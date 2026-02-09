@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Personal MCP Server with Resume Tools
+# Specification Quality Checklist: Persona MCP Server with Resume Tools
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-02-07
