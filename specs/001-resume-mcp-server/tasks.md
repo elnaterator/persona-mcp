@@ -19,11 +19,11 @@
 
 **Purpose**: Project initialization, packaging, and tooling
 
-- [ ] T001 Create project directory structure: `src/persona/`, `src/persona/tools/`, `tests/`, `tests/contract/`, `tests/unit/`, `tests/integration/`
-- [ ] T002 Create `pyproject.toml` with project metadata, Python 3.11+ requirement, dependencies (`mcp`, `python-frontmatter`), dev dependencies (`pytest`, `pytest-asyncio`, `ruff`, `pyright`), build system (`hatchling`), and entry point `persona = "persona.server:main"`
-- [ ] T003 [P] Create `Makefile` with mandatory targets: `run` (`uv run persona`), `test` (`uv run pytest`), `lint` (`uv run ruff check . && uv run ruff format --check .`), `typecheck` (`uv run pyright`), `check` (depends on `lint` + `typecheck` + `test`), plus `format` (`uv run ruff format .`)
-- [ ] T004 [P] Create `src/persona/__init__.py` with package version
-- [ ] T005 Run `uv sync` to install dependencies and verify `make lint` passes on empty project
+- [x] T001 Create project directory structure: `src/persona/`, `src/persona/tools/`, `tests/`, `tests/contract/`, `tests/unit/`, `tests/integration/`
+- [x] T002 Create `pyproject.toml` with project metadata, Python 3.11+ requirement, dependencies (`mcp`, `python-frontmatter`), dev dependencies (`pytest`, `pytest-asyncio`, `ruff`, `pyright`), build system (`hatchling`), and entry point `persona = "persona.server:main"`
+- [x] T003 [P] Create `Makefile` with mandatory targets: `run` (`uv run persona`), `test` (`uv run pytest`), `lint` (`uv run ruff check . && uv run ruff format --check .`), `typecheck` (`uv run pyright`), `check` (depends on `lint` + `typecheck` + `test`), plus `format` (`uv run ruff format .`)
+- [x] T004 [P] Create `src/persona/__init__.py` with package version
+- [x] T005 Run `uv sync` to install dependencies and verify `make lint` passes on empty project
 
 **Checkpoint**: Project skeleton compiles, `make lint` passes, `uv run persona` is a valid command (even if it errors on missing server code)
 
@@ -39,17 +39,17 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] Write unit tests for config module in `tests/unit/test_config.py`: default path `~/.persona/`, env var override `PERSONA_DATA_DIR`, relative path resolution (assert resolved absolute path is logged), directory creation on startup, error on uncreatable path
-- [ ] T007 [P] Write unit tests for Pydantic models in `tests/unit/test_models.py`: ContactInfo (all optional), WorkExperience (title+company required), Education (institution+degree required), Skill (name required, category defaults to "Other"), Resume aggregate with empty defaults
-- [ ] T008 [P] Write unit tests for resume store in `tests/unit/test_resume_store.py`: load valid `resume.md`, load empty file (returns empty resume), load malformed front-matter (logs warning, returns defaults), load missing file (returns empty resume), write round-trip (load→modify→save→reload), directory auto-creation
+- [x] T006 [P] Write unit tests for config module in `tests/unit/test_config.py`: default path `~/.persona/`, env var override `PERSONA_DATA_DIR`, relative path resolution (assert resolved absolute path is logged), directory creation on startup, error on uncreatable path
+- [x] T007 [P] Write unit tests for Pydantic models in `tests/unit/test_models.py`: ContactInfo (all optional), WorkExperience (title+company required), Education (institution+degree required), Skill (name required, category defaults to "Other"), Resume aggregate with empty defaults
+- [x] T008 [P] Write unit tests for resume store in `tests/unit/test_resume_store.py`: load valid `resume.md`, load empty file (returns empty resume), load malformed front-matter (logs warning, returns defaults), load missing file (returns empty resume), write round-trip (load→modify→save→reload), directory auto-creation
 
 ### Implementation for Foundational
 
-- [ ] T009 Implement config module in `src/persona/config.py`: resolve data directory from `PERSONA_DATA_DIR` env var (default `~/.persona/`), resolve relative paths against cwd, ensure `jobs/resume/` directory exists, configure `LOG_LEVEL` env var for logging to stderr. Run `make test` — T006 tests pass.
-- [ ] T010 Implement Pydantic models in `src/persona/models.py`: `ContactInfo`, `WorkExperience`, `Education`, `Skill`, `Resume` per data-model.md entity definitions and validation rules. Run `make test` — T007 tests pass.
-- [ ] T011 Implement resume store in `src/persona/resume_store.py`: `load_resume(path) -> Resume` and `save_resume(path, resume)` using `python-frontmatter` for file I/O, with Markdown section parsing/serialization per data-model.md file format. Handle edge cases: empty file, malformed front-matter (log warning, return defaults), missing file (return empty resume). Run `make test` — T008 tests pass.
-- [ ] T012 Create shared test fixtures in `tests/conftest.py`: `tmp_data_dir` fixture (temp directory with `jobs/resume/` structure), `sample_resume_md` fixture (valid `resume.md` content per data-model.md example), `empty_resume_md` fixture
-- [ ] T013 Create FastMCP server shell in `src/persona/server.py`: instantiate `FastMCP("persona")`, add `main()` function that calls `mcp.run(transport="stdio")`, configure logging to stderr at startup. Verify `make run` starts the server (exits cleanly with no stdin).
+- [x] T009 Implement config module in `src/persona/config.py`: resolve data directory from `PERSONA_DATA_DIR` env var (default `~/.persona/`), resolve relative paths against cwd, ensure `jobs/resume/` directory exists, configure `LOG_LEVEL` env var for logging to stderr. Run `make test` — T006 tests pass.
+- [x] T010 Implement Pydantic models in `src/persona/models.py`: `ContactInfo`, `WorkExperience`, `Education`, `Skill`, `Resume` per data-model.md entity definitions and validation rules. Run `make test` — T007 tests pass.
+- [x] T011 Implement resume store in `src/persona/resume_store.py`: `load_resume(path) -> Resume` and `save_resume(path, resume)` using `python-frontmatter` for file I/O, with Markdown section parsing/serialization per data-model.md file format. Handle edge cases: empty file, malformed front-matter (log warning, return defaults), missing file (return empty resume). Run `make test` — T008 tests pass.
+- [x] T012 Create shared test fixtures in `tests/conftest.py`: `tmp_data_dir` fixture (temp directory with `jobs/resume/` structure), `sample_resume_md` fixture (valid `resume.md` content per data-model.md example), `empty_resume_md` fixture
+- [x] T013 Create FastMCP server shell in `src/persona/server.py`: instantiate `FastMCP("persona")`, add `main()` function that calls `mcp.run(transport="stdio")`, configure logging to stderr at startup. Verify `make run` starts the server (exits cleanly with no stdin).
 
 **Checkpoint**: Foundation ready — `make check` passes, server starts, config resolves, models validate, resume store reads/writes files
 
