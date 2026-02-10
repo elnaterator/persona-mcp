@@ -58,3 +58,31 @@ Software engineer with 10 years of experience...
 |---|---|---|
 | `PERSONA_DATA_DIR` | Data directory path | `~/.persona/` |
 | `LOG_LEVEL` | Logging level (Python `logging` to stderr) | `INFO` |
+
+## Recommended Workflow
+
+This project uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with [spec-kit](https://github.com/github/spec-kit) for Spec-Driven Development (SDD):
+
+1. `/speckit.specify [feature requirements]` — creates a feature branch and generates an initial spec. Review, edit, and re-run to refine.
+2. `/speckit.clarify` — identifies gaps in the spec and asks clarifying questions.
+3. `/speckit.plan [tech details]` — generates an implementation plan. Review and iterate as needed.
+4. `/speckit.tasks` — produces a task list from the plan. Review and iterate as needed.
+5. `/speckit.analyze` — checks alignment across spec, plan, and tasks to ensure full coverage.
+6. `/speckit.implement [scope]` — executes tasks (e.g., `phase 1` or `tasks 1-4`).
+7. Commit changes — in chunks or all at once, depending on feature size.
+8. Push the branch.
+9. Enable the GitHub MCP server (see below) and have Claude create a PR.
+10. Review CI, then merge to main.
+
+### GitHub MCP server setup (for PR creation)
+
+```bash
+# Load env vars (includes GITHUB_PAT)
+export $(grep -v '^#' .env | xargs)
+
+# Add the GitHub MCP server
+claude mcp add-json github '{"type":"http","url":"https://api.githubcopilot.com/mcp","headers":{"Authorization":"Bearer '"$(grep GITHUB_PAT .env | cut -d '=' -f2)"'"}}'
+
+# Ask Claude to create a PR, then remove the server to save tokens
+claude mcp remove github
+```
