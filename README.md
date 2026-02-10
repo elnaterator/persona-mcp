@@ -1,4 +1,4 @@
-# Personal MCP Server
+# Persona MCP Server
 
 An MCP (Model Context Protocol) server that exposes personal data — starting with resume management — to AI assistants.
 
@@ -10,13 +10,13 @@ An MCP (Model Context Protocol) server that exposes personal data — starting w
 
 ## Data directory
 
-Defaults to `~/.personal-mcp/`. Override with:
+Defaults to `~/.persona/`. Override with:
 
 ```bash
-export PERSONAL_MCP_DATA_DIR=/path/to/your/data
+export PERSONA_DATA_DIR=/path/to/your/data
 ```
 
-Resume data lives at `job-search/resume/resume.md` under the data root.
+Resume data lives at `jobs/resume/resume.md` under the data root. Future features will use sibling directories under `jobs/`.
 
 ## Resume format
 
@@ -56,5 +56,5 @@ Software engineer with 10 years of experience...
 
 | Variable | Description | Default |
 |---|---|---|
-| `PERSONAL_MCP_DATA_DIR` | Data directory path | `~/.personal-mcp/` |
-| `LOG_LEVEL` | Logging level | `INFO` |
+| `PERSONA_DATA_DIR` | Data directory path | `~/.persona/` |
+| `LOG_LEVEL` | Logging level (Python `logging` to stderr) | `INFO` |

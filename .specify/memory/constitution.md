@@ -1,15 +1,15 @@
 <!--
 Sync Impact Report
 ===================
-- Version change: 1.1.0 → 1.2.0
-- Modified principles:
-  - III. Test-First Development → III. Test-Driven Development (TDD)
-    (expanded with test quality, readability, and maintenance rules)
+- Version change: 1.2.0 → 1.2.1
+- Modified principles: None
 - Added sections: None
 - Removed sections: None
 - Modified sections:
-  - Development Workflow > General Workflow: branching format
-    changed to `feature/my-feature`
+  - Technology & Packaging Constraints > Entry Point: updated example
+    from `personal-mcp` to `persona` to match actual project naming
+  - Development Workflow > Makefile: updated `make run` command from
+    `uv run personal-mcp` to `uv run persona`
 - Templates requiring updates:
   - .specify/templates/plan-template.md ✅ no changes needed (generic)
   - .specify/templates/spec-template.md ✅ no changes needed (generic)
@@ -98,7 +98,7 @@ MUST NOT be exposed to MCP clients in production.
 - **Type Checking**: `pyright` or `mypy` (MUST pass with no errors
   on CI)
 - **Entry Point**: A `[project.scripts]` entry in `pyproject.toml`
-  that starts the MCP server (e.g., `personal-mcp = "personal_mcp:main"`)
+  that starts the MCP server (e.g., `persona = "persona.server:main"`)
 - **Task Runner**: GNU Make via a root-level `Makefile`
 
 ## Development Workflow
@@ -111,7 +111,7 @@ targets are mandatory:
 
 | Target       | Command                        | Purpose                              |
 |--------------|--------------------------------|--------------------------------------|
-| `make run`   | Start the MCP server locally   | Launch via `uv run personal-mcp`     |
+| `make run`   | Start the MCP server locally   | Launch via `uv run persona`          |
 | `make test`  | Run the full test suite        | Execute `uv run pytest`              |
 | `make lint`  | Run linter and formatter check | Execute `uv run ruff check . && uv run ruff format --check .` |
 | `make check` | Run lint then test             | Composite: depends on `lint` + `test` |
@@ -151,4 +151,4 @@ these principles. Amendments require:
    - PATCH: Wording clarifications or typo fixes.
 3. Propagation check across all `.specify/templates/` files.
 
-**Version**: 1.2.0 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-07
+**Version**: 1.2.1 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-09

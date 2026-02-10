@@ -35,6 +35,7 @@ Thumbs.db
 .coverage
 htmlcov/
 .mypy_cache/
+.pyright/
 .ruff_cache/
 
 # Distribution
