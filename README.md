@@ -61,9 +61,21 @@ Software engineer with 10 years of experience...
 
 ## Recommended Workflow
 
-This project uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with [spec-kit](https://github.com/github/spec-kit) for Spec-Driven Development (SDD):
+This project uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with [spec-kit](https://github.com/github/spec-kit) for Spec-Driven Development (SDD) and **git worktrees** for parallel feature development.
 
-1. `/speckit.specify [feature requirements]` — creates a feature branch and generates an initial spec. Review, edit, and re-run to refine.
+### Setting up a new feature
+
+```bash
+# From the main working tree, create a worktree with a new feature branch
+git worktree add ../worktrees/feat-003-my-feature -b feat-003-my-feature
+
+# Open the worktree in VS Code and start Claude Code from there
+code ../worktrees/feat-003-my-feature
+```
+
+### Spec-driven development (inside the worktree)
+
+1. `/speckit.specify [feature requirements]` — generates a spec directory and initial spec. Review, edit, and re-run to refine.
 2. `/speckit.clarify` — identifies gaps in the spec and asks clarifying questions.
 3. `/speckit.plan [tech details]` — generates an implementation plan. Review and iterate as needed.
 4. `/speckit.tasks` — produces a task list from the plan. Review and iterate as needed.
@@ -73,6 +85,13 @@ This project uses [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 
 8. Push the branch.
 9. Enable the GitHub MCP server (see below) and have Claude create a PR.
 10. Review CI, then merge to main.
+
+### Cleaning up after merge
+
+```bash
+# Remove the worktree after merging
+git worktree remove ../worktrees/feat-003-my-feature
+```
 
 ### GitHub MCP server setup (for PR creation)
 

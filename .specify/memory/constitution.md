@@ -1,18 +1,24 @@
 <!--
 Sync Impact Report
 ===================
-- Version change: 1.2.1 → 1.3.0
+- Version change: 1.3.0 → 1.4.0
 - Modified principles: None
 - Added sections: None
 - Removed sections: None
 - Modified sections:
-  - Development Workflow > General Workflow > Branching: updated branch
-    naming convention from `feature/<descriptive-name>` to
-    `feature/<NNN>-<descriptive-name>` to include the spec number
+  - Development Workflow > General Workflow > Branching: switched from
+    in-repo `git checkout -b` to `git worktree add` workflow for parallel
+    feature development. Branch creation is now the developer's
+    responsibility via git worktree; spec-kit scripts only create spec
+    directories and files. Changed branch naming convention from
+    `feature/<NNN>-<name>` to `feat-<NNN>-<name>` to avoid `/` in
+    branch names which simplifies worktree directory management.
 - Templates requiring updates:
   - .specify/templates/plan-template.md ✅ no changes needed (generic)
   - .specify/templates/spec-template.md ✅ no changes needed (generic)
   - .specify/templates/tasks-template.md ✅ no changes needed (generic)
+- Scripts requiring updates:
+  - .specify/scripts/bash/create-new-feature.sh ✅ removed git checkout -b
 - Follow-up TODOs: None
 -->
 
@@ -123,10 +129,16 @@ runs before committing to verify the codebase is clean.
 ### General Workflow
 
 - **Branching**: Feature branches MUST use the format
-  `feature/<NNN>-<descriptive-name>` where `NNN` is the zero-padded
-  spec number (e.g., `feature/002-ci-pipeline`,
-  `feature/003-add-weather-tool`). Branch off `main`; merge via
-  pull request.
+  `feat-<NNN>-<descriptive-name>` where `NNN` is the zero-padded
+  spec number (e.g., `feat-002-ci-pipeline`,
+  `feat-003-add-weather-tool`). Branches are created using
+  `git worktree add` from the main working tree to enable parallel
+  feature development. Worktrees live under `../worktrees/<branch>`
+  relative to the main working tree (e.g.,
+  `../worktrees/feat-003-my-feature`). Each worktree gets its own
+  VS Code window and Claude Code session. Spec-kit scripts do NOT
+  create branches — developers create the worktree/branch first,
+  then run spec-kit from within the worktree. Merge via pull request.
 - **Commits**: Conventional commits (`feat:`, `fix:`, `docs:`,
   `refactor:`, `test:`, `chore:`).
 - **Pre-merge gates**: `make check` MUST pass. This is equivalent
@@ -151,4 +163,4 @@ these principles. Amendments require:
    - PATCH: Wording clarifications or typo fixes.
 3. Propagation check across all `.specify/templates/` files.
 
-**Version**: 1.3.0 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-10
+**Version**: 1.4.0 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-10
