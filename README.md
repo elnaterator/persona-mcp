@@ -96,11 +96,11 @@ git worktree remove ../worktrees/feat-003-my-feature
 ### GitHub MCP server setup (for PR creation)
 
 ```bash
-# Load env vars (includes GITHUB_PAT)
-export $(grep -v '^#' .env | xargs)
+# Export your GitHub PAT
+export GITHUB_PAT=<your-github-pat>
 
 # Add the GitHub MCP server
-claude mcp add-json github '{"type":"http","url":"https://api.githubcopilot.com/mcp","headers":{"Authorization":"Bearer '"$(grep GITHUB_PAT .env | cut -d '=' -f2)"'"}}'
+claude mcp add-json github '{"type":"http","url":"https://api.githubcopilot.com/mcp","headers":{"Authorization":"Bearer '"$GITHUB_PAT"'"}}'
 
 # Ask Claude to create a PR, then remove the server to save tokens
 claude mcp remove github
