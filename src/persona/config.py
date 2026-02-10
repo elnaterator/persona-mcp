@@ -24,9 +24,18 @@ def resolve_data_dir() -> Path:
 
 
 def ensure_data_dir(data_dir: Path) -> None:
-    """Ensure the data directory and jobs/resume/ structure exist."""
+    """Ensure the data directory and jobs/resume/ structure exist.
+
+    Raises:
+        ValueError: If the directory cannot be created.
+    """
     resume_dir = data_dir / RESUME_SUBPATH
-    resume_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        resume_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error("Cannot create data directory %s: %s", resume_dir, e)
+        raise ValueError(f"Cannot create data directory: {resume_dir}") from e
+    logger.info("Data directory ready: %s", resume_dir)
 
 
 def configure_logging() -> logging.Logger:

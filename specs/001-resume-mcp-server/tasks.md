@@ -65,15 +65,15 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T014 [P] [US1] Write contract tests for `get_resume` tool in `tests/contract/test_read_tools.py`: returns full resume structure from valid file, returns empty resume when file is absent, returns empty resume when file is empty, handles malformed file gracefully
-- [ ] T015 [P] [US1] Write contract tests for `get_resume_section` tool in `tests/contract/test_read_tools.py`: returns contact info for section="contact", returns experience list for section="experience", returns summary string for section="summary", returns education list for section="education", returns skills list for section="skills", returns error for invalid section name
+- [x] T014 [P] [US1] Write contract tests for `get_resume` tool in `tests/contract/test_read_tools.py`: returns full resume structure from valid file, returns empty resume when file is absent, returns empty resume when file is empty, handles malformed file gracefully
+- [x] T015 [P] [US1] Write contract tests for `get_resume_section` tool in `tests/contract/test_read_tools.py`: returns contact info for section="contact", returns experience list for section="experience", returns summary string for section="summary", returns education list for section="education", returns skills list for section="skills", returns error for invalid section name
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Implement `get_resume` tool in `src/persona/tools/read.py`: register with FastMCP server, load resume via store, return serialized Resume model. Run `make test` — T014 tests pass.
-- [ ] T017 [US1] Implement `get_resume_section` tool in `src/persona/tools/read.py`: accept `section` enum parameter, validate section name, return corresponding section data. Run `make test` — T015 tests pass.
-- [ ] T018 [US1] Register read tools with server in `src/persona/tools/__init__.py` and import in `src/persona/server.py`
-- [ ] T019 [US1] Write integration test in `tests/integration/test_server.py`: start server, invoke `get_resume` and `get_resume_section` via MCP client, verify responses match sample data, assert response time <2s with a 50-entry fixture (SC-001). Run `make check`.
+- [x] T016 [US1] Implement `get_resume` tool in `src/persona/tools/read.py`: register with FastMCP server, load resume via store, return serialized Resume model. Run `make test` — T014 tests pass.
+- [x] T017 [US1] Implement `get_resume_section` tool in `src/persona/tools/read.py`: accept `section` enum parameter, validate section name, return corresponding section data. Run `make test` — T015 tests pass.
+- [x] T018 [US1] Register read tools with server in `src/persona/tools/__init__.py` and import in `src/persona/server.py`
+- [x] T019 [US1] Write integration test in `tests/integration/test_server.py`: start server, invoke `get_resume` and `get_resume_section` via MCP client, verify responses match sample data, assert response time <2s with a 50-entry fixture (SC-001). Run `make check`.
 
 **Checkpoint**: User Story 1 complete — `get_resume` and `get_resume_section` work end-to-end, `make check` passes
 
@@ -89,19 +89,19 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T020 [P] [US2] Write contract tests for `update_section` tool in `tests/contract/test_write_tools.py`: update contact fields (partial update preserves other fields), update summary text, error on invalid section, error on empty contact update, error on empty summary text
-- [ ] T021 [P] [US2] Write contract tests for `add_entry` tool in `tests/contract/test_write_tools.py`: add experience entry (prepended), add education entry, add skill with category, add skill with default "Other" category, error on missing required fields per section, error on duplicate skill name
-- [ ] T022 [P] [US2] Write contract tests for `update_entry` tool in `tests/contract/test_write_tools.py`: update experience by index (partial update), update education by index, update skill by index, error on out-of-range index, error on empty data
-- [ ] T023 [P] [US2] Write contract tests for `remove_entry` tool in `tests/contract/test_write_tools.py`: remove experience by index, remove education by index, remove skill by index, error on out-of-range index, error on invalid section
+- [x] T020 [P] [US2] Write contract tests for `update_section` tool in `tests/contract/test_write_tools.py`: update contact fields (partial update preserves other fields), update summary text, error on invalid section, error on empty contact update, error on empty summary text
+- [x] T021 [P] [US2] Write contract tests for `add_entry` tool in `tests/contract/test_write_tools.py`: add experience entry (prepended), add education entry, add skill with category, add skill with default "Other" category, error on missing required fields per section, error on duplicate skill name
+- [x] T022 [P] [US2] Write contract tests for `update_entry` tool in `tests/contract/test_write_tools.py`: update experience by index (partial update), update education by index, update skill by index, error on out-of-range index, error on empty data
+- [x] T023 [P] [US2] Write contract tests for `remove_entry` tool in `tests/contract/test_write_tools.py`: remove experience by index, remove education by index, remove skill by index, error on out-of-range index, error on invalid section
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Implement `update_section` tool in `src/persona/tools/write.py`: accept section (contact|summary) and data dict, dispatch to section-specific validation, update resume via store, return confirmation. Run `make test` — T020 tests pass.
-- [ ] T025 [US2] Implement `add_entry` tool in `src/persona/tools/write.py`: accept section (experience|education|skills) and data dict, validate via section-specific Pydantic model, prepend entry, save via store, return confirmation. Run `make test` — T021 tests pass.
-- [ ] T026 [US2] Implement `update_entry` tool in `src/persona/tools/write.py`: accept section, index, and data dict, validate index bounds, partial-update entry fields, save via store, return confirmation. Run `make test` — T022 tests pass.
-- [ ] T027 [US2] Implement `remove_entry` tool in `src/persona/tools/write.py`: accept section and index, validate index bounds, remove entry, save via store, return confirmation. Run `make test` — T023 tests pass.
-- [ ] T028 [US2] Register write tools with server in `src/persona/tools/__init__.py`
-- [ ] T029 [US2] Write integration test in `tests/integration/test_server.py`: start server, add an experience entry via `add_entry`, read back via `get_resume_section`, verify the entry exists; update it via `update_entry`, verify change; remove it via `remove_entry`, verify gone. Run `make check`.
+- [x] T024 [US2] Implement `update_section` tool in `src/persona/tools/write.py`: accept section (contact|summary) and data dict, dispatch to section-specific validation, update resume via store, return confirmation. Run `make test` — T020 tests pass.
+- [x] T025 [US2] Implement `add_entry` tool in `src/persona/tools/write.py`: accept section (experience|education|skills) and data dict, validate via section-specific Pydantic model, prepend entry, save via store, return confirmation. Run `make test` — T021 tests pass.
+- [x] T026 [US2] Implement `update_entry` tool in `src/persona/tools/write.py`: accept section, index, and data dict, validate index bounds, partial-update entry fields, save via store, return confirmation. Run `make test` — T022 tests pass.
+- [x] T027 [US2] Implement `remove_entry` tool in `src/persona/tools/write.py`: accept section and index, validate index bounds, remove entry, save via store, return confirmation. Run `make test` — T023 tests pass.
+- [x] T028 [US2] Register write tools with server in `src/persona/tools/__init__.py`
+- [x] T029 [US2] Write integration test in `tests/integration/test_server.py`: start server, add an experience entry via `add_entry`, read back via `get_resume_section`, verify the entry exists; update it via `update_entry`, verify change; remove it via `remove_entry`, verify gone. Run `make check`.
 
 **Checkpoint**: User Story 2 complete — all write tools work end-to-end, `make check` passes
 
@@ -111,10 +111,10 @@
 
 **Purpose**: Edge case hardening, logging, documentation, final validation
 
-- [ ] T030 [P] Add edge case handling: write permission errors return clear ToolError messages (not stack traces), read operations continue working when writes fail, per spec edge cases
-- [ ] T031 [P] Add logging throughout: log data directory path at startup, log each tool invocation at INFO level, log parse warnings at WARNING level, all to stderr per FR-008
-- [ ] T032 Verify `make check` passes (lint clean, typecheck clean, all tests green)
-- [ ] T033 Run quickstart.md validation: follow quickstart.md steps on a clean environment, verify server starts, tools respond, Claude Desktop config works
+- [x] T030 [P] Add edge case handling: write permission errors return clear ToolError messages (not stack traces), read operations continue working when writes fail, per spec edge cases
+- [x] T031 [P] Add logging throughout: log data directory path at startup, log each tool invocation at INFO level, log parse warnings at WARNING level, all to stderr per FR-008
+- [x] T032 Verify `make check` passes (lint clean, typecheck clean, all tests green)
+- [x] T033 Run quickstart.md validation: follow quickstart.md steps on a clean environment, verify server starts, tools respond, Claude Desktop config works
 
 ---
 

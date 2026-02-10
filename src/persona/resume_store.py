@@ -56,8 +56,16 @@ def load_resume(path: Path) -> Resume:
 
 
 def save_resume(path: Path, resume: Resume) -> None:
-    """Save a Resume to a Markdown file with YAML front-matter."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    """Save a Resume to a Markdown file with YAML front-matter.
+
+    Raises:
+        ValueError: If the file cannot be written (permissions, disk full, etc.).
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error("Cannot create directory %s: %s", path.parent, e)
+        raise ValueError(f"Cannot create directory for resume: {path.parent}") from e
 
     metadata = {k: v for k, v in resume.contact.model_dump().items() if v is not None}
 
@@ -89,7 +97,12 @@ def save_resume(path: Path, resume: Resume) -> None:
     body = "\n\n".join(body_parts)
 
     post = frontmatter.Post(body, **metadata)
-    path.write_text(frontmatter.dumps(post) + "\n", encoding="utf-8")
+    try:
+        path.write_text(frontmatter.dumps(post) + "\n", encoding="utf-8")
+    except OSError as e:
+        logger.error("Failed to write resume to %s: %s", path, e)
+        raise ValueError(f"Failed to save resume: {e}") from e
+    logger.info("Resume saved to %s", path)
 
 
 # --- Parsing helpers ---

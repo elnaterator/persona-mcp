@@ -85,7 +85,7 @@ class TestEnsureDataDir:
         blocker.write_text("I am a file")
         data_dir = blocker / "nested"
 
-        with pytest.raises(OSError):
+        with pytest.raises((OSError, ValueError)):
             ensure_data_dir(data_dir)
 
 
