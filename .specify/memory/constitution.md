@@ -1,15 +1,14 @@
 <!--
 Sync Impact Report
 ===================
-- Version change: 1.2.0 → 1.2.1
+- Version change: 1.2.1 → 1.3.0
 - Modified principles: None
 - Added sections: None
 - Removed sections: None
 - Modified sections:
-  - Technology & Packaging Constraints > Entry Point: updated example
-    from `personal-mcp` to `persona` to match actual project naming
-  - Development Workflow > Makefile: updated `make run` command from
-    `uv run personal-mcp` to `uv run persona`
+  - Development Workflow > General Workflow > Branching: updated branch
+    naming convention from `feature/<descriptive-name>` to
+    `feature/<NNN>-<descriptive-name>` to include the spec number
 - Templates requiring updates:
   - .specify/templates/plan-template.md ✅ no changes needed (generic)
   - .specify/templates/spec-template.md ✅ no changes needed (generic)
@@ -124,8 +123,9 @@ runs before committing to verify the codebase is clean.
 ### General Workflow
 
 - **Branching**: Feature branches MUST use the format
-  `feature/<descriptive-name>` (e.g., `feature/add-weather-tool`,
-  `feature/refactor-error-handling`). Branch off `main`; merge via
+  `feature/<NNN>-<descriptive-name>` where `NNN` is the zero-padded
+  spec number (e.g., `feature/002-ci-pipeline`,
+  `feature/003-add-weather-tool`). Branch off `main`; merge via
   pull request.
 - **Commits**: Conventional commits (`feat:`, `fix:`, `docs:`,
   `refactor:`, `test:`, `chore:`).
@@ -151,4 +151,4 @@ these principles. Amendments require:
    - PATCH: Wording clarifications or typo fixes.
 3. Propagation check across all `.specify/templates/` files.
 
-**Version**: 1.2.1 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-09
+**Version**: 1.3.0 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-10
