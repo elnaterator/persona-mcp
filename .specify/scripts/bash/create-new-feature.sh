@@ -40,8 +40,11 @@ while [ $i -le $# ]; do
             fi
             BRANCH_NUMBER="$next_arg"
             ;;
-        --help|-h) 
+        --help|-h)
             echo "Usage: $0 [--json] [--short-name <name>] [--number N] <feature_description>"
+            echo ""
+            echo "Creates spec directory and files for a feature. Does NOT create a git branch."
+            echo "Create the branch/worktree first, then run this script from within it."
             echo ""
             echo "Options:"
             echo "  --json              Output in JSON format"
@@ -49,9 +52,10 @@ while [ $i -le $# ]; do
             echo "  --number N          Specify branch number manually (overrides auto-detection)"
             echo "  --help, -h          Show this help message"
             echo ""
-            echo "Examples:"
-            echo "  $0 'Add user authentication system' --short-name 'user-auth'"
-            echo "  $0 'Implement OAuth2 integration for API' --number 5"
+            echo "Workflow:"
+            echo "  git worktree add ../worktrees/feat-003-user-auth -b feat-003-user-auth"
+            echo "  cd ../worktrees/feat-003-user-auth"
+            echo "  $0 'Add user authentication system' --short-name 'user-auth' --number 3"
             exit 0
             ;;
         *) 
@@ -216,15 +220,15 @@ fi
 FEATURE_NUM=$(printf "%03d" "$((10#$BRANCH_NUMBER))")
 SPEC_DIR_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
 
-# Branch uses feature/ prefix per constitution workflow
-BRANCH_NAME="feature/${BRANCH_SUFFIX}"
+# Branch uses feat- prefix per constitution workflow
+BRANCH_NAME="feat-${FEATURE_NUM}-${BRANCH_SUFFIX}"
 
 # GitHub enforces a 244-byte limit on branch names
 # Validate and truncate if necessary
 MAX_BRANCH_LENGTH=244
 if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
-    # Account for: "feature/" prefix = 8 chars
-    MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 8))
+    # Account for: "feat-NNN-" prefix = 9 chars
+    MAX_SUFFIX_LENGTH=$((MAX_BRANCH_LENGTH - 9))
 
     # Truncate suffix at word boundary if possible
     TRUNCATED_SUFFIX=$(echo "$BRANCH_SUFFIX" | cut -c1-$MAX_SUFFIX_LENGTH)
@@ -232,7 +236,7 @@ if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
     TRUNCATED_SUFFIX=$(echo "$TRUNCATED_SUFFIX" | sed 's/-$//')
 
     ORIGINAL_BRANCH_NAME="$BRANCH_NAME"
-    BRANCH_NAME="feature/${TRUNCATED_SUFFIX}"
+    BRANCH_NAME="feat-${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
     SPEC_DIR_NAME="${FEATURE_NUM}-${TRUNCATED_SUFFIX}"
 
     >&2 echo "[specify] Warning: Branch name exceeded GitHub's 244-byte limit"
@@ -241,9 +245,14 @@ if [ ${#BRANCH_NAME} -gt $MAX_BRANCH_LENGTH ]; then
 fi
 
 if [ "$HAS_GIT" = true ]; then
-    git checkout -b "$BRANCH_NAME"
+    # Verify current branch matches expected name (branch should already exist via git worktree add)
+    CURRENT=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [ -n "$CURRENT" ] && [ "$CURRENT" != "$BRANCH_NAME" ]; then
+        >&2 echo "[specify] Note: Expected branch '$BRANCH_NAME' but currently on '$CURRENT'"
+        >&2 echo "[specify] Create the worktree first: git worktree add ../worktrees/$BRANCH_NAME -b $BRANCH_NAME"
+    fi
 else
-    >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
+    >&2 echo "[specify] Warning: Git repository not detected; skipped branch validation for $BRANCH_NAME"
 fi
 
 FEATURE_DIR="$SPECS_DIR/$SPEC_DIR_NAME"

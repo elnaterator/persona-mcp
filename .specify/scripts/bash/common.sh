@@ -72,10 +72,10 @@ check_feature_branch() {
         return 0
     fi
 
-    # Accept feature/ prefix (constitution format) or ###- prefix (spec dir / SPECIFY_FEATURE)
-    if [[ ! "$branch" =~ ^feature/ ]] && [[ ! "$branch" =~ ^[0-9]{3}- ]]; then
+    # Accept feat-NNN- prefix (constitution format) or ###- prefix (spec dir / SPECIFY_FEATURE)
+    if [[ ! "$branch" =~ ^feat-[0-9]{3}- ]] && [[ ! "$branch" =~ ^[0-9]{3}- ]]; then
         echo "ERROR: Not on a feature branch. Current branch: $branch" >&2
-        echo "Feature branches should be named like: feature/my-feature" >&2
+        echo "Feature branches should be named like: feat-003-my-feature" >&2
         return 1
     fi
 
@@ -91,13 +91,14 @@ find_feature_dir_by_prefix() {
     local branch_name="$2"
     local specs_dir="$repo_root/specs"
 
-    # Handle feature/ prefix branches (constitution format)
-    # Map feature/<name> to specs/###-<name> by matching the suffix
-    if [[ "$branch_name" =~ ^feature/(.+)$ ]]; then
-        local suffix="${BASH_REMATCH[1]}"
+    # Handle feat-NNN-name prefix branches (constitution format)
+    # Map feat-NNN-<name> to specs/NNN-<name> by extracting the number and suffix
+    if [[ "$branch_name" =~ ^feat-([0-9]{3})-(.+)$ ]]; then
+        local prefix="${BASH_REMATCH[1]}"
+        local suffix="${BASH_REMATCH[2]}"
         local matches=()
         if [[ -d "$specs_dir" ]]; then
-            for dir in "$specs_dir"/[0-9][0-9][0-9]-"$suffix"; do
+            for dir in "$specs_dir"/"$prefix"-"$suffix"; do
                 if [[ -d "$dir" ]]; then
                     matches+=("$(basename "$dir")")
                 fi
@@ -107,11 +108,11 @@ find_feature_dir_by_prefix() {
         if [[ ${#matches[@]} -eq 1 ]]; then
             echo "$specs_dir/${matches[0]}"
         elif [[ ${#matches[@]} -gt 1 ]]; then
-            echo "ERROR: Multiple spec directories found for '$suffix': ${matches[*]}" >&2
+            echo "ERROR: Multiple spec directories found for '$prefix-$suffix': ${matches[*]}" >&2
             echo "$specs_dir/${matches[0]}"
         else
             # No match - return a reasonable default path
-            echo "$specs_dir/$suffix"
+            echo "$specs_dir/$prefix-$suffix"
         fi
         return
     fi
