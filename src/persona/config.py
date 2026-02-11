@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_DATA_DIR = "~/.persona"
-RESUME_SUBPATH = Path("jobs") / "resume"
+DB_FILENAME = "persona.db"
 
 logger = logging.getLogger("persona")
 
@@ -21,21 +21,6 @@ def resolve_data_dir() -> Path:
     path = Path(raw).expanduser().resolve()
     logger.info("Data directory resolved to: %s", path)
     return path
-
-
-def ensure_data_dir(data_dir: Path) -> None:
-    """Ensure the data directory and jobs/resume/ structure exist.
-
-    Raises:
-        ValueError: If the directory cannot be created.
-    """
-    resume_dir = data_dir / RESUME_SUBPATH
-    try:
-        resume_dir.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        logger.error("Cannot create data directory %s: %s", resume_dir, e)
-        raise ValueError(f"Cannot create data directory: {resume_dir}") from e
-    logger.info("Data directory ready: %s", resume_dir)
 
 
 def configure_logging() -> logging.Logger:

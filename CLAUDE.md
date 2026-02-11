@@ -36,6 +36,8 @@ tests/
 
 ## Active Technologies
 - Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action (feature/002-ci-pipeline)
+- Python 3.11+ + `mcp` (MCP SDK), `sqlite3` (stdlib — replaces `python-frontmatter`) (feat-003-sqlite)
+- SQLite via stdlib `sqlite3`, database file at `{data_dir}/persona.db` (feat-003-sqlite)
 
 ## Recent Changes
 - feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action

@@ -1,18 +1,19 @@
 """Persona MCP server — entry point and FastMCP setup."""
 
-from pathlib import Path
+import sqlite3
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from persona.config import configure_logging, ensure_data_dir, resolve_data_dir
+from persona.config import configure_logging, resolve_data_dir
+from persona.database import init_database
 from persona.tools import read as read_tools
 from persona.tools import write as write_tools
 
 mcp = FastMCP("persona")
 
 # Resolved at startup in main(), used by tool handlers.
-_data_dir: Path = Path()
+_conn: sqlite3.Connection | None = None
 
 
 @mcp.tool()
@@ -21,7 +22,8 @@ def get_resume() -> dict[str, Any]:
 
     Returns contact info, summary, experience, education, and skills.
     """
-    return read_tools.get_resume(data_dir=_data_dir)
+    assert _conn is not None
+    return read_tools.get_resume(conn=_conn)
 
 
 @mcp.tool()
@@ -31,7 +33,8 @@ def get_resume_section(section: str) -> Any:
     Args:
         section: One of: contact, summary, experience, education, skills.
     """
-    return read_tools.get_resume_section(section=section, data_dir=_data_dir)
+    assert _conn is not None
+    return read_tools.get_resume_section(section=section, conn=_conn)
 
 
 @mcp.tool()
@@ -43,7 +46,8 @@ def update_section(section: str, data: dict[str, Any]) -> str:
         data: Fields to update. For contact: any subset of contact fields.
               For summary: {"text": "new summary"}.
     """
-    return write_tools.update_section(section=section, data=data, data_dir=_data_dir)
+    assert _conn is not None
+    return write_tools.update_section(section=section, data=data, conn=_conn)
 
 
 @mcp.tool()
@@ -54,7 +58,8 @@ def add_entry(section: str, data: dict[str, Any]) -> str:
         section: One of: experience, education, skills.
         data: Entry fields. Required fields vary by section.
     """
-    return write_tools.add_entry(section=section, data=data, data_dir=_data_dir)
+    assert _conn is not None
+    return write_tools.add_entry(section=section, data=data, conn=_conn)
 
 
 @mcp.tool()
@@ -66,9 +71,8 @@ def update_entry(section: str, index: int, data: dict[str, Any]) -> str:
         index: 0-based index of the entry to update.
         data: Fields to update (partial update, omitted fields unchanged).
     """
-    return write_tools.update_entry(
-        section=section, index=index, data=data, data_dir=_data_dir
-    )
+    assert _conn is not None
+    return write_tools.update_entry(section=section, index=index, data=data, conn=_conn)
 
 
 @mcp.tool()
@@ -79,14 +83,15 @@ def remove_entry(section: str, index: int) -> str:
         section: One of: experience, education, skills.
         index: 0-based index of the entry to remove.
     """
-    return write_tools.remove_entry(section=section, index=index, data_dir=_data_dir)
+    assert _conn is not None
+    return write_tools.remove_entry(section=section, index=index, conn=_conn)
 
 
 def main() -> None:
     """Start the persona MCP server."""
-    global _data_dir
+    global _conn
     logger = configure_logging()
-    _data_dir = resolve_data_dir()
-    ensure_data_dir(_data_dir)
-    logger.info("Persona MCP server starting, data dir: %s", _data_dir)
+    data_dir = resolve_data_dir()
+    _conn = init_database(data_dir)
+    logger.info("Persona MCP server starting, data dir: %s", data_dir)
     mcp.run(transport="stdio")
