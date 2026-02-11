@@ -1,31 +1,29 @@
 """Read tools for persona MCP server — get_resume, get_resume_section."""
 
 import logging
-from pathlib import Path
+import sqlite3
 from typing import Any
 
-from persona.config import RESUME_SUBPATH
-from persona.resume_store import load_resume
+from persona.database import load_resume
 
 logger = logging.getLogger("persona")
 
 VALID_SECTIONS = ("contact", "summary", "experience", "education", "skills")
 
 
-def get_resume(data_dir: Path) -> dict[str, Any]:
+def get_resume(conn: sqlite3.Connection) -> dict[str, Any]:
     """Get the full resume as structured data."""
     logger.info("get_resume invoked")
-    resume_path = data_dir / RESUME_SUBPATH / "resume.md"
-    resume = load_resume(resume_path)
+    resume = load_resume(conn)
     return resume.model_dump()
 
 
-def get_resume_section(section: str, data_dir: Path) -> Any:
+def get_resume_section(section: str, conn: sqlite3.Connection) -> Any:
     """Get a specific resume section by name.
 
     Args:
         section: One of: contact, summary, experience, education, skills.
-        data_dir: The persona data directory.
+        conn: SQLite database connection.
 
     Raises:
         ValueError: If section name is invalid.
@@ -36,5 +34,5 @@ def get_resume_section(section: str, data_dir: Path) -> Any:
             f"Invalid section: '{section}'. Must be one of: {', '.join(VALID_SECTIONS)}"
         )
 
-    resume_data = get_resume(data_dir)
+    resume_data = get_resume(conn)
     return resume_data[section]

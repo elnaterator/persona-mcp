@@ -1,33 +1,57 @@
 """Write tools for persona MCP server — update_section, add/update/remove_entry."""
 
 import logging
-from pathlib import Path
+import sqlite3
 from typing import Any
 
 from pydantic import ValidationError
 
-from persona.config import RESUME_SUBPATH
+from persona.database import (
+    add_education,
+    add_experience,
+    add_skill,
+    remove_education,
+    remove_experience,
+    remove_skill,
+    save_contact,
+    save_summary,
+    update_education,
+    update_experience,
+    update_skill,
+)
 from persona.models import Education, Skill, WorkExperience
-from persona.resume_store import load_resume, save_resume
 
 logger = logging.getLogger("persona")
 
 SECTION_UPDATE = ("contact", "summary")
 SECTION_LIST = ("experience", "education", "skills")
 
-# Maps section name to the Pydantic model for validation.
 _LIST_MODELS: dict[str, type[WorkExperience | Education | Skill]] = {
     "experience": WorkExperience,
     "education": Education,
     "skills": Skill,
 }
 
+_ADD_FUNCTIONS = {
+    "experience": add_experience,
+    "education": add_education,
+    "skills": add_skill,
+}
 
-def _resume_path(data_dir: Path) -> Path:
-    return data_dir / RESUME_SUBPATH / "resume.md"
+_UPDATE_FUNCTIONS = {
+    "experience": update_experience,
+    "education": update_education,
+    "skills": update_skill,
+}
+
+_REMOVE_FUNCTIONS = {
+    "experience": remove_experience,
+    "education": remove_education,
+    "skills": remove_skill,
+}
 
 
-def update_section(section: str, data: dict[str, Any], data_dir: Path) -> str:
+def update_section(section: str, data: dict[str, Any], conn: sqlite3.Connection) -> str:
     """Update a non-list section (contact or summary)."""
     logger.info("update_section invoked, section=%s", section)
     if section not in SECTION_UPDATE:
@@ -36,29 +60,29 @@ def update_section(section: str, data: dict[str, Any], data_dir: Path) -> str:
             f"Must be one of: {', '.join(SECTION_UPDATE)}"
         )
 
-    path = _resume_path(data_dir)
-    resume = load_resume(path)
-
     if section == "contact":
-        known = set(type(resume.contact).model_fields.keys())
-        filtered = {k: v for k, v in data.items() if k in known}
-        if not filtered:
-            raise ValueError("At least one contact field must be provided")
-        updated = resume.contact.model_copy(update=filtered)
-        resume.contact = updated
-        save_resume(path, resume)
+        contact_fields = {
+            "name",
+            "email",
+            "phone",
+            "location",
+            "linkedin",
+            "website",
+            "github",
+        }
+        filtered = {k: v for k, v in data.items() if k in contact_fields}
+        save_contact(conn, data)
         return f"Updated contact fields: {', '.join(filtered.keys())}"
 
     # summary
     text = data.get("text", "")
     if not text:
         raise ValueError("Summary text must not be empty")
-    resume.summary = text
-    save_resume(path, resume)
+    save_summary(conn, text)
     return "Updated summary"
 
 
-def add_entry(section: str, data: dict[str, Any], data_dir: Path) -> str:
+def add_entry(section: str, data: dict[str, Any], conn: sqlite3.Connection) -> str:
     """Add an entry to a list-based section."""
     logger.info("add_entry invoked, section=%s", section)
     if section not in SECTION_LIST:
@@ -67,35 +91,25 @@ def add_entry(section: str, data: dict[str, Any], data_dir: Path) -> str:
             f"Must be one of: {', '.join(SECTION_LIST)}"
         )
 
-    path = _resume_path(data_dir)
-    resume = load_resume(path)
-    model_cls = _LIST_MODELS[section]
+    add_fn = _ADD_FUNCTIONS[section]
 
     try:
-        entry = model_cls(**data)
-    except ValidationError as e:
-        fields = [err["loc"][0] for err in e.errors() if err["loc"]]
-        names = ", ".join(str(f) for f in fields)
-        raise ValueError(f"Missing required fields for {section}: {names}") from e
+        entry = add_fn(conn, data)
+    except (ValidationError, TypeError) as e:
+        if isinstance(e, ValidationError):
+            fields = [err["loc"][0] for err in e.errors() if err["loc"]]
+            names = ", ".join(str(f) for f in fields)
+            raise ValueError(f"Missing required fields for {section}: {names}") from e
+        raise
+    except ValueError:
+        raise
 
-    entries: list[Any] = getattr(resume, section)
-
-    # Duplicate skill check
-    if section == "skills" and isinstance(entry, Skill):
-        existing_names = {s.name.lower() for s in entries}
-        if entry.name.lower() in existing_names:
-            existing = next(s for s in entries if s.name.lower() == entry.name.lower())
-            raise ValueError(
-                f"Skill '{entry.name}' already exists "
-                f"under category '{existing.category}'"
-            )
-
-    entries.insert(0, entry)
-    save_resume(path, resume)
     return f"Added {section} entry: {_entry_summary(section, entry)}"
 
 
-def update_entry(section: str, index: int, data: dict[str, Any], data_dir: Path) -> str:
+def update_entry(
+    section: str, index: int, data: dict[str, Any], conn: sqlite3.Connection
+) -> str:
     """Update an entry in a list-based section by index."""
     logger.info("update_entry invoked, section=%s, index=%d", section, index)
     if section not in SECTION_LIST:
@@ -107,31 +121,14 @@ def update_entry(section: str, index: int, data: dict[str, Any], data_dir: Path)
     if not data:
         raise ValueError("At least one field must be provided to update")
 
-    path = _resume_path(data_dir)
-    resume = load_resume(path)
-    entries: list[Any] = getattr(resume, section)
+    update_fn = _UPDATE_FUNCTIONS[section]
+    updated = update_fn(conn, index, data)
 
-    if index < 0 or index >= len(entries):
-        raise ValueError(
-            f"{section.capitalize()} index {index} out of range. "
-            f"Resume has {len(entries)} {section} entries."
-        )
-
-    existing = entries[index]
-
-    # For skills, handle category=None/empty → "Other"
-    if section == "skills" and "category" in data:
-        if not data["category"]:
-            data["category"] = "Other"
-
-    updated = existing.model_copy(update=data)
-    entries[index] = updated
-    save_resume(path, resume)
     summary = _entry_summary(section, updated)
     return f"Updated {section} entry at index {index}: {summary}"
 
 
-def remove_entry(section: str, index: int, data_dir: Path) -> str:
+def remove_entry(section: str, index: int, conn: sqlite3.Connection) -> str:
     """Remove an entry from a list-based section by index."""
     logger.info("remove_entry invoked, section=%s, index=%d", section, index)
     if section not in SECTION_LIST:
@@ -140,18 +137,9 @@ def remove_entry(section: str, index: int, data_dir: Path) -> str:
             f"Must be one of: {', '.join(SECTION_LIST)}"
         )
 
-    path = _resume_path(data_dir)
-    resume = load_resume(path)
-    entries: list[Any] = getattr(resume, section)
+    remove_fn = _REMOVE_FUNCTIONS[section]
+    removed = remove_fn(conn, index)
 
-    if index < 0 or index >= len(entries):
-        raise ValueError(
-            f"{section.capitalize()} index {index} out of range. "
-            f"Resume has {len(entries)} {section} entries."
-        )
-
-    removed = entries.pop(index)
-    save_resume(path, resume)
     return f"Removed {section} entry: {_entry_summary(section, removed)}"
 
 

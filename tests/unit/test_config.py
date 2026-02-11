@@ -54,41 +54,6 @@ class TestResolveDataDir:
         assert str(result) in caplog.text
 
 
-class TestEnsureDataDir:
-    """Tests for directory creation on startup."""
-
-    def test_creates_jobs_resume_structure(self, tmp_path: Path) -> None:
-        from persona.config import ensure_data_dir
-
-        ensure_data_dir(tmp_path)
-        assert (tmp_path / "jobs" / "resume").is_dir()
-
-    def test_creates_parent_if_missing(self, tmp_path: Path) -> None:
-        from persona.config import ensure_data_dir
-
-        data_dir = tmp_path / "nonexistent" / "deep" / "path"
-        ensure_data_dir(data_dir)
-        assert (data_dir / "jobs" / "resume").is_dir()
-
-    def test_idempotent_on_existing_structure(self, tmp_data_dir: Path) -> None:
-        from persona.config import ensure_data_dir
-
-        # Should not raise when structure already exists
-        ensure_data_dir(tmp_data_dir)
-        assert (tmp_data_dir / "jobs" / "resume").is_dir()
-
-    def test_error_on_uncreatable_path(self, tmp_path: Path) -> None:
-        from persona.config import ensure_data_dir
-
-        # Create a file where a directory is expected
-        blocker = tmp_path / "blocker"
-        blocker.write_text("I am a file")
-        data_dir = blocker / "nested"
-
-        with pytest.raises((OSError, ValueError)):
-            ensure_data_dir(data_dir)
-
-
 class TestConfigureLogging:
     """Tests for logging configuration."""
 
