@@ -1,24 +1,19 @@
 <!--
 Sync Impact Report
 ===================
-- Version change: 1.3.0 → 1.4.0
+- Version change: 1.4.0 → 1.5.0
 - Modified principles: None
 - Added sections: None
 - Removed sections: None
 - Modified sections:
-  - Development Workflow > General Workflow > Branching: switched from
-    in-repo `git checkout -b` to `git worktree add` workflow for parallel
-    feature development. Branch creation is now the developer's
-    responsibility via git worktree; spec-kit scripts only create spec
-    directories and files. Changed branch naming convention from
-    `feature/<NNN>-<name>` to `feat-<NNN>-<name>` to avoid `/` in
-    branch names which simplifies worktree directory management.
+  - Development Workflow > General Workflow: Added "README updates" bullet
+    requiring every feature to include a task updating README.md to reflect
+    user-visible changes.
 - Templates requiring updates:
   - .specify/templates/plan-template.md ✅ no changes needed (generic)
   - .specify/templates/spec-template.md ✅ no changes needed (generic)
   - .specify/templates/tasks-template.md ✅ no changes needed (generic)
-- Scripts requiring updates:
-  - .specify/scripts/bash/create-new-feature.sh ✅ removed git checkout -b
+- Scripts requiring updates: None
 - Follow-up TODOs: None
 -->
 
@@ -147,6 +142,11 @@ runs before committing to verify the codebase is clean.
   schema, output schema) → write failing contract test (TDD red) →
   implement handler until tests pass (TDD green) → refactor →
   verify via MCP Inspector or client.
+- **README updates**: Every feature MUST include a task to update
+  `README.md` to reflect user-visible changes (new capabilities,
+  changed configuration, modified data formats, new environment
+  variables). The README is the primary user-facing documentation
+  and MUST stay current with the codebase.
 - **Release**: Version in `pyproject.toml` follows SemVer. Publish
   to PyPI triggers on tagged releases.
 
@@ -163,4 +163,4 @@ these principles. Amendments require:
    - PATCH: Wording clarifications or typo fixes.
 3. Propagation check across all `.specify/templates/` files.
 
-**Version**: 1.4.0 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-10
+**Version**: 1.5.0 | **Ratified**: 2026-02-07 | **Last Amended**: 2026-02-11
