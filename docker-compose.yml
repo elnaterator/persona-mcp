@@ -8,7 +8,7 @@ services:
     image: persona:latest
     container_name: persona
     ports:
-      - "${PERSONA_PORT:-8000}:8000"
+      - "${PERSONA_PORT:-8000}:${PERSONA_PORT:-8000}"
     volumes:
       - ./data:/data
     environment:
@@ -17,7 +17,7 @@ services:
       - PERSONA_CORS_ORIGINS=${PERSONA_CORS_ORIGINS:-}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; import os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PERSONA_PORT\", \"8000\")}/health')"]
       interval: 30s
       timeout: 3s
       retries: 3

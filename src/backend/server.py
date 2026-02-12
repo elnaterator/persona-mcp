@@ -181,3 +181,7 @@ def main() -> None:
         port = resolve_port()
         app = create_app()
         uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+if __name__ == "__main__":
+    main()
