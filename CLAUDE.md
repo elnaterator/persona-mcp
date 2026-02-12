@@ -38,6 +38,10 @@ tests/
 - Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action (feature/002-ci-pipeline)
 - Python 3.11+ + `mcp` (MCP SDK), `sqlite3` (stdlib — replaces `python-frontmatter`) (feat-003-sqlite)
 - SQLite via stdlib `sqlite3`, database file at `{data_dir}/persona.db` (feat-003-sqlite)
+- Python 3.11+ + FastMCP >=2.3.0, FastAPI >=0.100.0, uvicorn >=0.20.0 (feat-004-rest-api)
+- SQLite via stdlib `sqlite3` (existing, unchanged) (feat-004-rest-api)
+- Python 3.11+ + `fastmcp>=2.3.0`, `fastapi>=0.100.0`, `uvicorn>=0.20.0` (replaces `mcp>=1.0.0`) (feat-004-rest-api)
+- SQLite via stdlib `sqlite3` (existing, unchanged) with `DBConnection` protocol for future DB swaps (feat-004-rest-api)
 
 ## Recent Changes
 - feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action

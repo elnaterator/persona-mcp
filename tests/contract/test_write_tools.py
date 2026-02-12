@@ -11,8 +11,8 @@ class TestUpdateSection:
     def test_update_contact_partial(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import update_section
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import update_section
 
         update_section(
             section="contact",
@@ -26,8 +26,8 @@ class TestUpdateSection:
         assert contact["phone"] == "+1-555-0100"
 
     def test_update_summary(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import update_section
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import update_section
 
         update_section(
             section="summary",
@@ -39,7 +39,7 @@ class TestUpdateSection:
         assert summary == "A brand new summary."
 
     def test_error_on_invalid_section(self, db_conn: sqlite3.Connection) -> None:
-        from persona.tools.write import update_section
+        from backend.tools.write import update_section
 
         with pytest.raises(ValueError, match="Invalid section"):
             update_section(
@@ -51,7 +51,7 @@ class TestUpdateSection:
     def test_error_on_empty_contact_update(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import update_section
+        from backend.tools.write import update_section
 
         with pytest.raises(ValueError, match="At least one contact field"):
             update_section(section="contact", data={}, conn=db_conn_with_data)
@@ -59,7 +59,7 @@ class TestUpdateSection:
     def test_error_on_empty_summary_text(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import update_section
+        from backend.tools.write import update_section
 
         with pytest.raises(ValueError, match="Summary text must not be empty"):
             update_section(section="summary", data={"text": ""}, conn=db_conn_with_data)
@@ -71,8 +71,8 @@ class TestAddEntry:
     def test_add_experience_prepended(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import add_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import add_entry
 
         add_entry(
             section="experience",
@@ -93,8 +93,8 @@ class TestAddEntry:
         assert experience[0]["company"] == "NewCo"
 
     def test_add_education(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import add_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import add_entry
 
         add_entry(
             section="education",
@@ -113,8 +113,8 @@ class TestAddEntry:
     def test_add_skill_with_category(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import add_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import add_entry
 
         add_entry(
             section="skills",
@@ -130,8 +130,8 @@ class TestAddEntry:
     def test_add_skill_default_category(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import add_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import add_entry
 
         add_entry(
             section="skills",
@@ -147,7 +147,7 @@ class TestAddEntry:
     def test_error_on_missing_required_fields(
         self, db_conn: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import add_entry
+        from backend.tools.write import add_entry
 
         with pytest.raises(ValueError, match="required"):
             add_entry(
@@ -159,7 +159,7 @@ class TestAddEntry:
     def test_error_on_duplicate_skill(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import add_entry
+        from backend.tools.write import add_entry
 
         with pytest.raises(ValueError, match="already exists"):
             add_entry(
@@ -169,7 +169,7 @@ class TestAddEntry:
             )
 
     def test_error_on_invalid_section(self, db_conn: sqlite3.Connection) -> None:
-        from persona.tools.write import add_entry
+        from backend.tools.write import add_entry
 
         with pytest.raises(ValueError, match="Invalid section"):
             add_entry(section="contact", data={"name": "x"}, conn=db_conn)
@@ -181,8 +181,8 @@ class TestUpdateEntry:
     def test_update_experience_by_index(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import update_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import update_entry
 
         update_entry(
             section="experience",
@@ -198,8 +198,8 @@ class TestUpdateEntry:
     def test_update_education_by_index(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import update_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import update_entry
 
         update_entry(
             section="education",
@@ -212,8 +212,8 @@ class TestUpdateEntry:
         assert education[1]["honors"] == "Summa Cum Laude"
 
     def test_update_skill_by_index(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import update_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import update_entry
 
         update_entry(
             section="skills",
@@ -228,7 +228,7 @@ class TestUpdateEntry:
     def test_error_on_out_of_range_index(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import update_entry
+        from backend.tools.write import update_entry
 
         with pytest.raises(ValueError, match="out of range"):
             update_entry(
@@ -239,7 +239,7 @@ class TestUpdateEntry:
             )
 
     def test_error_on_empty_data(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.write import update_entry
+        from backend.tools.write import update_entry
 
         with pytest.raises(ValueError, match="At least one field"):
             update_entry(
@@ -256,8 +256,8 @@ class TestRemoveEntry:
     def test_remove_experience_by_index(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import remove_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import remove_entry
 
         remove_entry(section="experience", index=0, conn=db_conn_with_data)
 
@@ -268,8 +268,8 @@ class TestRemoveEntry:
     def test_remove_education_by_index(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import remove_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import remove_entry
 
         remove_entry(section="education", index=1, conn=db_conn_with_data)
 
@@ -278,8 +278,8 @@ class TestRemoveEntry:
         assert education[0]["institution"] == "Stanford University"
 
     def test_remove_skill_by_index(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import remove_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import remove_entry
 
         skills_before = get_resume_section(section="skills", conn=db_conn_with_data)
         count_before = len(skills_before)
@@ -294,13 +294,13 @@ class TestRemoveEntry:
     def test_error_on_out_of_range_index(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import remove_entry
+        from backend.tools.write import remove_entry
 
         with pytest.raises(ValueError, match="out of range"):
             remove_entry(section="experience", index=99, conn=db_conn_with_data)
 
     def test_error_on_invalid_section(self, db_conn: sqlite3.Connection) -> None:
-        from persona.tools.write import remove_entry
+        from backend.tools.write import remove_entry
 
         with pytest.raises(ValueError, match="Invalid section"):
             remove_entry(section="contact", index=0, conn=db_conn)

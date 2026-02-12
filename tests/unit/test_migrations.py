@@ -9,7 +9,7 @@ class TestApplyMigrations:
     """Tests for the migration framework."""
 
     def test_applies_v0_to_v1_migration(self) -> None:
-        from persona.migrations import SCHEMA_VERSION, apply_migrations
+        from backend.migrations import SCHEMA_VERSION, apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -20,7 +20,7 @@ class TestApplyMigrations:
         conn.close()
 
     def test_v0_to_v1_creates_all_tables(self) -> None:
-        from persona.migrations import apply_migrations
+        from backend.migrations import apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -39,7 +39,7 @@ class TestApplyMigrations:
         conn.close()
 
     def test_no_op_when_already_current(self) -> None:
-        from persona.migrations import apply_migrations
+        from backend.migrations import apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -53,7 +53,7 @@ class TestApplyMigrations:
         conn.close()
 
     def test_raises_schema_version_error_when_db_ahead(self) -> None:
-        from persona.migrations import SchemaVersionError, apply_migrations
+        from backend.migrations import SchemaVersionError, apply_migrations
 
         conn = sqlite3.connect(":memory:")
         conn.execute("PRAGMA user_version = 999")
@@ -63,7 +63,7 @@ class TestApplyMigrations:
         conn.close()
 
     def test_schema_version_error_has_versions(self) -> None:
-        from persona.migrations import SchemaVersionError
+        from backend.migrations import SchemaVersionError
 
         err = SchemaVersionError(db_version=5, code_version=1)
         assert err.db_version == 5
@@ -72,7 +72,7 @@ class TestApplyMigrations:
         assert "1" in str(err)
 
     def test_migration_error_has_context(self) -> None:
-        from persona.migrations import MigrationError
+        from backend.migrations import MigrationError
 
         cause = RuntimeError("bad sql")
         err = MigrationError(from_version=0, to_version=1, cause=cause)
@@ -82,7 +82,7 @@ class TestApplyMigrations:
 
     def test_rollback_on_migration_failure(self) -> None:
         """A failed migration should leave the DB at the pre-migration version."""
-        from persona.migrations import (
+        from backend.migrations import (
             MIGRATIONS,
             MigrationError,
             apply_migrations,
@@ -120,7 +120,7 @@ class TestV0ToV1Schema:
     """Tests for the v0→v1 migration schema details."""
 
     def test_contact_singleton_constraint(self) -> None:
-        from persona.migrations import apply_migrations
+        from backend.migrations import apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -131,7 +131,7 @@ class TestV0ToV1Schema:
         conn.close()
 
     def test_summary_singleton_constraint(self) -> None:
-        from persona.migrations import apply_migrations
+        from backend.migrations import apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -142,7 +142,7 @@ class TestV0ToV1Schema:
         conn.close()
 
     def test_skill_unique_name_constraint(self) -> None:
-        from persona.migrations import apply_migrations
+        from backend.migrations import apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -157,7 +157,7 @@ class TestV0ToV1Schema:
         conn.close()
 
     def test_experience_has_position_column(self) -> None:
-        from persona.migrations import apply_migrations
+        from backend.migrations import apply_migrations
 
         conn = sqlite3.connect(":memory:")
         apply_migrations(conn)
@@ -175,7 +175,7 @@ class TestMultiStepMigration:
 
     def test_mock_v1_to_v2_migration_preserves_data(self) -> None:
         """Simulate a v1→v2 migration and verify data is preserved."""
-        from persona.migrations import MIGRATIONS, apply_migrations
+        from backend.migrations import MIGRATIONS, apply_migrations
 
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
@@ -226,7 +226,7 @@ class TestMultiStepMigration:
 
     def test_version_incremented_correctly_across_multiple_migrations(self) -> None:
         """Apply multiple migrations sequentially and verify version tracking."""
-        from persona.migrations import MIGRATIONS, apply_migrations
+        from backend.migrations import MIGRATIONS, apply_migrations
 
         conn = sqlite3.connect(":memory:")
 

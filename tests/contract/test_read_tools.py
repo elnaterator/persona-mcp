@@ -11,7 +11,7 @@ class TestGetResume:
     def test_returns_full_resume_from_populated_db(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume
+        from backend.tools.read import get_resume
 
         result = get_resume(conn=db_conn_with_data)
 
@@ -26,7 +26,7 @@ class TestGetResume:
     def test_returns_empty_resume_on_empty_db(
         self, db_conn: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume
+        from backend.tools.read import get_resume
 
         result = get_resume(conn=db_conn)
 
@@ -41,7 +41,7 @@ class TestGetResumeSection:
     """Contract tests for the get_resume_section MCP tool."""
 
     def test_returns_contact_info(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         result = get_resume_section(section="contact", conn=db_conn_with_data)
 
@@ -50,7 +50,7 @@ class TestGetResumeSection:
         assert result["phone"] == "+1-555-0100"
 
     def test_returns_summary(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         result = get_resume_section(section="summary", conn=db_conn_with_data)
 
@@ -60,7 +60,7 @@ class TestGetResumeSection:
     def test_returns_experience_list(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         result = get_resume_section(section="experience", conn=db_conn_with_data)
 
@@ -72,7 +72,7 @@ class TestGetResumeSection:
     def test_returns_education_list(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         result = get_resume_section(section="education", conn=db_conn_with_data)
 
@@ -81,7 +81,7 @@ class TestGetResumeSection:
         assert result[0]["institution"] == "Stanford University"
 
     def test_returns_skills_list(self, db_conn_with_data: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         result = get_resume_section(section="skills", conn=db_conn_with_data)
 
@@ -91,7 +91,7 @@ class TestGetResumeSection:
         assert len(python_skills) == 1
 
     def test_error_on_invalid_section(self, db_conn: sqlite3.Connection) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         with pytest.raises(ValueError, match="Invalid section"):
             get_resume_section(section="invalid", conn=db_conn)

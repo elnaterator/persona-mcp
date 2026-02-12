@@ -10,7 +10,7 @@ class TestServerAutoInit:
     """Integration tests for database auto-initialization (US2)."""
 
     def test_auto_creates_data_dir_and_db(self, tmp_path: Path) -> None:
-        from persona.database import init_database
+        from backend.database import init_database
 
         data_dir = tmp_path / "fresh" / "data"
         conn = init_database(data_dir)
@@ -20,8 +20,8 @@ class TestServerAutoInit:
         conn.close()
 
     def test_schema_at_current_version_after_init(self, tmp_path: Path) -> None:
-        from persona.database import init_database
-        from persona.migrations import SCHEMA_VERSION
+        from backend.database import init_database
+        from backend.migrations import SCHEMA_VERSION
 
         conn = init_database(tmp_path)
         version = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -30,7 +30,7 @@ class TestServerAutoInit:
 
     def test_transparent_schema_upgrade_on_restart(self, tmp_path: Path) -> None:
         """Simulates server restart with a pending migration."""
-        from persona.migrations import MIGRATIONS, apply_migrations
+        from backend.migrations import MIGRATIONS, apply_migrations
 
         # First "startup" — create DB at v1
         db_path = tmp_path / "persona.db"
@@ -70,8 +70,8 @@ class TestServerAutoInit:
         """Server should refuse to start if DB version > code version."""
         import pytest
 
-        from persona.database import init_database
-        from persona.migrations import SchemaVersionError
+        from backend.database import init_database
+        from backend.migrations import SchemaVersionError
 
         # Create DB and set future version
         conn = init_database(tmp_path)
@@ -90,7 +90,7 @@ class TestServerReadTools:
     def test_get_resume_returns_full_data(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume
+        from backend.tools.read import get_resume
 
         result = get_resume(conn=db_conn_with_data)
 
@@ -103,7 +103,7 @@ class TestServerReadTools:
     def test_get_resume_section_contact(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         contact = get_resume_section(section="contact", conn=db_conn_with_data)
 
@@ -113,7 +113,7 @@ class TestServerReadTools:
     def test_get_resume_section_experience(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
+        from backend.tools.read import get_resume_section
 
         experience = get_resume_section(section="experience", conn=db_conn_with_data)
 
@@ -128,7 +128,7 @@ class TestServerReadTools:
     def test_result_is_json_serializable(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume
+        from backend.tools.read import get_resume
 
         result = get_resume(conn=db_conn_with_data)
 
@@ -142,7 +142,7 @@ class TestServerReadTools:
         """SC-003: System starts and is usable within 2 seconds."""
         import json as json_mod
 
-        from persona.tools.read import get_resume
+        from backend.tools.read import get_resume
 
         # Insert 50 experience entries
         for i in range(50):
@@ -176,8 +176,8 @@ class TestServerWriteTools:
     def test_add_read_update_remove_experience(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import add_entry, remove_entry, update_entry
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import add_entry, remove_entry, update_entry
 
         # Add
         add_entry(
@@ -211,8 +211,8 @@ class TestServerWriteTools:
     def test_update_contact_and_summary(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.read import get_resume_section
-        from persona.tools.write import update_section
+        from backend.tools.read import get_resume_section
+        from backend.tools.write import update_section
 
         # Update contact
         update_section(
@@ -238,7 +238,7 @@ class TestServerWriteTools:
     def test_write_results_are_json_serializable(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        from persona.tools.write import add_entry
+        from backend.tools.write import add_entry
 
         result = add_entry(
             section="skills",

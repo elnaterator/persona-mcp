@@ -6,9 +6,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from persona.config import DB_FILENAME
-from persona.migrations import apply_migrations
-from persona.models import (
+from backend.config import DB_FILENAME
+from backend.db import DBConnection
+from backend.migrations import apply_migrations
+from backend.models import (
     ContactInfo,
     Education,
     Resume,
@@ -19,7 +20,7 @@ from persona.models import (
 logger = logging.getLogger("persona")
 
 
-def init_database(data_dir: Path) -> sqlite3.Connection:
+def init_database(data_dir: Path) -> DBConnection:
     """Initialize the SQLite database, creating it if needed.
 
     Creates the data directory if it doesn't exist, opens a connection with
@@ -47,7 +48,7 @@ def init_database(data_dir: Path) -> sqlite3.Connection:
 # --- Read operations ---
 
 
-def load_resume(conn: sqlite3.Connection) -> Resume:
+def load_resume(conn: DBConnection) -> Resume:
     """Load the complete resume from all tables."""
     return Resume(
         contact=_load_contact(conn),
@@ -59,7 +60,7 @@ def load_resume(conn: sqlite3.Connection) -> Resume:
 
 
 def load_section(
-    conn: sqlite3.Connection, section: str
+    conn: DBConnection, section: str
 ) -> ContactInfo | str | list[WorkExperience] | list[Education] | list[Skill]:
     """Load a single resume section by name."""
     loaders = {
@@ -76,7 +77,7 @@ def load_section(
     return loaders[section](conn)
 
 
-def _load_contact(conn: sqlite3.Connection) -> ContactInfo:
+def _load_contact(conn: DBConnection) -> ContactInfo:
     row = conn.execute("SELECT * FROM contact WHERE id = 1").fetchone()
     if row is None:
         return ContactInfo()
@@ -91,14 +92,14 @@ def _load_contact(conn: sqlite3.Connection) -> ContactInfo:
     )
 
 
-def _load_summary(conn: sqlite3.Connection) -> str:
+def _load_summary(conn: DBConnection) -> str:
     row = conn.execute("SELECT text FROM summary WHERE id = 1").fetchone()
     if row is None:
         return ""
     return row["text"]
 
 
-def _load_experience(conn: sqlite3.Connection) -> list[WorkExperience]:
+def _load_experience(conn: DBConnection) -> list[WorkExperience]:
     rows = conn.execute("SELECT * FROM experience ORDER BY position").fetchall()
     return [
         WorkExperience(
@@ -113,7 +114,7 @@ def _load_experience(conn: sqlite3.Connection) -> list[WorkExperience]:
     ]
 
 
-def _load_education(conn: sqlite3.Connection) -> list[Education]:
+def _load_education(conn: DBConnection) -> list[Education]:
     rows = conn.execute("SELECT * FROM education ORDER BY position").fetchall()
     return [
         Education(
@@ -128,7 +129,7 @@ def _load_education(conn: sqlite3.Connection) -> list[Education]:
     ]
 
 
-def _load_skills(conn: sqlite3.Connection) -> list[Skill]:
+def _load_skills(conn: DBConnection) -> list[Skill]:
     rows = conn.execute("SELECT * FROM skill ORDER BY id").fetchall()
     return [Skill(name=row["name"], category=row["category"]) for row in rows]
 
@@ -136,7 +137,7 @@ def _load_skills(conn: sqlite3.Connection) -> list[Skill]:
 # --- Write operations: singletons ---
 
 
-def save_contact(conn: sqlite3.Connection, data: dict[str, Any]) -> None:
+def save_contact(conn: DBConnection, data: dict[str, Any]) -> None:
     """Save contact info with partial merge semantics."""
     known_fields = set(ContactInfo.model_fields.keys())
     filtered = {k: v for k, v in data.items() if k in known_fields}
@@ -163,7 +164,7 @@ def save_contact(conn: sqlite3.Connection, data: dict[str, Any]) -> None:
     conn.commit()
 
 
-def save_summary(conn: sqlite3.Connection, text: str) -> None:
+def save_summary(conn: DBConnection, text: str) -> None:
     """Save summary text (full replace)."""
     if not text:
         raise ValueError("Summary text must not be empty")
@@ -174,7 +175,7 @@ def save_summary(conn: sqlite3.Connection, text: str) -> None:
 # --- Write operations: list entries ---
 
 
-def add_experience(conn: sqlite3.Connection, data: dict[str, Any]) -> WorkExperience:
+def add_experience(conn: DBConnection, data: dict[str, Any]) -> WorkExperience:
     """Add a new experience entry at position 0 (prepend)."""
     entry = WorkExperience(**data)
     conn.execute("UPDATE experience SET position = position + 1")
@@ -196,7 +197,7 @@ def add_experience(conn: sqlite3.Connection, data: dict[str, Any]) -> WorkExperi
 
 
 def update_experience(
-    conn: sqlite3.Connection, index: int, data: dict[str, Any]
+    conn: DBConnection, index: int, data: dict[str, Any]
 ) -> WorkExperience:
     """Update an experience entry at the given index (0-based by position)."""
     row = conn.execute(
@@ -236,7 +237,7 @@ def update_experience(
     return updated
 
 
-def remove_experience(conn: sqlite3.Connection, index: int) -> WorkExperience:
+def remove_experience(conn: DBConnection, index: int) -> WorkExperience:
     """Remove an experience entry by index and compact positions."""
     row = conn.execute(
         "SELECT * FROM experience WHERE position = ?", (index,)
@@ -266,7 +267,7 @@ def remove_experience(conn: sqlite3.Connection, index: int) -> WorkExperience:
     return removed
 
 
-def add_education(conn: sqlite3.Connection, data: dict[str, Any]) -> Education:
+def add_education(conn: DBConnection, data: dict[str, Any]) -> Education:
     """Add a new education entry at position 0 (prepend)."""
     entry = Education(**data)
     conn.execute("UPDATE education SET position = position + 1")
@@ -287,9 +288,7 @@ def add_education(conn: sqlite3.Connection, data: dict[str, Any]) -> Education:
     return entry
 
 
-def update_education(
-    conn: sqlite3.Connection, index: int, data: dict[str, Any]
-) -> Education:
+def update_education(conn: DBConnection, index: int, data: dict[str, Any]) -> Education:
     """Update an education entry at the given index (0-based by position)."""
     row = conn.execute(
         "SELECT * FROM education WHERE position = ?", (index,)
@@ -328,7 +327,7 @@ def update_education(
     return updated
 
 
-def remove_education(conn: sqlite3.Connection, index: int) -> Education:
+def remove_education(conn: DBConnection, index: int) -> Education:
     """Remove an education entry by index and compact positions."""
     row = conn.execute(
         "SELECT * FROM education WHERE position = ?", (index,)
@@ -358,7 +357,7 @@ def remove_education(conn: sqlite3.Connection, index: int) -> Education:
     return removed
 
 
-def add_skill(conn: sqlite3.Connection, data: dict[str, Any]) -> Skill:
+def add_skill(conn: DBConnection, data: dict[str, Any]) -> Skill:
     """Add a new skill entry. Rejects case-insensitive duplicates."""
     entry = Skill(**data)
 
@@ -380,7 +379,7 @@ def add_skill(conn: sqlite3.Connection, data: dict[str, Any]) -> Skill:
     return entry
 
 
-def update_skill(conn: sqlite3.Connection, index: int, data: dict[str, Any]) -> Skill:
+def update_skill(conn: DBConnection, index: int, data: dict[str, Any]) -> Skill:
     """Update a skill entry at the given index (0-based by id ordering)."""
     rows = conn.execute("SELECT * FROM skill ORDER BY id").fetchall()
     if index < 0 or index >= len(rows):
@@ -400,7 +399,7 @@ def update_skill(conn: sqlite3.Connection, index: int, data: dict[str, Any]) -> 
     return updated
 
 
-def remove_skill(conn: sqlite3.Connection, index: int) -> Skill:
+def remove_skill(conn: DBConnection, index: int) -> Skill:
     """Remove a skill entry by index (0-based by id ordering)."""
     rows = conn.execute("SELECT * FROM skill ORDER BY id").fetchall()
     if index < 0 or index >= len(rows):

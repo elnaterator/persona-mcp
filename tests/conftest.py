@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from persona.migrations import MIGRATIONS, apply_migrations
+from backend.migrations import MIGRATIONS, apply_migrations
 
 # --- SQLite fixtures ---
 
@@ -209,3 +209,22 @@ def db_conn_with_data(db_conn: sqlite3.Connection) -> sqlite3.Connection:
     """Database connection pre-populated with sample resume data."""
     populate_sample_data(db_conn)
     return db_conn
+
+
+# --- ResumeService fixtures ---
+
+
+@pytest.fixture
+def resume_service(db_conn: sqlite3.Connection):  # type: ignore[no-untyped-def]
+    """ResumeService backed by an empty in-memory database."""
+    from backend.resume_service import ResumeService
+
+    return ResumeService(db_conn)
+
+
+@pytest.fixture
+def resume_service_with_data(db_conn_with_data: sqlite3.Connection):  # type: ignore[no-untyped-def]
+    """ResumeService backed by a database pre-populated with sample data."""
+    from backend.resume_service import ResumeService
+
+    return ResumeService(db_conn_with_data)

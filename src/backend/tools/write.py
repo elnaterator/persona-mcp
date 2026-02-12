@@ -1,12 +1,11 @@
 """Write tools for persona MCP server — update_section, add/update/remove_entry."""
 
 import logging
-import sqlite3
 from typing import Any
 
 from pydantic import ValidationError
 
-from persona.database import (
+from backend.database import (
     add_education,
     add_experience,
     add_skill,
@@ -19,7 +18,8 @@ from persona.database import (
     update_experience,
     update_skill,
 )
-from persona.models import Education, Skill, WorkExperience
+from backend.db import DBConnection
+from backend.models import Education, Skill, WorkExperience
 
 logger = logging.getLogger("persona")
 
@@ -51,7 +51,7 @@ _REMOVE_FUNCTIONS = {
 }
 
 
-def update_section(section: str, data: dict[str, Any], conn: sqlite3.Connection) -> str:
+def update_section(section: str, data: dict[str, Any], conn: DBConnection) -> str:
     """Update a non-list section (contact or summary)."""
     logger.info("update_section invoked, section=%s", section)
     if section not in SECTION_UPDATE:
@@ -82,7 +82,7 @@ def update_section(section: str, data: dict[str, Any], conn: sqlite3.Connection)
     return "Updated summary"
 
 
-def add_entry(section: str, data: dict[str, Any], conn: sqlite3.Connection) -> str:
+def add_entry(section: str, data: dict[str, Any], conn: DBConnection) -> str:
     """Add an entry to a list-based section."""
     logger.info("add_entry invoked, section=%s", section)
     if section not in SECTION_LIST:
@@ -108,7 +108,7 @@ def add_entry(section: str, data: dict[str, Any], conn: sqlite3.Connection) -> s
 
 
 def update_entry(
-    section: str, index: int, data: dict[str, Any], conn: sqlite3.Connection
+    section: str, index: int, data: dict[str, Any], conn: DBConnection
 ) -> str:
     """Update an entry in a list-based section by index."""
     logger.info("update_entry invoked, section=%s, index=%d", section, index)
@@ -128,7 +128,7 @@ def update_entry(
     return f"Updated {section} entry at index {index}: {summary}"
 
 
-def remove_entry(section: str, index: int, conn: sqlite3.Connection) -> str:
+def remove_entry(section: str, index: int, conn: DBConnection) -> str:
     """Remove an entry from a list-based section by index."""
     logger.info("remove_entry invoked, section=%s, index=%d", section, index)
     if section not in SECTION_LIST:
