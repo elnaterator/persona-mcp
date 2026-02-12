@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from persona.migrations import MIGRATIONS, apply_migrations
+from backend.migrations import MIGRATIONS, apply_migrations
 
 # --- SQLite fixtures ---
 
@@ -14,7 +14,7 @@ from persona.migrations import MIGRATIONS, apply_migrations
 @pytest.fixture
 def db_conn() -> Generator[sqlite3.Connection, None, None]:
     """Create an in-memory SQLite database at the current schema version."""
-    conn = sqlite3.connect(":memory:")
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     apply_migrations(conn)
     yield conn
@@ -31,7 +31,7 @@ def db_conn_at_version(
         "db_conn_at_version", [0, 1], indirect=True
     )
     """
-    conn = sqlite3.connect(":memory:")
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     version = request.param
     for i in range(version):
@@ -209,3 +209,22 @@ def db_conn_with_data(db_conn: sqlite3.Connection) -> sqlite3.Connection:
     """Database connection pre-populated with sample resume data."""
     populate_sample_data(db_conn)
     return db_conn
+
+
+# --- ResumeService fixtures ---
+
+
+@pytest.fixture
+def resume_service(db_conn: sqlite3.Connection):  # type: ignore[no-untyped-def]
+    """ResumeService backed by an empty in-memory database."""
+    from backend.resume_service import ResumeService
+
+    return ResumeService(db_conn)
+
+
+@pytest.fixture
+def resume_service_with_data(db_conn_with_data: sqlite3.Connection):  # type: ignore[no-untyped-def]
+    """ResumeService backed by a database pre-populated with sample data."""
+    from backend.resume_service import ResumeService
+
+    return ResumeService(db_conn_with_data)

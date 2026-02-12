@@ -1,24 +1,24 @@
 """Read tools for persona MCP server — get_resume, get_resume_section."""
 
 import logging
-import sqlite3
 from typing import Any
 
-from persona.database import load_resume
+from backend.database import load_resume
+from backend.db import DBConnection
 
 logger = logging.getLogger("persona")
 
 VALID_SECTIONS = ("contact", "summary", "experience", "education", "skills")
 
 
-def get_resume(conn: sqlite3.Connection) -> dict[str, Any]:
+def get_resume(conn: DBConnection) -> dict[str, Any]:
     """Get the full resume as structured data."""
     logger.info("get_resume invoked")
     resume = load_resume(conn)
     return resume.model_dump()
 
 
-def get_resume_section(section: str, conn: sqlite3.Connection) -> Any:
+def get_resume_section(section: str, conn: DBConnection) -> Any:
     """Get a specific resume section by name.
 
     Args:

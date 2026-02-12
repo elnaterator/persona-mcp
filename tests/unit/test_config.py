@@ -13,7 +13,7 @@ class TestResolveDataDir:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("PERSONA_DATA_DIR", raising=False)
-        from persona.config import resolve_data_dir
+        from backend.config import resolve_data_dir
 
         result = resolve_data_dir()
         assert result == Path.home() / ".persona"
@@ -22,7 +22,7 @@ class TestResolveDataDir:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         monkeypatch.setenv("PERSONA_DATA_DIR", str(tmp_path / "custom"))
-        from persona.config import resolve_data_dir
+        from backend.config import resolve_data_dir
 
         result = resolve_data_dir()
         assert result == tmp_path / "custom"
@@ -32,7 +32,7 @@ class TestResolveDataDir:
     ) -> None:
         monkeypatch.setenv("PERSONA_DATA_DIR", "relative/data")
         monkeypatch.chdir(tmp_path)
-        from persona.config import resolve_data_dir
+        from backend.config import resolve_data_dir
 
         result = resolve_data_dir()
         assert result == tmp_path / "relative" / "data"
@@ -46,7 +46,7 @@ class TestResolveDataDir:
     ) -> None:
         monkeypatch.setenv("PERSONA_DATA_DIR", "relative/data")
         monkeypatch.chdir(tmp_path)
-        from persona.config import resolve_data_dir
+        from backend.config import resolve_data_dir
 
         with caplog.at_level(logging.INFO):
             result = resolve_data_dir()
@@ -59,14 +59,14 @@ class TestConfigureLogging:
 
     def test_default_log_level_is_info(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("LOG_LEVEL", raising=False)
-        from persona.config import configure_logging
+        from backend.config import configure_logging
 
         logger = configure_logging()
         assert logger.level == logging.INFO
 
     def test_log_level_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-        from persona.config import configure_logging
+        from backend.config import configure_logging
 
         logger = configure_logging()
         assert logger.level == logging.DEBUG

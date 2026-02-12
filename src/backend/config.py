@@ -7,6 +7,7 @@ from pathlib import Path
 
 DEFAULT_DATA_DIR = "~/.persona"
 DB_FILENAME = "persona.db"
+DEFAULT_PORT = 8000
 
 logger = logging.getLogger("persona")
 
@@ -21,6 +22,23 @@ def resolve_data_dir() -> Path:
     path = Path(raw).expanduser().resolve()
     logger.info("Data directory resolved to: %s", path)
     return path
+
+
+def resolve_port() -> int:
+    """Resolve the HTTP server port from PERSONA_PORT env var (default 8000)."""
+    raw = os.environ.get("PERSONA_PORT", str(DEFAULT_PORT))
+    return int(raw)
+
+
+def resolve_cors_origins() -> list[str]:
+    """Resolve CORS allowed origins from PERSONA_CORS_ORIGINS env var.
+
+    Comma-separated list. Empty/unset = no CORS origins allowed.
+    """
+    raw = os.environ.get("PERSONA_CORS_ORIGINS", "")
+    if not raw.strip():
+        return []
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 def configure_logging() -> logging.Logger:

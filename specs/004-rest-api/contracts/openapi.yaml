@@ -1,0 +1,349 @@
+openapi: "3.1.0"
+info:
+  title: Persona REST API
+  version: "0.2.0"
+  description: REST API for managing personal resume data. Shares backend with the MCP server.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      description: Returns service health status. Used by Docker HEALTHCHECK and load balancers.
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/resume:
+    get:
+      operationId: getResume
+      summary: Get full resume
+      description: Returns the complete resume with all sections.
+      responses:
+        "200":
+          description: Full resume data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+
+  /api/resume/{section}:
+    get:
+      operationId: getResumeSection
+      summary: Get a specific resume section
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SectionName"
+      responses:
+        "200":
+          description: Section data (shape varies by section)
+          content:
+            application/json:
+              schema: {}
+        "404":
+          description: Invalid section name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/resume/contact:
+    put:
+      operationId: updateContact
+      summary: Update contact info (partial merge)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInfo"
+      responses:
+        "200":
+          description: Contact updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/resume/summary:
+    put:
+      operationId: updateSummary
+      summary: Update summary text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Summary updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/resume/{section}/entries:
+    post:
+      operationId: addEntry
+      summary: Add an entry to a list section
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ListSectionName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: Entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid section
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error (missing required fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/resume/{section}/entries/{index}:
+    put:
+      operationId: updateEntry
+      summary: Update an entry in a list section by index
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ListSectionName"
+        - name: index
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Entry updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid section
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Index out of range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: removeEntry
+      summary: Remove an entry from a list section by index
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ListSectionName"
+        - name: index
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Entry removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid section
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Index out of range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    SectionName:
+      type: string
+      enum: [contact, summary, experience, education, skills]
+
+    ListSectionName:
+      type: string
+      enum: [experience, education, skills]
+
+    ContactInfo:
+      type: object
+      properties:
+        name:
+          type: [string, "null"]
+        email:
+          type: [string, "null"]
+        phone:
+          type: [string, "null"]
+        location:
+          type: [string, "null"]
+        linkedin:
+          type: [string, "null"]
+        website:
+          type: [string, "null"]
+        github:
+          type: [string, "null"]
+
+    WorkExperience:
+      type: object
+      required: [title, company]
+      properties:
+        title:
+          type: string
+        company:
+          type: string
+        start_date:
+          type: [string, "null"]
+        end_date:
+          type: [string, "null"]
+        location:
+          type: [string, "null"]
+        highlights:
+          type: array
+          items:
+            type: string
+          default: []
+
+    Education:
+      type: object
+      required: [institution, degree]
+      properties:
+        institution:
+          type: string
+        degree:
+          type: string
+        field:
+          type: [string, "null"]
+        start_date:
+          type: [string, "null"]
+        end_date:
+          type: [string, "null"]
+        honors:
+          type: [string, "null"]
+
+    Skill:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        category:
+          type: [string, "null"]
+          default: Other
+
+    Resume:
+      type: object
+      properties:
+        contact:
+          $ref: "#/components/schemas/ContactInfo"
+        summary:
+          type: string
+        experience:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkExperience"
+        education:
+          type: array
+          items:
+            $ref: "#/components/schemas/Education"
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/Skill"
+
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string

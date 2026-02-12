@@ -19,25 +19,38 @@ make format   # auto-format with ruff
 ## Project Layout
 
 ```
-src/persona/          # main package
-  server.py           # MCP server entrypoint
-  models.py           # data models
+src/backend/          # main package (renamed from persona)
+  server.py           # FastAPI + MCP server entrypoint
+  models.py           # Pydantic data models
   config.py           # configuration
-  resume_store.py     # resume data store
+  database.py         # SQLite operations
+  db.py               # DBConnection protocol
+  resume_service.py   # shared business logic
+  api/                # REST API routes
+    routes.py         # FastAPI route handlers
   tools/              # MCP tool handlers (read.py, write.py)
 tests/
   unit/               # unit tests
-  contract/           # MCP contract tests
-  integration/        # integration tests
+  contract/           # MCP + REST API contract tests
+  integration/        # integration tests (incl. cross-interface)
+docker-compose.yml    # Docker Compose configuration
+Dockerfile            # Multi-stage Docker build
 ```
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
 
 ## Active Technologies
-- Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action (feature/002-ci-pipeline)
-- Python 3.11+ + `mcp` (MCP SDK), `sqlite3` (stdlib — replaces `python-frontmatter`) (feat-003-sqlite)
-- SQLite via stdlib `sqlite3`, database file at `{data_dir}/persona.db` (feat-003-sqlite)
+- Python 3.11+ with type hints and Pydantic validation
+- FastMCP >=2.3.0 for MCP server (streamable-http + stdio)
+- FastAPI >=0.100.0 for REST API
+- uvicorn >=0.20.0 for ASGI HTTP server
+- SQLite via stdlib `sqlite3` with `DBConnection` protocol for DB-agnostic code
+- Docker + Docker Compose for containerized deployment
+- `uv` for dependency management and packaging
+- pytest for testing (unit, contract, integration)
+- ruff for linting and formatting
+- pyright for type checking
 
 ## Recent Changes
 - feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action
