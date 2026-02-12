@@ -34,9 +34,10 @@
 #    - Can update single agents or all existing agent files
 #    - Creates default Claude file if no agent files exist
 #
-# Usage: ./update-agent-context.sh [agent_type]
-# Agent types: claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|shai|q|bob|qoder
-# Leave empty to update all existing agent files
+# Usage: ./update-agent-context.sh
+#
+# This script updates all existing agent context files (e.g., CLAUDE.md, GEMINI.md).
+# Any arguments passed to the script are ignored.
 
 set -e
 
@@ -763,21 +764,12 @@ main() {
         exit 1
     fi
     
-    # Process based on agent type argument
+    # Process all existing agent files
     local success=true
     
-    if [[ -z "$AGENT_TYPE" ]]; then
-        # No specific agent provided - update all existing agent files
-        log_info "No agent specified, updating all existing agent files..."
-        if ! update_all_existing_agents; then
-            success=false
-        fi
-    else
-        # Specific agent provided - update only that agent
-        log_info "Updating specific agent: $AGENT_TYPE"
-        if ! update_specific_agent "$AGENT_TYPE"; then
-            success=false
-        fi
+    log_info "Updating all existing agent files..."
+    if ! update_all_existing_agents; then
+        success=false
     fi
     
     # Print summary
