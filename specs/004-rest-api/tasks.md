@@ -80,14 +80,14 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T020 [US2] Write integration test verifying MCP tools are accessible via streamable-http transport in `tests/integration/test_server.py` (TDD red)
+- [x] T020 [US2] Write integration test verifying MCP tools are accessible via streamable-http transport in `tests/integration/test_server.py` (TDD red)
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Update MCP tool handlers in `src/backend/tools/read.py` and `src/backend/tools/write.py` to use `ResumeService` instead of direct DB calls
-- [ ] T022 [US2] Mount FastMCP app at `/mcp` on the FastAPI instance in `src/backend/server.py` per R-001 (use `mcp.http_app(path="/")` and `combine_lifespans`)
-- [ ] T023 [US2] Verify `--stdio` flag still works for backward-compatible local MCP transport in `src/backend/server.py`
-- [ ] T024 [US2] Run integration tests from T020 and verify MCP-over-HTTP works (TDD green)
+- [x] T021 [US2] Update MCP tool handlers in `src/backend/tools/read.py` and `src/backend/tools/write.py` to use `ResumeService` instead of direct DB calls
+- [x] T022 [US2] Mount FastMCP app at `/mcp` on the FastAPI instance in `src/backend/server.py` per R-001 (use `mcp.http_app(path="/")` and `combine_lifespans`)
+- [x] T023 [US2] Verify `--stdio` flag still works for backward-compatible local MCP transport in `src/backend/server.py`
+- [x] T024 [US2] Run integration tests from T020 and verify MCP-over-HTTP works (TDD green)
 
 **Checkpoint**: MCP tools accessible via both streamable-http (`/mcp`) and stdio (`--stdio`). Existing MCP functionality preserved.
 
@@ -103,13 +103,13 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T025 [P] [US3] Write cross-interface integration test: add entry via REST, read via MCP in `tests/integration/test_cross_interface.py` (TDD red)
-- [ ] T026 [P] [US3] Write cross-interface integration test: update via MCP, read via REST in `tests/integration/test_cross_interface.py` (TDD red)
+- [x] T025 [P] [US3] Write cross-interface integration test: add entry via REST, read via MCP in `tests/integration/test_cross_interface.py` (TDD red)
+- [x] T026 [P] [US3] Write cross-interface integration test: update via MCP, read via REST in `tests/integration/test_cross_interface.py` (TDD red)
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Ensure single `ResumeService` instance is shared between FastAPI routes and MCP tools in `src/backend/server.py` lifespan — verify shared state (TDD green for T025–T026)
-- [ ] T028 [US3] Run cross-interface tests and verify both directions of shared state work (TDD green)
+- [x] T027 [US3] Ensure single `ResumeService` instance is shared between FastAPI routes and MCP tools in `src/backend/server.py` lifespan — verify shared state (TDD green for T025–T026)
+- [x] T028 [US3] Run cross-interface tests and verify both directions of shared state work (TDD green)
 
 **Checkpoint**: Changes via REST are visible via MCP and vice versa. Single source of truth confirmed.
 
@@ -123,12 +123,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T029 [P] [US4] Create `Dockerfile` at repo root — multi-stage build per R-007 (builder with `uv`, slim runtime with `python:3.11-slim`)
-- [ ] T030 [P] [US4] Create `.dockerignore` at repo root (exclude `.git`, `__pycache__`, `tests/`, `.specify/`, `*.db`)
-- [ ] T031 [P] [US4] Create `docker-compose.yml` at repo root — single `persona` service with port mapping, volume mount for `./data:/data`, environment variable passthrough, health check per R-007
-- [ ] T032 [US4] Update `Makefile` — change `make run` to `docker compose up --build`, add `make run-local` for `uv run persona` per R-007
-- [ ] T033 [US4] Build and test Docker image: `docker compose up --build`, verify health check, REST API, and MCP endpoint respond
-- [ ] T034 [US4] Test data persistence: stop container, restart with same volume, verify data preserved
+- [x] T029 [P] [US4] Create `Dockerfile` at repo root — multi-stage build per R-007 (builder with `uv`, slim runtime with `python:3.11-slim`)
+- [x] T030 [P] [US4] Create `.dockerignore` at repo root (exclude `.git`, `__pycache__`, `tests/`, `.specify/`, `*.db`)
+- [x] T031 [P] [US4] Create `docker-compose.yml` at repo root — single `persona` service with port mapping, volume mount for `./data:/data`, environment variable passthrough, health check per R-007
+- [x] T032 [US4] Update `Makefile` — change `make run` to `docker compose up --build`, add `make run-local` for `uv run persona` per R-007
+- [x] T033 [US4] Build and test Docker image: `docker compose up --build`, verify health check, REST API, and MCP endpoint respond
+- [x] T034 [US4] Test data persistence: stop container, restart with same volume, verify data preserved
 
 **Checkpoint**: Docker image builds, container runs both interfaces, data persists across restarts.
 
@@ -138,10 +138,10 @@
 
 **Purpose**: Documentation, cleanup, and final validation
 
-- [ ] T035 Update `README.md` with REST API usage, Docker instructions, new environment variables, and MCP remote client config (per constitution README update rule)
-- [ ] T036 Update `CLAUDE.md` active technologies and project layout sections
-- [ ] T037 Run `make check` (lint + typecheck + test) — all tests pass, no lint errors
-- [ ] T038 Run quickstart.md validation — manually verify all commands from `specs/004-rest-api/quickstart.md` work
+- [x] T035 Update `README.md` with REST API usage, Docker instructions, new environment variables, and MCP remote client config (per constitution README update rule)
+- [x] T036 Update `CLAUDE.md` active technologies and project layout sections
+- [x] T037 Run `make check` (lint + typecheck + test) — all tests pass, no lint errors
+- [x] T038 Run quickstart.md validation — manually verify all commands from `specs/004-rest-api/quickstart.md` work
 
 ---
 
