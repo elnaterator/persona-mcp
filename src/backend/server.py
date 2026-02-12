@@ -1,13 +1,12 @@
 """Persona server — FastAPI REST API + MCP tools, with --stdio backward compat."""
 
 import argparse
-from contextlib import asynccontextmanager
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from backend.api.routes import create_router
 from backend.config import (
@@ -19,8 +18,6 @@ from backend.config import (
 from backend.database import init_database
 from backend.db import DBConnection
 from backend.resume_service import ResumeService
-from backend.tools import read as read_tools
-from backend.tools import write as write_tools
 
 mcp = FastMCP("persona")
 
@@ -38,8 +35,8 @@ def get_resume() -> dict[str, Any]:
 
     Returns contact info, summary, experience, education, and skills.
     """
-    assert _conn is not None
-    return read_tools.get_resume(conn=_conn)
+    assert _service is not None
+    return _service.get_resume().model_dump()
 
 
 @mcp.tool()
@@ -49,8 +46,8 @@ def get_resume_section(section: str) -> Any:
     Args:
         section: One of: contact, summary, experience, education, skills.
     """
-    assert _conn is not None
-    return read_tools.get_resume_section(section=section, conn=_conn)
+    assert _service is not None
+    return _service.get_section(section)
 
 
 @mcp.tool()
@@ -62,8 +59,8 @@ def update_section(section: str, data: dict[str, Any]) -> str:
         data: Fields to update. For contact: any subset of contact fields.
               For summary: {"text": "new summary"}.
     """
-    assert _conn is not None
-    return write_tools.update_section(section=section, data=data, conn=_conn)
+    assert _service is not None
+    return _service.update_section(section, data)
 
 
 @mcp.tool()
@@ -74,8 +71,8 @@ def add_entry(section: str, data: dict[str, Any]) -> str:
         section: One of: experience, education, skills.
         data: Entry fields. Required fields vary by section.
     """
-    assert _conn is not None
-    return write_tools.add_entry(section=section, data=data, conn=_conn)
+    assert _service is not None
+    return _service.add_entry(section, data)
 
 
 @mcp.tool()
@@ -87,8 +84,8 @@ def update_entry(section: str, index: int, data: dict[str, Any]) -> str:
         index: 0-based index of the entry to update.
         data: Fields to update (partial update, omitted fields unchanged).
     """
-    assert _conn is not None
-    return write_tools.update_entry(section=section, index=index, data=data, conn=_conn)
+    assert _service is not None
+    return _service.update_entry(section, index, data)
 
 
 @mcp.tool()
@@ -99,8 +96,8 @@ def remove_entry(section: str, index: int) -> str:
         section: One of: experience, education, skills.
         index: 0-based index of the entry to remove.
     """
-    assert _conn is not None
-    return write_tools.remove_entry(section=section, index=index, conn=_conn)
+    assert _service is not None
+    return _service.remove_entry(section, index)
 
 
 # --- FastAPI application factory ---
@@ -129,13 +126,18 @@ def create_app(
     _conn = conn
     _service = service
 
-    @asynccontextmanager
-    async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
-        yield
+    # Get MCP HTTP app first to access its lifespan
+    mcp_app = mcp.http_app(path="/")
+
+    # Use MCP app's lifespan directly as required by FastMCP
+    # We close the DB connection when the app shuts down via a shutdown event handler
+    app = FastAPI(title="Persona", lifespan=mcp_app.lifespan)
+
+    # Register shutdown event to close DB connection
+    @app.on_event("shutdown")
+    def shutdown_event() -> None:
         if _conn is not None:
             _conn.close()
-
-    app = FastAPI(title="Persona", lifespan=lifespan)
 
     # CORS middleware
     cors_origins = resolve_cors_origins()
@@ -148,7 +150,11 @@ def create_app(
             allow_headers=["*"],
         )
 
+    # Mount REST API routes
     app.include_router(create_router(service))
+
+    # Mount MCP server at /mcp (streamable-http transport)
+    app.mount("/mcp", mcp_app)
 
     return app
 
@@ -164,10 +170,11 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.stdio:
-        global _conn
+        global _conn, _service
         logger = configure_logging()
         data_dir = resolve_data_dir()
         _conn = init_database(data_dir)
+        _service = ResumeService(_conn)
         logger.info("Persona MCP server starting (stdio), data dir: %s", data_dir)
         mcp.run(transport="stdio")
     else:

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  persona:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: persona:latest
+    container_name: persona
+    ports:
+      - "${PERSONA_PORT:-8000}:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      - PERSONA_PORT=${PERSONA_PORT:-8000}
+      - PERSONA_DATA_DIR=/data
+      - PERSONA_CORS_ORIGINS=${PERSONA_CORS_ORIGINS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

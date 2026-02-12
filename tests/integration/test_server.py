@@ -247,3 +247,35 @@ class TestServerWriteTools:
         )
         serialized = json.dumps(result)
         assert isinstance(serialized, str)
+
+
+class TestMCPOverHTTP:
+    """Integration tests for MCP accessible via streamable-http (US2)."""
+
+    def test_mcp_app_mounted(self, db_conn_with_data: sqlite3.Connection) -> None:
+        """Test US2: MCP server is mounted at /mcp endpoint."""
+        from backend.resume_service import ResumeService
+        from backend.server import create_app
+
+        service = ResumeService(db_conn_with_data)
+        app = create_app(service=service, conn=db_conn_with_data)
+
+        # Verify the /mcp route is mounted in the app
+        routes = [getattr(route, "path", None) for route in app.routes]
+        assert "/mcp" in routes, "MCP endpoint should be mounted at /mcp"
+
+    def test_rest_and_mcp_share_service(
+        self, db_conn_with_data: sqlite3.Connection
+    ) -> None:
+        """Test US2/US3: REST API and MCP tools use the same ResumeService instance."""
+        import backend.server
+        from backend.resume_service import ResumeService
+        from backend.server import create_app
+
+        service = ResumeService(db_conn_with_data)
+        create_app(service=service, conn=db_conn_with_data)
+
+        # Verify the global _service is set correctly
+        assert backend.server._service is service, (
+            "MCP tools should use the same service as REST API"
+        )

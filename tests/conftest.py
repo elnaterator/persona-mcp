@@ -14,7 +14,7 @@ from backend.migrations import MIGRATIONS, apply_migrations
 @pytest.fixture
 def db_conn() -> Generator[sqlite3.Connection, None, None]:
     """Create an in-memory SQLite database at the current schema version."""
-    conn = sqlite3.connect(":memory:")
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     apply_migrations(conn)
     yield conn
@@ -31,7 +31,7 @@ def db_conn_at_version(
         "db_conn_at_version", [0, 1], indirect=True
     )
     """
-    conn = sqlite3.connect(":memory:")
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     version = request.param
     for i in range(version):
