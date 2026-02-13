@@ -51,6 +51,8 @@ Dockerfile            # Multi-stage Docker build
 - pytest for testing (unit, contract, integration)
 - ruff for linting and formatting
 - pyright for type checking
+- Python 3.11+ (backend), TypeScript 5.x (frontend) + FastAPI, FastMCP, uvicorn (backend); React 18, Vite 5 (frontend) (feat-005-user-interface)
+- SQLite via stdlib `sqlite3` (existing, unchanged) (feat-005-user-interface)
 
 ## Recent Changes
 - feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action
