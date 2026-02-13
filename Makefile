@@ -1,36 +1,38 @@
-.PHONY: run run-local test lint typecheck check format docker-build docker-up docker-down
+.PHONY: build run run-local lint test check format help
 
-.DEFAULT_GOAL := help
+help:
+	@echo "Root Makefile targets:"
+	@echo "  build      - Build frontend then backend"
+	@echo "  run        - Start via Docker Compose"
+	@echo "  run-local  - Build frontend then run backend locally"
+	@echo "  lint       - Lint both frontend and backend"
+	@echo "  test       - Test both frontend and backend"
+	@echo "  check      - Run lint + test for both"
+	@echo "  format     - Format both frontend and backend"
 
-help: ## Show this help message
-	@echo "persona-mcp — available make targets"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m  %-20s\033[0m %s\n", $$1, $$2}'
+build:
+	$(MAKE) -C frontend build
+	$(MAKE) -C backend build
 
-run: ## Run the server via Docker Compose
+run:
 	docker compose up --build
 
-run-local: ## Run the server locally without Docker
-	uv run persona
+run-local:
+	$(MAKE) -C frontend build
+	$(MAKE) -C backend run
 
-test: ## Run unit tests with pytest
-	uv run pytest
+lint:
+	$(MAKE) -C frontend lint
+	$(MAKE) -C backend lint
 
-lint: ## Run linter and verify formatting with ruff
-	uv run ruff check . && uv run ruff format --check .
+test:
+	$(MAKE) -C frontend test
+	$(MAKE) -C backend test
 
-typecheck: ## Type checker
-	uv run pyright
+check:
+	$(MAKE) -C frontend check
+	$(MAKE) -C backend check
 
-check: lint typecheck test ## Lint, type checker, and unit tests
-
-format: ## Format code
-	uv run ruff format .
-
-docker-build: ## Build Docker image
-	docker compose build
-
-docker-up: ## Start Docker containers
-	docker compose up -d
-
-docker-down: ## Stop Docker containers
-	docker compose down
+format:
+	$(MAKE) -C frontend format
+	$(MAKE) -C backend format

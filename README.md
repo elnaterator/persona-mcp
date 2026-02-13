@@ -1,16 +1,17 @@
 # Persona MCP Server
 
-An MCP (Model Context Protocol) server that exposes personal data — starting with resume management — to AI assistants. Now with REST API and remote MCP access over HTTP.
+An MCP (Model Context Protocol) server that exposes personal data — starting with resume management — to AI assistants. Features a web UI, REST API, and remote MCP access over HTTP.
 
 ## Features
 
+- **Web User Interface**: React SPA for viewing and editing resume data in a browser
 - **Resume Management**: Store and query your resume data (contact, summary, experience, education, skills)
-- **REST API**: Full CRUD operations via HTTP at `/api/resume` endpoints  
+- **REST API**: Full CRUD operations via HTTP at `/api/resume` endpoints
 - **Remote MCP Server**: Access MCP tools over HTTP (streamable-http transport) at `/mcp`
-- **Dual Interface**: Both REST API and MCP server share the same database and business logic
+- **Unified Serving**: Single FastAPI server serves both the frontend SPA and backend API
 - **Docker Support**: Run via Docker Compose with persistent data storage
 - **SQLite Storage**: Persistent, schema-versioned database with automatic migrations
-- **Type-Safe**: Full Pydantic validation and type hints throughout
+- **Type-Safe**: Full Pydantic validation (backend) and TypeScript types (frontend)
 
 ## Quick Start
 
@@ -27,22 +28,29 @@ docker compose up --build
 ```
 
 The server will be available at:
-- REST API: `http://localhost:8000/api/resume`
-- MCP endpoint: `http://localhost:8000/mcp`
-- Health check: `http://localhost:8000/health`
+- **Web UI**: `http://localhost:8000/` (resume viewer/editor)
+- **REST API**: `http://localhost:8000/api/resume`
+- **MCP endpoint**: `http://localhost:8000/mcp`
+- **Health check**: `http://localhost:8000/health`
 
 ### Option 2: Local Development
 
 ```bash
-# Install dependencies
-uv sync
-
-# Run the HTTP server (REST API + MCP)
+# Build frontend and run backend locally
 make run-local
-# or directly:
-uv run persona
 
-# Run in stdio mode (backward compatibility)
+# Or run frontend and backend separately:
+
+# Terminal 1: Start backend (from backend/)
+cd backend
+make run      # Runs on http://localhost:8000
+
+# Terminal 2: Start frontend dev server (from frontend/)
+cd frontend
+make run      # Runs on http://localhost:5173 with proxy to backend
+
+# Run backend in stdio mode (MCP only, no HTTP)
+cd backend
 uv run persona --stdio
 ```
 
@@ -133,14 +141,51 @@ Environment variables:
 
 ## Development
 
+### Root Commands (orchestrates both frontend and backend)
+
 ```bash
-make check      # lint + typecheck + test
-make test       # run tests
-make lint       # ruff check + format check
-make format     # auto-format
-make run        # start server via Docker Compose
-make run-local  # start server without Docker
+make check      # lint + typecheck + test (both)
+make build      # build frontend then backend
+make run        # docker compose up --build
+make run-local  # build frontend, run backend locally
+make test       # test both
+make lint       # lint both
+make format     # auto-format both
 ```
+
+### Backend Development (from `backend/`)
+
+```bash
+cd backend
+make check      # lint + typecheck + test
+make test       # uv run pytest
+make lint       # ruff check + format check
+make run        # uv run persona (HTTP server on :8000)
+make format     # auto-format with ruff
+```
+
+### Frontend Development (from `frontend/`)
+
+```bash
+cd frontend
+make check      # lint + test
+make build      # npm run build (production build)
+make run        # npm run dev (dev server with HMR on :5173)
+make lint       # npm run lint (ESLint)
+make test       # npm run test (Vitest)
+```
+
+### Development Workflow
+
+For frontend development with live backend:
+1. Start backend: `cd backend && make run` (port 8000)
+2. Start frontend: `cd frontend && make run` (port 5173, proxies API calls to 8000)
+3. Access dev UI at `http://localhost:5173/`
+
+For production-like testing:
+1. Build frontend: `cd frontend && make build`
+2. Start backend: `cd backend && make run`
+3. Access UI at `http://localhost:8000/` (backend serves frontend assets)
 
 ## Docker Commands
 
@@ -158,12 +203,32 @@ docker compose logs -f
 
 ## Architecture
 
+- **Frontend**: React 18 SPA built with Vite + TypeScript, uses CSS Modules for styling
 - **Backend**: FastAPI + FastMCP for dual REST/MCP interface
 - **Database**: SQLite with automatic schema migrations
-- **Business Logic**: Shared `ResumeService` class used by both interfaces
-- **Transport Modes**: 
-  - HTTP server (default): REST API + MCP over streamable-http
+- **Business Logic**: Shared `ResumeService` class used by REST API, MCP, and web UI
+- **Unified Serving**: FastAPI serves frontend static assets at `/` with API routes at `/api/*`
+- **Transport Modes**:
+  - HTTP server (default): Web UI + REST API + MCP over streamable-http
   - stdio mode (`--stdio` flag): MCP over stdio for local clients
+
+### Project Structure
+
+```
+frontend/          # React SPA (TypeScript, Vite, Vitest)
+  src/
+    components/    # React components (view + edit modes)
+    services/      # API client (fetch wrapper)
+    types/         # TypeScript definitions
+backend/           # Python FastAPI + MCP server
+  src/persona/     # Python package
+    server.py      # FastAPI + static serving + MCP
+    api/routes.py  # REST API
+    tools/         # MCP tools
+  tests/           # pytest (unit, contract, integration)
+Dockerfile         # Multi-stage build (Node.js + Python)
+Makefile           # Root orchestrator
+```
 
 ## Recommended Workflow
 
