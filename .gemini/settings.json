@@ -1,0 +1,355 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google/gemini-cli/main/packages/core/engine/schemas/settings.schema.json",
+  "tools": {
+    "defaultState": "prompt",
+    "overrides": [
+      {
+        "tool": "read_file",
+        "state": "allow"
+      },
+      {
+        "tool": "replace",
+        "state": "allow"
+      },
+      {
+        "tool": "write_file",
+        "state": "allow"
+      },
+      {
+        "tool": "glob",
+        "state": "allow"
+      },
+      {
+        "tool": "grep_search",
+        "state": "allow"
+      },
+      {
+        "tool": "web_fetch",
+        "state": "allow"
+      },
+      {
+        "tool": "google_web_search",
+        "state": "allow"
+      },
+      {
+        "tool": "write_todos",
+        "state": "allow"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:bash:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:cat:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:chmod:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:cp:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:curl:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:date:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:docker compose up:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:echo:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:find:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:gh api:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:gh issue:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:gh pr:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:gh repo:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git add:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git branch:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git checkout:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git commit:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git diff:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git fetch:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git log:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git merge:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git mv:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git rebase:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git remote:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git rev-parse:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git show:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git stash:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git status:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git switch:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git tag:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:git worktree:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:head:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:ls:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:make:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:mkdir:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:mv:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:npm install:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:npm run build:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:npm run lint:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:npm run test:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:npm test:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:npx vitest:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:pwd:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:python:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:sort:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:tail:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:test:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:timeout:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:touch:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv add:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv pip:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv run persona:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv run pyright:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv run pytest:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv run python:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv run ruff:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:uv sync:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:wc:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:which:*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "allow",
+        "matcher": "glob:.specify/scripts/bash/*"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "deny",
+        "matcher": "glob:git push --force *"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "deny",
+        "matcher": "glob:git reset --hard *"
+      },
+      {
+        "tool": "run_shell_command",
+        "state": "deny",
+        "matcher": "glob:rm -rf /*"
+      }
+    ]
+  }
+}
