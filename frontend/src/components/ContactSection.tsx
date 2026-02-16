@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ContactInfo } from '../types/resume';
 import { EditableSection } from './EditableSection';
 import { updateContact } from '../services/api';
@@ -12,6 +12,10 @@ interface ContactSectionProps {
 export default function ContactSection({ contact, onUpdate }: ContactSectionProps) {
   const [formData, setFormData] = useState<ContactInfo>(contact);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setFormData(contact);
+  }, [contact]);
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true;
