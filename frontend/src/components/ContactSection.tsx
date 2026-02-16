@@ -15,6 +15,7 @@ export default function ContactSection({ contact, onUpdate }: ContactSectionProp
 
   useEffect(() => {
     setFormData(contact);
+    setValidationErrors({});
   }, [contact]);
 
   const validateEmail = (email: string): boolean => {
