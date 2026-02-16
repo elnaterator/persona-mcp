@@ -1,7 +1,8 @@
-.PHONY: build run lint test check format help
+.PHONY: build run lint test check format install help
 
 help:
 	@echo "Frontend Makefile targets:"
+	@echo "  install - Install Node.js dependencies"
 	@echo "  build   - Build production bundle"
 	@echo "  run     - Start dev server"
 	@echo "  lint    - Run ESLint"
@@ -9,19 +10,25 @@ help:
 	@echo "  check   - Run lint + test"
 	@echo "  format  - Auto-format code (no formatter configured yet)"
 
-build:
+node_modules: package.json package-lock.json
+	npm ci
+	@touch node_modules
+
+install: node_modules
+
+build: node_modules
 	npm run build
 
-run:
+run: node_modules
 	npm run dev
 
-lint:
+lint: node_modules
 	npm run lint
 
-test:
+test: node_modules
 	npm run test
 
 check: lint test
 
-format:
+format: node_modules
 	@echo "No formatter configured yet (consider adding prettier)"
