@@ -42,16 +42,20 @@ class TestStaticFileServing:
         """Create app with temporary frontend directory."""
         # Override the frontend directory config
         os.environ["PERSONA_FRONTEND_DIR"] = str(temp_frontend_dir)
-        app = create_app(conn=db_conn)
-        del os.environ["PERSONA_FRONTEND_DIR"]
+        try:
+            app = create_app(conn=db_conn)
+        finally:
+            os.environ.pop("PERSONA_FRONTEND_DIR", None)
         return app
 
     @pytest.fixture
     def app_without_frontend(self, db_conn):
         """Create app with non-existent frontend directory."""
         os.environ["PERSONA_FRONTEND_DIR"] = "/nonexistent/path"
-        app = create_app(conn=db_conn)
-        del os.environ["PERSONA_FRONTEND_DIR"]
+        try:
+            app = create_app(conn=db_conn)
+        finally:
+            os.environ.pop("PERSONA_FRONTEND_DIR", None)
         return app
 
     def test_root_serves_index_html(self, app_with_frontend):
