@@ -56,3 +56,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 Thumbs.db
+
+# AI
+.mcp.json
+*.mcp.json
