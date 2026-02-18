@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { ContactInfo } from '../types/resume';
 import { EditableSection } from './EditableSection';
-import { updateContact } from '../services/api';
+import { updateContact, updateVersionContact } from '../services/api';
 import styles from './ContactSection.module.css';
 
 interface ContactSectionProps {
   contact: ContactInfo;
   onUpdate?: () => void;
+  versionId?: number;
 }
 
-export default function ContactSection({ contact, onUpdate }: ContactSectionProps) {
+export default function ContactSection({ contact, onUpdate, versionId }: ContactSectionProps) {
   const [formData, setFormData] = useState<ContactInfo>(contact);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -37,7 +38,11 @@ export default function ContactSection({ contact, onUpdate }: ContactSectionProp
     }
 
     setValidationErrors({});
-    await updateContact(formData);
+    if (versionId !== undefined) {
+      await updateVersionContact(versionId, formData);
+    } else {
+      await updateContact(formData);
+    }
     if (onUpdate) {
       onUpdate();
     }

@@ -7,9 +7,14 @@
 import type {
   ApiError,
   ApiSuccessResponse,
+  Application,
+  ApplicationContact,
+  Communication,
   ContactInfo,
   Education,
   Resume,
+  ResumeVersion,
+  ResumeVersionSummary,
   Skill,
   WorkExperience,
 } from '../types/resume'
@@ -174,6 +179,358 @@ export async function removeEntry(
     {
       method: 'DELETE',
     }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+// ─── Resume version API ───────────────────────────────────────────────────────
+
+/**
+ * List all resume versions (summaries without full resume data)
+ */
+export async function listResumes(): Promise<ResumeVersionSummary[]> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes`)
+  return handleResponse<ResumeVersionSummary[]>(response)
+}
+
+/**
+ * Get a single resume version by ID (includes full resume_data)
+ */
+export async function getResumeVersion(id: number): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`)
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Get the default resume version
+ */
+export async function getDefaultResume(): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/default`)
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Create a new resume version by cloning the current default
+ */
+export async function createResume(label: string): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label }),
+  })
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Delete a resume version
+ */
+export async function deleteResume(id: number): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Set a resume version as the default
+ */
+export async function setDefaultResume(id: number): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}/default`, {
+    method: 'POST',
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update the label of a resume version
+ */
+export async function updateResumeLabel(id: number, label: string): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label }),
+  })
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Update contact info for a specific resume version
+ */
+export async function updateVersionContact(
+  versionId: number,
+  data: Partial<ContactInfo>
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/contact`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update summary for a specific resume version
+ */
+export async function updateVersionSummary(
+  versionId: number,
+  text: string
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/summary`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Add an entry to a version-scoped section
+ */
+export async function addVersionEntry(
+  versionId: number,
+  section: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/${section}/entries`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update an entry in a version-scoped section
+ */
+export async function updateVersionEntry(
+  versionId: number,
+  section: string,
+  index: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/${section}/entries/${index}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Remove an entry from a version-scoped section
+ */
+export async function removeVersionEntry(
+  versionId: number,
+  section: string,
+  index: number
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/${section}/entries/${index}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+// ─── Application API ──────────────────────────────────────────────────────────
+
+/**
+ * List applications with optional status filter and search query
+ */
+export async function listApplications(
+  status?: string,
+  q?: string
+): Promise<Application[]> {
+  const params = new URLSearchParams()
+  if (status) params.set('status', status)
+  if (q) params.set('q', q)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  const response = await fetchWithErrorHandling(`${API_BASE}/applications${query}`)
+  return handleResponse<Application[]>(response)
+}
+
+/**
+ * Get a single application by ID
+ */
+export async function getApplication(id: number): Promise<Application> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/applications/${id}`)
+  return handleResponse<Application>(response)
+}
+
+/**
+ * Create a new application
+ */
+export async function createApplication(
+  data: Partial<Application>
+): Promise<Application> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/applications`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<Application>(response)
+}
+
+/**
+ * Update an existing application
+ */
+export async function updateApplication(
+  id: number,
+  data: Partial<Application>
+): Promise<Application> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/applications/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<Application>(response)
+}
+
+/**
+ * Delete an application
+ */
+export async function deleteApplication(id: number): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/applications/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+// ─── Application contacts API ─────────────────────────────────────────────────
+
+/**
+ * List contacts for an application
+ */
+export async function listContacts(appId: number): Promise<ApplicationContact[]> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/contacts`
+  )
+  return handleResponse<ApplicationContact[]>(response)
+}
+
+/**
+ * Add a contact to an application
+ */
+export async function addContact(
+  appId: number,
+  data: Partial<ApplicationContact>
+): Promise<ApplicationContact> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/contacts`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApplicationContact>(response)
+}
+
+/**
+ * Update a contact for an application
+ */
+export async function updateAppContact(
+  appId: number,
+  contactId: number,
+  data: Partial<ApplicationContact>
+): Promise<ApplicationContact> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/contacts/${contactId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApplicationContact>(response)
+}
+
+/**
+ * Remove a contact from an application
+ */
+export async function removeContact(
+  appId: number,
+  contactId: number
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/contacts/${contactId}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+// ─── Communications API ───────────────────────────────────────────────────────
+
+/**
+ * List communications for an application
+ */
+export async function listCommunications(appId: number): Promise<Communication[]> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/communications`
+  )
+  return handleResponse<Communication[]>(response)
+}
+
+/**
+ * Add a communication to an application
+ */
+export async function addCommunication(
+  appId: number,
+  data: Partial<Communication>
+): Promise<Communication> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/communications`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<Communication>(response)
+}
+
+/**
+ * Update a communication for an application
+ */
+export async function updateCommunication(
+  appId: number,
+  commId: number,
+  data: Partial<Communication>
+): Promise<Communication> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/communications/${commId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<Communication>(response)
+}
+
+/**
+ * Remove a communication from an application
+ */
+export async function removeCommunication(
+  appId: number,
+  commId: number
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/applications/${appId}/communications/${commId}`,
+    { method: 'DELETE' }
   )
   return handleResponse<ApiSuccessResponse>(response)
 }

@@ -3,12 +3,13 @@ import type { WorkExperience } from '../types/resume'
 import { EntryForm, type FieldConfig } from './EntryForm'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
-import { addEntry, updateEntry, removeEntry } from '../services/api'
+import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../services/api'
 import styles from './ExperienceSection.module.css'
 
 interface ExperienceSectionProps {
   experience: WorkExperience[]
   onUpdate?: () => void
+  versionId?: number
 }
 
 type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
@@ -22,7 +23,7 @@ const experienceFields: FieldConfig[] = [
   { name: 'highlights', label: 'Highlights', type: 'highlights', required: false },
 ]
 
-export default function ExperienceSection({ experience, onUpdate }: ExperienceSectionProps) {
+export default function ExperienceSection({ experience, onUpdate, versionId }: ExperienceSectionProps) {
   const [mode, setMode] = useState<Mode>('view')
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -37,7 +38,11 @@ export default function ExperienceSection({ experience, onUpdate }: ExperienceSe
         highlights: (data.highlights as string[]) || [],
       }
 
-      await addEntry('experience', entryData)
+      if (versionId !== undefined) {
+        await addVersionEntry(versionId, 'experience', entryData)
+      } else {
+        await addEntry('experience', entryData)
+      }
       setStatusMessage({ type: 'success', message: 'Experience added successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
@@ -59,7 +64,11 @@ export default function ExperienceSection({ experience, onUpdate }: ExperienceSe
         highlights: (data.highlights as string[]) || [],
       }
 
-      await updateEntry('experience', mode.index, entryData)
+      if (versionId !== undefined) {
+        await updateVersionEntry(versionId, 'experience', mode.index, entryData)
+      } else {
+        await updateEntry('experience', mode.index, entryData)
+      }
       setStatusMessage({ type: 'success', message: 'Experience updated successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
@@ -72,7 +81,11 @@ export default function ExperienceSection({ experience, onUpdate }: ExperienceSe
     if (typeof mode !== 'object' || mode.type !== 'delete') return
 
     try {
-      await removeEntry('experience', mode.index)
+      if (versionId !== undefined) {
+        await removeVersionEntry(versionId, 'experience', mode.index)
+      } else {
+        await removeEntry('experience', mode.index)
+      }
       setStatusMessage({ type: 'success', message: 'Experience deleted successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
