@@ -505,6 +505,169 @@ def update_communication(
     )
 
 
+# --- Accomplishment operations ---
+
+
+def _row_to_accomplishment(row: Any) -> dict[str, Any]:
+    """Convert an accomplishment row to a dict with parsed tags."""
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "situation": row["situation"],
+        "task": row["task"],
+        "action": row["action"],
+        "result": row["result"],
+        "accomplishment_date": row["accomplishment_date"],
+        "tags": json.loads(row["tags"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _row_to_accomplishment_summary(row: Any) -> dict[str, Any]:
+    """Convert an accomplishment row to a summary dict (no STAR body)."""
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "accomplishment_date": row["accomplishment_date"],
+        "tags": json.loads(row["tags"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def create_accomplishment(conn: DBConnection, data: dict[str, Any]) -> dict[str, Any]:
+    """Insert a new accomplishment row and return it."""
+    cursor = conn.execute(
+        "INSERT INTO accomplishment "
+        "(title, situation, task, action, result, accomplishment_date, tags) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            data["title"],
+            data.get("situation", ""),
+            data.get("task", ""),
+            data.get("action", ""),
+            data.get("result", ""),
+            data.get("accomplishment_date"),
+            json.dumps(data.get("tags", [])),
+        ),
+    )
+    conn.commit()
+    return load_accomplishment(conn, cursor.lastrowid)
+
+
+def load_accomplishment(conn: DBConnection, acc_id: int) -> dict[str, Any]:
+    """Load a single accomplishment by ID. Raises ValueError if not found."""
+    row = conn.execute(
+        "SELECT * FROM accomplishment WHERE id = ?", (acc_id,)
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"Accomplishment {acc_id} not found")
+    return _row_to_accomplishment(row)
+
+
+def load_accomplishments(
+    conn: DBConnection,
+    tag: str | None = None,
+    q: str | None = None,
+) -> list[dict[str, Any]]:
+    """List accomplishments ordered reverse-chronologically with optional filters.
+
+    Args:
+        tag: Filter by exact tag match (substring in JSON array).
+        q: Case-insensitive substring search across title and STAR fields.
+    """
+    query = (
+        "SELECT id, title, accomplishment_date, tags, created_at, updated_at "
+        "FROM accomplishment"
+    )
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if tag:
+        conditions.append("tags LIKE ?")
+        params.append(f'%"{tag}"%')
+    if q:
+        pattern = f"%{q.lower()}%"
+        conditions.append(
+            "(LOWER(title) LIKE ? OR LOWER(situation) LIKE ? "
+            "OR LOWER(task) LIKE ? OR LOWER(action) LIKE ? OR LOWER(result) LIKE ?)"
+        )
+        params.extend([pattern, pattern, pattern, pattern, pattern])
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += (
+        " ORDER BY "
+        "CASE WHEN accomplishment_date IS NULL THEN 1 ELSE 0 END, "
+        "accomplishment_date DESC, "
+        "created_at DESC"
+    )
+
+    rows = conn.execute(query, params).fetchall()
+    return [_row_to_accomplishment_summary(row) for row in rows]
+
+
+def update_accomplishment(
+    conn: DBConnection, acc_id: int, data: dict[str, Any]
+) -> dict[str, Any]:
+    """Patch an accomplishment with provided fields. Raises ValueError if not found."""
+    # Verify exists first
+    load_accomplishment(conn, acc_id)
+
+    updatable = (
+        "title",
+        "situation",
+        "task",
+        "action",
+        "result",
+        "accomplishment_date",
+    )
+    sets: list[str] = []
+    params: list[Any] = []
+
+    for field in updatable:
+        if field in data:
+            sets.append(f"{field} = ?")
+            params.append(data[field])
+
+    if "tags" in data:
+        sets.append("tags = ?")
+        params.append(json.dumps(data["tags"]))
+
+    if not sets:
+        return load_accomplishment(conn, acc_id)
+
+    sets.append("updated_at = datetime('now')")
+    params.append(acc_id)
+
+    conn.execute(
+        f"UPDATE accomplishment SET {', '.join(sets)} WHERE id = ?",
+        params,
+    )
+    conn.commit()
+    return load_accomplishment(conn, acc_id)
+
+
+def delete_accomplishment(conn: DBConnection, acc_id: int) -> dict[str, Any]:
+    """Delete an accomplishment. Returns the deleted row. ValueError if not found."""
+    acc = load_accomplishment(conn, acc_id)
+    conn.execute("DELETE FROM accomplishment WHERE id = ?", (acc_id,))
+    conn.commit()
+    return acc
+
+
+def load_accomplishment_tags(conn: DBConnection) -> list[str]:
+    """Return a sorted unique list of all tags across all accomplishments."""
+    rows = conn.execute("SELECT tags FROM accomplishment").fetchall()
+    all_tags: set[str] = set()
+    for row in rows:
+        tags = json.loads(row["tags"])
+        all_tags.update(tags)
+    return sorted(all_tags)
+
+
 def delete_communication(conn: DBConnection, comm_id: int) -> str:
     """Delete a communication. Returns its subject."""
     row = conn.execute(

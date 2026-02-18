@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 
+from persona.accomplishment_service import AccomplishmentService
 from persona.api.routes import create_router
 from persona.application_service import ApplicationService
 from persona.config import (
@@ -22,6 +23,7 @@ from persona.config import (
 from persona.database import init_database
 from persona.db import DBConnection
 from persona.resume_service import ResumeService
+from persona.tools.accomplishment_tools import register_accomplishment_tools
 from persona.tools.application_tools import register_application_tools
 from persona.tools.resume_tools import register_resume_tools
 
@@ -31,6 +33,7 @@ mcp = FastMCP("persona")
 _conn: DBConnection | None = None
 _service: ResumeService | None = None
 _app_service: ApplicationService | None = None
+_acc_service: AccomplishmentService | None = None
 
 
 def _get_resume_service() -> ResumeService:
@@ -43,9 +46,15 @@ def _get_app_service() -> ApplicationService:
     return _app_service
 
 
+def _get_acc_service() -> AccomplishmentService:
+    assert _acc_service is not None
+    return _acc_service
+
+
 # Register MCP tools from modules
 register_resume_tools(mcp, _get_resume_service)
 register_application_tools(mcp, _get_app_service)
+register_accomplishment_tools(mcp, _get_acc_service)
 
 
 # --- FastAPI application factory ---
@@ -62,7 +71,7 @@ def create_app(
         conn: Optional pre-built DBConnection (for testing / MCP globals).
             If service and conn are None, initializes from environment config.
     """
-    global _conn, _service, _app_service
+    global _conn, _service, _app_service, _acc_service
 
     if service is None:
         logger = configure_logging()
@@ -74,6 +83,7 @@ def create_app(
     _conn = conn
     _service = service
     _app_service = ApplicationService(conn) if conn else None
+    _acc_service = AccomplishmentService(conn) if conn else None
 
     # Get MCP HTTP app first to access its lifespan
     mcp_app = mcp.http_app(path="/")
@@ -106,6 +116,7 @@ def create_app(
         create_router(
             service,
             app_service=_app_service,
+            acc_service=_acc_service,
         )
     )
 
@@ -136,12 +147,13 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.stdio:
-        global _conn, _service, _app_service
+        global _conn, _service, _app_service, _acc_service
         logger = configure_logging()
         data_dir = resolve_data_dir()
         _conn = init_database(data_dir)
         _service = ResumeService(_conn)
         _app_service = ApplicationService(_conn)
+        _acc_service = AccomplishmentService(_conn)
         logger.info("Persona MCP server starting (stdio), data dir: %s", data_dir)
         mcp.run(transport="stdio")
     else:

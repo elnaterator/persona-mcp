@@ -103,6 +103,28 @@ export interface ApplicationContact {
   created_at: string
 }
 
+export interface Accomplishment {
+  id: number
+  title: string
+  situation: string
+  task: string
+  action: string
+  result: string
+  accomplishment_date: string | null
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface AccomplishmentSummary {
+  id: number
+  title: string
+  accomplishment_date: string | null
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
 export interface Communication {
   id: number
   app_id: number
