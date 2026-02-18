@@ -1,138 +1,238 @@
-"""ResumeService — shared business logic for resume CRUD operations."""
+"""ResumeService — shared business logic for resume version CRUD operations."""
 
+import json
 from typing import Any
 
 from persona.database import (
-    add_education,
-    add_experience,
-    add_skill,
-    load_resume,
-    remove_education,
-    remove_experience,
-    remove_skill,
-    save_contact,
-    save_summary,
-    update_education,
-    update_experience,
-    update_skill,
+    create_resume_version,
+    delete_resume_version,
+    load_default_resume_version,
+    load_resume_version,
+    load_resume_versions,
+    set_default_resume_version,
+    update_resume_version_data,
+    update_resume_version_metadata,
 )
 from persona.db import DBConnection
-from persona.models import Resume
+from persona.models import (
+    ContactInfo,
+    Education,
+    Skill,
+    WorkExperience,
+)
 
 SECTION_UPDATE = ("contact", "summary")
 SECTION_LIST = ("experience", "education", "skills")
 ALL_SECTIONS = ("contact", "summary", "experience", "education", "skills")
 
-_ADD_FUNCTIONS = {
-    "experience": add_experience,
-    "education": add_education,
-    "skills": add_skill,
-}
-
-_UPDATE_FUNCTIONS = {
-    "experience": update_experience,
-    "education": update_education,
-    "skills": update_skill,
-}
-
-_REMOVE_FUNCTIONS = {
-    "experience": remove_experience,
-    "education": remove_education,
-    "skills": remove_skill,
-}
-
 
 class ResumeService:
-    """Resume CRUD operations with constructor-injected DB connection."""
+    """Resume version CRUD operations with constructor-injected DB connection."""
 
     def __init__(self, conn: DBConnection) -> None:
         self._conn = conn
 
-    def get_resume(self) -> Resume:
-        """Get the full resume."""
-        return load_resume(self._conn)
+    # --- Version management ---
 
-    def get_section(self, section: str) -> Any:
-        """Get a single resume section by name.
+    def list_resumes(self) -> list[dict[str, Any]]:
+        """List all resume versions with metadata."""
+        return load_resume_versions(self._conn)
 
-        Returns dict for contact, str for summary, list for list sections.
-        """
+    def get_resume(self, version_id: int | None = None) -> dict[str, Any]:
+        """Get a resume version. If id is None, returns the default."""
+        if version_id is None:
+            return load_default_resume_version(self._conn)
+        return load_resume_version(self._conn, version_id)
+
+    def create_resume(self, label: str) -> dict[str, Any]:
+        """Create a new resume version copied from the default."""
+        if not label or not label.strip():
+            raise ValueError("Label must not be empty")
+        default = load_default_resume_version(self._conn)
+        return create_resume_version(self._conn, label.strip(), default["resume_data"])
+
+    def set_default(self, version_id: int) -> str:
+        """Set a resume version as default."""
+        label = set_default_resume_version(self._conn, version_id)
+        return f"Set '{label}' as default resume"
+
+    def delete_resume(self, version_id: int) -> str:
+        """Delete a resume version."""
+        label = delete_resume_version(self._conn, version_id)
+        return f"Deleted resume version '{label}'"
+
+    def update_metadata(self, version_id: int, label: str) -> dict[str, Any]:
+        """Update resume version label."""
+        if not label or not label.strip():
+            raise ValueError("Label must not be empty")
+        return update_resume_version_metadata(self._conn, version_id, label.strip())
+
+    # --- Section operations (version-scoped) ---
+
+    def get_section(self, section: str, version_id: int | None = None) -> Any:
+        """Get a section from a resume version."""
         if section not in ALL_SECTIONS:
             raise ValueError(
                 f"Invalid section: '{section}'. "
                 f"Must be one of: {', '.join(ALL_SECTIONS)}"
             )
-        data = load_resume(self._conn)
-        value = getattr(data, section)
-        if hasattr(value, "model_dump"):
-            return value.model_dump()
-        if isinstance(value, list):
-            return [
-                item.model_dump() if hasattr(item, "model_dump") else item
-                for item in value
-            ]
+        version = self.get_resume(version_id)
+        resume_data = version["resume_data"]
+        value = resume_data.get(section)
         return value
 
-    def update_section(self, section: str, data: dict[str, Any]) -> str:
-        """Update a singleton section (contact or summary)."""
+    def update_section(
+        self, section: str, data: dict[str, Any], version_id: int | None = None
+    ) -> str:
+        """Update a singleton section (contact or summary) on a version."""
         if section not in SECTION_UPDATE:
             raise ValueError(
                 f"Invalid section for update_section: '{section}'. "
                 f"Must be one of: {', '.join(SECTION_UPDATE)}"
             )
+
+        version = self.get_resume(version_id)
+        vid = version["id"]
+        resume_data = version["resume_data"]
+
         if section == "contact":
-            save_contact(self._conn, data)
-            fields = {
-                k
-                for k in data
-                if k
-                in {
-                    "name",
-                    "email",
-                    "phone",
-                    "location",
-                    "linkedin",
-                    "website",
-                    "github",
-                }
-            }
-            return f"Updated contact fields: {', '.join(fields)}"
+            known_fields = set(ContactInfo.model_fields.keys())
+            filtered = {k: v for k, v in data.items() if k in known_fields}
+            if not filtered:
+                raise ValueError("At least one contact field must be provided")
+            existing = resume_data.get("contact", {})
+            existing.update(filtered)
+            resume_data["contact"] = existing
+            update_resume_version_data(self._conn, vid, resume_data)
+            return f"Updated contact fields: {', '.join(filtered.keys())}"
+
         # summary
         text = data.get("text", "")
         if not text:
             raise ValueError("Summary text must not be empty")
-        save_summary(self._conn, text)
+        resume_data["summary"] = text
+        update_resume_version_data(self._conn, vid, resume_data)
         return "Updated summary"
 
-    def add_entry(self, section: str, data: dict[str, Any]) -> str:
-        """Add an entry to a list section."""
+    def add_entry(
+        self, section: str, data: dict[str, Any], version_id: int | None = None
+    ) -> str:
+        """Add an entry to a list section of a resume version."""
         if section not in SECTION_LIST:
             raise ValueError(
                 f"Invalid section for add_entry: '{section}'. "
                 f"Must be one of: {', '.join(SECTION_LIST)}"
             )
-        add_fn = _ADD_FUNCTIONS[section]
-        entry = add_fn(self._conn, data)
-        return f"Added {section} entry: {entry}"
 
-    def update_entry(self, section: str, index: int, data: dict[str, Any]) -> str:
+        # Validate entry data by constructing the model
+        model_cls = _SECTION_MODELS[section]
+        entry = model_cls(**data)
+
+        version = self.get_resume(version_id)
+        vid = version["id"]
+        resume_data = version["resume_data"]
+
+        entries = resume_data.get(section, [])
+
+        # For skills, check for case-insensitive duplicates
+        if section == "skills":
+            for existing in entries:
+                if existing.get("name", "").lower() == entry.name.lower():
+                    raise ValueError(
+                        f"Skill '{entry.name}' already exists "
+                        f"under category '{existing.get('category')}'"
+                    )
+
+        # Prepend for experience/education, append for skills
+        entry_dict = json.loads(entry.model_dump_json())
+        if section in ("experience", "education"):
+            entries.insert(0, entry_dict)
+        else:
+            entries.append(entry_dict)
+
+        resume_data[section] = entries
+        update_resume_version_data(self._conn, vid, resume_data)
+        return f"Added {section} entry: {_entry_summary(section, entry)}"
+
+    def update_entry(
+        self,
+        section: str,
+        index: int,
+        data: dict[str, Any],
+        version_id: int | None = None,
+    ) -> str:
         """Update an entry in a list section by index."""
         if section not in SECTION_LIST:
             raise ValueError(
                 f"Invalid section for update_entry: '{section}'. "
                 f"Must be one of: {', '.join(SECTION_LIST)}"
             )
-        update_fn = _UPDATE_FUNCTIONS[section]
-        updated = update_fn(self._conn, index, data)
-        return f"Updated {section} entry at index {index}: {updated}"
 
-    def remove_entry(self, section: str, index: int) -> str:
+        version = self.get_resume(version_id)
+        vid = version["id"]
+        resume_data = version["resume_data"]
+        entries = resume_data.get(section, [])
+
+        if index < 0 or index >= len(entries):
+            raise ValueError(
+                f"{section.title()} index {index} out of range. "
+                f"Resume has {len(entries)} {section} entries."
+            )
+
+        model_cls = _SECTION_MODELS[section]
+        existing = model_cls(**entries[index])
+        updated = existing.model_copy(update=data)
+        entries[index] = json.loads(updated.model_dump_json())
+
+        resume_data[section] = entries
+        update_resume_version_data(self._conn, vid, resume_data)
+        return (
+            f"Updated {section} entry at index {index}: "
+            f"{_entry_summary(section, updated)}"
+        )
+
+    def remove_entry(
+        self, section: str, index: int, version_id: int | None = None
+    ) -> str:
         """Remove an entry from a list section by index."""
         if section not in SECTION_LIST:
             raise ValueError(
                 f"Invalid section for remove_entry: '{section}'. "
                 f"Must be one of: {', '.join(SECTION_LIST)}"
             )
-        remove_fn = _REMOVE_FUNCTIONS[section]
-        removed = remove_fn(self._conn, index)
-        return f"Removed {section} entry: {removed}"
+
+        version = self.get_resume(version_id)
+        vid = version["id"]
+        resume_data = version["resume_data"]
+        entries = resume_data.get(section, [])
+
+        if index < 0 or index >= len(entries):
+            raise ValueError(
+                f"{section.title()} index {index} out of range. "
+                f"Resume has {len(entries)} {section} entries."
+            )
+
+        model_cls = _SECTION_MODELS[section]
+        removed = model_cls(**entries[index])
+        entries.pop(index)
+
+        resume_data[section] = entries
+        update_resume_version_data(self._conn, vid, resume_data)
+        return f"Removed {section} entry: {_entry_summary(section, removed)}"
+
+
+_SECTION_MODELS: dict[str, type] = {
+    "experience": WorkExperience,
+    "education": Education,
+    "skills": Skill,
+}
+
+
+def _entry_summary(section: str, entry: WorkExperience | Education | Skill) -> str:
+    """Create a short human-readable summary of an entry."""
+    if isinstance(entry, WorkExperience):
+        return f"{entry.title} at {entry.company}"
+    elif isinstance(entry, Education):
+        return f"{entry.degree} from {entry.institution}"
+    else:
+        return f"{entry.name} ({entry.category})"

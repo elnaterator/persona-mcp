@@ -104,3 +104,165 @@ class TestCrossInterfaceSharedState:
         assert persona.server._service is service, (
             "MCP tools should use the same service instance"
         )
+
+
+class TestResumeVersionCrossInterface:
+    """Integration tests for resume version operations across REST and MCP."""
+
+    @pytest.fixture
+    def full_app(self, db_conn_with_data: Any) -> tuple[Any, ResumeService, TestClient]:
+        """Create full app with both resume and application services."""
+
+        service = ResumeService(db_conn_with_data)
+        app = create_app(service=service, conn=db_conn_with_data)
+        client = TestClient(app)
+        return app, service, client
+
+    def test_create_version_via_rest_visible_in_service(
+        self, full_app: tuple[Any, ResumeService, TestClient]
+    ) -> None:
+        """Create a resume version via REST and verify it's visible via service."""
+        app, service, client = full_app
+
+        resp = client.post("/api/resumes", json={"label": "My New Resume"})
+        assert resp.status_code == 201
+        created_id = resp.json()["id"]
+
+        versions = service.list_resumes()
+        ids = [v["id"] for v in versions]
+        assert created_id in ids
+
+    def test_update_version_via_service_visible_in_rest(
+        self, full_app: tuple[Any, ResumeService, TestClient]
+    ) -> None:
+        """Update a resume version via service and verify it's visible via REST."""
+        app, service, client = full_app
+
+        default = service.get_resume()
+        service.update_section(
+            "contact",
+            {"name": "Updated Name"},
+            default["id"],
+        )
+
+        resp = client.get(f"/api/resumes/{default['id']}/contact")
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "Updated Name"
+
+    def test_set_default_via_rest_visible_in_service(
+        self, full_app: tuple[Any, ResumeService, TestClient]
+    ) -> None:
+        """Set default via REST and verify service returns the new default."""
+        app, service, client = full_app
+
+        resp = client.post("/api/resumes", json={"label": "Promoted"})
+        new_id = resp.json()["id"]
+
+        client.put(f"/api/resumes/{new_id}/default")
+
+        default = service.get_resume()
+        assert default["id"] == new_id
+
+
+class TestApplicationCascadeDelete:
+    """Integration tests for application cascade delete behavior."""
+
+    @pytest.fixture
+    def full_app_with_app_service(
+        self, db_conn_with_data: Any
+    ) -> tuple[Any, ResumeService, TestClient]:
+        """Create full app with application service enabled."""
+
+        service = ResumeService(db_conn_with_data)
+        app = create_app(service=service, conn=db_conn_with_data)
+        client = TestClient(app)
+        return app, service, client
+
+    def test_delete_application_cascades_contacts_and_comms(
+        self, full_app_with_app_service: tuple[Any, ResumeService, TestClient]
+    ) -> None:
+        """Deleting an application via REST removes its contacts and communications."""
+        app, service, client = full_app_with_app_service
+
+        # Create application with contacts and communications
+        created_resp = client.post(
+            "/api/applications",
+            json={"company": "Corp", "position": "Dev"},
+        )
+        assert created_resp.status_code == 201
+        app_id = created_resp.json()["id"]
+
+        client.post(
+            f"/api/applications/{app_id}/contacts",
+            json={"name": "Alice"},
+        )
+        client.post(
+            f"/api/applications/{app_id}/communications",
+            json={
+                "type": "email",
+                "direction": "sent",
+                "body": "Hello",
+                "date": "2024-01-01",
+            },
+        )
+
+        # Delete the application
+        del_resp = client.delete(f"/api/applications/{app_id}")
+        assert del_resp.status_code == 200
+
+        # Verify application is gone
+        get_resp = client.get(f"/api/applications/{app_id}")
+        assert get_resp.status_code == 404
+
+
+class TestAIDraftWorkflow:
+    """Integration tests for AI draft communication workflow."""
+
+    @pytest.fixture
+    def full_app_ai(
+        self, db_conn_with_data: Any
+    ) -> tuple[Any, ResumeService, TestClient]:
+        """Create full app for AI workflow testing."""
+
+        service = ResumeService(db_conn_with_data)
+        app = create_app(service=service, conn=db_conn_with_data)
+        client = TestClient(app)
+        return app, service, client
+
+    def test_create_app_via_rest_add_draft_via_service_visible_in_rest(
+        self, full_app_ai: tuple[Any, ResumeService, TestClient]
+    ) -> None:
+        """Create app via REST, add draft comm via service, verify it shows in REST."""
+
+        app, service, client = full_app_ai
+        app_svc = persona.server._app_service
+        assert app_svc is not None
+
+        # Create application via REST
+        created_resp = client.post(
+            "/api/applications",
+            json={"company": "TechCorp", "position": "Senior Engineer"},
+        )
+        assert created_resp.status_code == 201
+        app_id = created_resp.json()["id"]
+
+        # Add draft communication via service (simulates MCP tool call)
+        comm = app_svc.add_communication(
+            app_id,
+            {
+                "type": "email",
+                "direction": "sent",
+                "body": "I am applying for this role.",
+                "date": "2024-02-01",
+                "subject": "Application - Senior Engineer",
+                "status": "draft",
+            },
+        )
+
+        # Verify draft appears in REST endpoint
+        comms_resp = client.get(f"/api/applications/{app_id}/communications")
+        assert comms_resp.status_code == 200
+        comms = comms_resp.json()
+        assert len(comms) == 1
+        assert comms[0]["status"] == "draft"
+        assert comms[0]["id"] == comm["id"]

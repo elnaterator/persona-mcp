@@ -85,6 +85,9 @@ specs/                    # Feature specifications
 <!-- MANUAL ADDITIONS END -->
 
 ## Active Technologies
+- Python 3.11+ (backend), TypeScript 5.x (frontend) + FastMCP >=2.3.0, FastAPI >=0.100.0, React 18, Vite 6 (006-job-applications)
+- SQLite via stdlib `sqlite3` (schema migration v1 → v2) (006-job-applications)
+- SQLite via stdlib sqlite3 with DBConnection protocol (006-job-applications)
 
 ### Backend
 - Python 3.11+ with type hints and Pydantic validation

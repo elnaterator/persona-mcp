@@ -3,27 +3,34 @@
 import logging
 from typing import Any
 
-from persona.database import load_resume
 from persona.db import DBConnection
+from persona.models import Resume
+from persona.resume_service import ResumeService
 
 logger = logging.getLogger("persona")
 
 VALID_SECTIONS = ("contact", "summary", "experience", "education", "skills")
 
 
-def get_resume(conn: DBConnection) -> dict[str, Any]:
-    """Get the full resume as structured data."""
-    logger.info("get_resume invoked")
-    resume = load_resume(conn)
+def get_resume(conn: DBConnection, version_id: int | None = None) -> dict[str, Any]:
+    """Get a resume version as structured data. None=default."""
+    logger.info("get_resume invoked, version_id=%s", version_id)
+    service = ResumeService(conn)
+    version = service.get_resume(version_id)
+    # Normalize through Resume model to ensure all fields present
+    resume = Resume(**version["resume_data"])
     return resume.model_dump()
 
 
-def get_resume_section(section: str, conn: DBConnection) -> Any:
+def get_resume_section(
+    section: str, conn: DBConnection, version_id: int | None = None
+) -> Any:
     """Get a specific resume section by name.
 
     Args:
         section: One of: contact, summary, experience, education, skills.
         conn: SQLite database connection.
+        version_id: Optional resume version ID (None=default).
 
     Raises:
         ValueError: If section name is invalid.
@@ -34,5 +41,5 @@ def get_resume_section(section: str, conn: DBConnection) -> Any:
             f"Invalid section: '{section}'. Must be one of: {', '.join(VALID_SECTIONS)}"
         )
 
-    resume_data = get_resume(conn)
-    return resume_data[section]
+    data = get_resume(conn, version_id)
+    return data[section]

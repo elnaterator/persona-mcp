@@ -95,3 +95,119 @@ class TestGetResumeSection:
 
         with pytest.raises(ValueError, match="Invalid section"):
             get_resume_section(section="invalid", conn=db_conn)
+
+
+class TestResumeVersionReadTools:
+    """Contract tests for resume version MCP read tools."""
+
+    def test_list_resumes_returns_list(self, db_conn: sqlite3.Connection) -> None:
+        from fastmcp import FastMCP
+
+        from persona.resume_service import ResumeService
+        from persona.tools.resume_tools import register_resume_tools
+
+        mcp = FastMCP("test")
+        service = ResumeService(db_conn)
+        register_resume_tools(mcp, lambda: service)
+
+        result = service.list_resumes()
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_get_resume_default(self, db_conn_with_data: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn_with_data)
+        version = service.get_resume()
+
+        assert version["is_default"] is True
+        assert version["resume_data"]["contact"]["name"] == "Jane Doe"
+
+    def test_get_resume_by_id(self, db_conn: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn)
+        second = service.create_resume("Second")
+        version = service.get_resume(second["id"])
+
+        assert version["id"] == second["id"]
+        assert version["label"] == "Second"
+
+    def test_get_resume_section_contact(
+        self, db_conn_with_data: sqlite3.Connection
+    ) -> None:
+        from persona.models import Resume
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn_with_data)
+        version = service.get_resume()
+        resume = Resume(**version["resume_data"])
+        section = resume.model_dump()["contact"]
+
+        assert section["name"] == "Jane Doe"
+
+    def test_get_resume_section_experience(
+        self, db_conn_with_data: sqlite3.Connection
+    ) -> None:
+        from persona.models import Resume
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn_with_data)
+        version = service.get_resume()
+        resume = Resume(**version["resume_data"])
+        section = resume.model_dump()["experience"]
+
+        assert isinstance(section, list)
+        assert len(section) == 2
+
+
+class TestApplicationContextTool:
+    """Contract tests for get_application_context MCP tool."""
+
+    def test_returns_composite_context(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        svc.add_contact(app["id"], {"name": "Alice"})
+        svc.add_communication(
+            app["id"],
+            {
+                "type": "email",
+                "direction": "sent",
+                "body": "Hello",
+                "date": "2024-01-01",
+            },
+        )
+        context = svc.get_application_context(app["id"])
+
+        assert context["application"]["id"] == app["id"]
+        assert len(context["contacts"]) == 1
+        assert len(context["communications"]) == 1
+
+    def test_default_resume_populated(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        context = svc.get_application_context(app["id"])
+
+        assert context["default_resume"] is not None
+
+    def test_resume_version_none_when_not_linked(
+        self, db_conn: sqlite3.Connection
+    ) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        context = svc.get_application_context(app["id"])
+
+        assert context["resume_version"] is None
+
+    def test_raises_for_nonexistent_app(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        with pytest.raises(ValueError, match="not found"):
+            svc.get_application_context(9999)

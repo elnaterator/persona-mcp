@@ -2,7 +2,7 @@
 
 import argparse
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 
 import uvicorn
 from fastapi import FastAPI
@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 
 from persona.api.routes import create_router
+from persona.application_service import ApplicationService
 from persona.config import (
     configure_logging,
     resolve_cors_origins,
@@ -21,86 +22,30 @@ from persona.config import (
 from persona.database import init_database
 from persona.db import DBConnection
 from persona.resume_service import ResumeService
+from persona.tools.application_tools import register_application_tools
+from persona.tools.resume_tools import register_resume_tools
 
 mcp = FastMCP("persona")
 
 # Resolved at startup, used by MCP tool handlers.
 _conn: DBConnection | None = None
 _service: ResumeService | None = None
+_app_service: ApplicationService | None = None
 
 
-# --- MCP tool definitions (unchanged signatures) ---
-
-
-@mcp.tool()
-def get_resume() -> dict[str, Any]:
-    """Get the full resume as structured data.
-
-    Returns contact info, summary, experience, education, and skills.
-    """
+def _get_resume_service() -> ResumeService:
     assert _service is not None
-    return _service.get_resume().model_dump()
+    return _service
 
 
-@mcp.tool()
-def get_resume_section(section: str) -> Any:
-    """Get a specific resume section by name.
-
-    Args:
-        section: One of: contact, summary, experience, education, skills.
-    """
-    assert _service is not None
-    return _service.get_section(section)
+def _get_app_service() -> ApplicationService:
+    assert _app_service is not None
+    return _app_service
 
 
-@mcp.tool()
-def update_section(section: str, data: dict[str, Any]) -> str:
-    """Update a non-list resume section (contact info or summary).
-
-    Args:
-        section: One of: contact, summary.
-        data: Fields to update. For contact: any subset of contact fields.
-              For summary: {"text": "new summary"}.
-    """
-    assert _service is not None
-    return _service.update_section(section, data)
-
-
-@mcp.tool()
-def add_entry(section: str, data: dict[str, Any]) -> str:
-    """Add an entry to a list-based resume section.
-
-    Args:
-        section: One of: experience, education, skills.
-        data: Entry fields. Required fields vary by section.
-    """
-    assert _service is not None
-    return _service.add_entry(section, data)
-
-
-@mcp.tool()
-def update_entry(section: str, index: int, data: dict[str, Any]) -> str:
-    """Update an existing entry in a list-based resume section.
-
-    Args:
-        section: One of: experience, education, skills.
-        index: 0-based index of the entry to update.
-        data: Fields to update (partial update, omitted fields unchanged).
-    """
-    assert _service is not None
-    return _service.update_entry(section, index, data)
-
-
-@mcp.tool()
-def remove_entry(section: str, index: int) -> str:
-    """Remove an entry from a list-based resume section.
-
-    Args:
-        section: One of: experience, education, skills.
-        index: 0-based index of the entry to remove.
-    """
-    assert _service is not None
-    return _service.remove_entry(section, index)
+# Register MCP tools from modules
+register_resume_tools(mcp, _get_resume_service)
+register_application_tools(mcp, _get_app_service)
 
 
 # --- FastAPI application factory ---
@@ -117,7 +62,7 @@ def create_app(
         conn: Optional pre-built DBConnection (for testing / MCP globals).
             If service and conn are None, initializes from environment config.
     """
-    global _conn, _service
+    global _conn, _service, _app_service
 
     if service is None:
         logger = configure_logging()
@@ -128,6 +73,7 @@ def create_app(
 
     _conn = conn
     _service = service
+    _app_service = ApplicationService(conn) if conn else None
 
     # Get MCP HTTP app first to access its lifespan
     mcp_app = mcp.http_app(path="/")
@@ -156,7 +102,12 @@ def create_app(
         )
 
     # Mount REST API routes
-    app.include_router(create_router(service))
+    app.include_router(
+        create_router(
+            service,
+            app_service=_app_service,
+        )
+    )
 
     # Mount MCP server at /mcp (streamable-http transport)
     app.mount("/mcp", mcp_app)
@@ -185,11 +136,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.stdio:
-        global _conn, _service
+        global _conn, _service, _app_service
         logger = configure_logging()
         data_dir = resolve_data_dir()
         _conn = init_database(data_dir)
         _service = ResumeService(_conn)
+        _app_service = ApplicationService(_conn)
         logger.info("Persona MCP server starting (stdio), data dir: %s", data_dir)
         mcp.run(transport="stdio")
     else:

@@ -53,6 +53,9 @@ Dockerfile            # Multi-stage Docker build
 - pyright for type checking
 - Python 3.11+ (backend), TypeScript 5.x (frontend) + FastAPI, FastMCP, uvicorn (backend); React 18, Vite 5 (frontend) (feat-005-user-interface)
 - SQLite via stdlib `sqlite3` (existing, unchanged) (feat-005-user-interface)
+- Python 3.11+ (backend), TypeScript 5.x (frontend) + FastMCP >=2.3.0, FastAPI >=0.100.0, React 18, Vite 6 (006-job-applications)
+- SQLite via stdlib `sqlite3` (schema migration v1 → v2) (006-job-applications)
+- SQLite via stdlib sqlite3 with DBConnection protocol (006-job-applications)
 
 ## Recent Changes
 - feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action
