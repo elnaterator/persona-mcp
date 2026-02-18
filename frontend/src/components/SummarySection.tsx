@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { EditableSection } from './EditableSection';
-import { updateSummary } from '../services/api';
+import { updateSummary, updateVersionSummary } from '../services/api';
 import styles from './SummarySection.module.css';
 
 interface SummarySectionProps {
   summary: string;
   onUpdate?: () => void;
+  versionId?: number;
 }
 
-export default function SummarySection({ summary, onUpdate }: SummarySectionProps) {
+export default function SummarySection({ summary, onUpdate, versionId }: SummarySectionProps) {
   const [formData, setFormData] = useState<string>(summary);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -19,7 +20,11 @@ export default function SummarySection({ summary, onUpdate }: SummarySectionProp
     }
 
     setValidationError(null);
-    await updateSummary(formData);
+    if (versionId !== undefined) {
+      await updateVersionSummary(versionId, formData);
+    } else {
+      await updateSummary(formData);
+    }
     if (onUpdate) {
       onUpdate();
     }

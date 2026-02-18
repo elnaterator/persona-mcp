@@ -3,12 +3,13 @@ import type { Skill } from '../types/resume'
 import { EntryForm, type FieldConfig } from './EntryForm'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
-import { addEntry, updateEntry, removeEntry } from '../services/api'
+import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../services/api'
 import styles from './SkillsSection.module.css'
 
 interface SkillsSectionProps {
   skills: Skill[]
   onUpdate?: () => void
+  versionId?: number
 }
 
 type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
@@ -18,7 +19,7 @@ const skillFields: FieldConfig[] = [
   { name: 'category', label: 'Category', type: 'text', required: false },
 ]
 
-export default function SkillsSection({ skills, onUpdate }: SkillsSectionProps) {
+export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSectionProps) {
   const [mode, setMode] = useState<Mode>('view')
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -40,7 +41,11 @@ export default function SkillsSection({ skills, onUpdate }: SkillsSectionProps) 
         category: (data.category as string) || null,
       }
 
-      await addEntry('skills', entryData)
+      if (versionId !== undefined) {
+        await addVersionEntry(versionId, 'skills', entryData)
+      } else {
+        await addEntry('skills', entryData)
+      }
       setStatusMessage({ type: 'success', message: 'Skill added successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
@@ -58,7 +63,11 @@ export default function SkillsSection({ skills, onUpdate }: SkillsSectionProps) 
         category: (data.category as string) || null,
       }
 
-      await updateEntry('skills', mode.index, entryData)
+      if (versionId !== undefined) {
+        await updateVersionEntry(versionId, 'skills', mode.index, entryData)
+      } else {
+        await updateEntry('skills', mode.index, entryData)
+      }
       setStatusMessage({ type: 'success', message: 'Skill updated successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
@@ -71,7 +80,11 @@ export default function SkillsSection({ skills, onUpdate }: SkillsSectionProps) 
     if (typeof mode !== 'object' || mode.type !== 'delete') return
 
     try {
-      await removeEntry('skills', mode.index)
+      if (versionId !== undefined) {
+        await removeVersionEntry(versionId, 'skills', mode.index)
+      } else {
+        await removeEntry('skills', mode.index)
+      }
       setStatusMessage({ type: 'success', message: 'Skill deleted successfully' })
       setMode('view')
       if (onUpdate) onUpdate()

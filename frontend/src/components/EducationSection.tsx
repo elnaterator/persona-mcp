@@ -3,12 +3,13 @@ import type { Education } from '../types/resume'
 import { EntryForm, type FieldConfig } from './EntryForm'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
-import { addEntry, updateEntry, removeEntry } from '../services/api'
+import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../services/api'
 import styles from './EducationSection.module.css'
 
 interface EducationSectionProps {
   education: Education[]
   onUpdate?: () => void
+  versionId?: number
 }
 
 type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
@@ -22,7 +23,7 @@ const educationFields: FieldConfig[] = [
   { name: 'honors', label: 'Honors', type: 'text', required: false },
 ]
 
-export default function EducationSection({ education, onUpdate }: EducationSectionProps) {
+export default function EducationSection({ education, onUpdate, versionId }: EducationSectionProps) {
   const [mode, setMode] = useState<Mode>('view')
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -37,7 +38,11 @@ export default function EducationSection({ education, onUpdate }: EducationSecti
         honors: (data.honors as string) || null,
       }
 
-      await addEntry('education', entryData)
+      if (versionId !== undefined) {
+        await addVersionEntry(versionId, 'education', entryData)
+      } else {
+        await addEntry('education', entryData)
+      }
       setStatusMessage({ type: 'success', message: 'Education added successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
@@ -59,7 +64,11 @@ export default function EducationSection({ education, onUpdate }: EducationSecti
         honors: (data.honors as string) || null,
       }
 
-      await updateEntry('education', mode.index, entryData)
+      if (versionId !== undefined) {
+        await updateVersionEntry(versionId, 'education', mode.index, entryData)
+      } else {
+        await updateEntry('education', mode.index, entryData)
+      }
       setStatusMessage({ type: 'success', message: 'Education updated successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
@@ -72,7 +81,11 @@ export default function EducationSection({ education, onUpdate }: EducationSecti
     if (typeof mode !== 'object' || mode.type !== 'delete') return
 
     try {
-      await removeEntry('education', mode.index)
+      if (versionId !== undefined) {
+        await removeVersionEntry(versionId, 'education', mode.index)
+      } else {
+        await removeEntry('education', mode.index)
+      }
       setStatusMessage({ type: 'success', message: 'Education deleted successfully' })
       setMode('view')
       if (onUpdate) onUpdate()

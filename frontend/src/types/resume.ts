@@ -59,3 +59,60 @@ export interface ApiError {
 export interface ApiSuccessResponse {
   message: string
 }
+
+export interface ResumeVersion {
+  id: number
+  label: string
+  is_default: boolean
+  resume_data: Resume
+  app_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ResumeVersionSummary {
+  id: number
+  label: string
+  is_default: boolean
+  app_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Application {
+  id: number
+  company: string
+  position: string
+  description: string
+  status: string
+  url: string | null
+  notes: string
+  resume_version_id: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ApplicationContact {
+  id: number
+  app_id: number
+  name: string
+  role: string | null
+  email: string | null
+  phone: string | null
+  notes: string
+  created_at: string
+}
+
+export interface Communication {
+  id: number
+  app_id: number
+  contact_id: number | null
+  contact_name: string | null
+  type: string
+  direction: string
+  subject: string
+  body: string
+  date: string
+  status: string
+  created_at: string
+}

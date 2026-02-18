@@ -1,0 +1,144 @@
+.container {
+  padding: 0;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.backButton {
+  background: none;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.backButton:hover {
+  background-color: #f3f4f6;
+}
+
+.backButton:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.defaultBadge {
+  background-color: #dcfce7;
+  color: #166534;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.labelRow {
+  margin-bottom: 1.5rem;
+}
+
+.labelDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.label {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.editLabelBtn {
+  background: none;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.editLabelBtn:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.editLabelBtn:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.labelEdit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.labelInput {
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  width: 20rem;
+  max-width: 100%;
+}
+
+.labelInput:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 0;
+  border-color: #3b82f6;
+}
+
+.saveLabel {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.saveLabel:hover {
+  background-color: #1d4ed8;
+}
+
+.cancelLabel {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.cancelLabel:hover {
+  background-color: #e5e7eb;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .labelInput {
+    width: 100%;
+  }
+
+  .labelEdit {
+    flex-wrap: wrap;
+  }
+}
