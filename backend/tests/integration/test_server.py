@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 class TestServerAutoInit:
-    """Integration tests for database auto-initialization (US2)."""
+    """Integration tests for database auto-initialization."""
 
     def test_auto_creates_data_dir_and_db(self, tmp_path: Path) -> None:
         from persona.database import init_database
@@ -32,35 +32,42 @@ class TestServerAutoInit:
         """Simulates server restart with a pending migration."""
         from persona.migrations import MIGRATIONS, apply_migrations
 
-        # First "startup" — create DB at v1
+        # First "startup" — create DB at current version
         db_path = tmp_path / "persona.db"
         conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         apply_migrations(conn)
 
-        # Insert data at v1
-        conn.execute("INSERT INTO contact (id, name) VALUES (1, 'Existing User')")
+        # Insert data at current version
+        conn.execute(
+            "INSERT INTO resume_version (label, is_default, resume_data) "
+            "VALUES ('Test Resume', 0, '{}')"
+        )
         conn.commit()
         conn.close()
 
-        # Add a mock v1→v2 migration
-        def mock_v1_to_v2(c: sqlite3.Connection) -> None:
-            c.execute("ALTER TABLE contact ADD COLUMN twitter TEXT")
+        # Add a mock next migration
+        def mock_next_migration(c: sqlite3.Connection) -> None:
+            c.execute("ALTER TABLE resume_version ADD COLUMN description TEXT")
 
         original = MIGRATIONS.copy()
-        MIGRATIONS.append(mock_v1_to_v2)
+        MIGRATIONS.append(mock_next_migration)
 
         try:
-            # Second "startup" — should auto-apply v1→v2
+            # Second "startup" — should auto-apply the mock migration
             conn2 = sqlite3.connect(str(db_path))
             conn2.row_factory = sqlite3.Row
             apply_migrations(conn2)
 
             version = conn2.execute("PRAGMA user_version").fetchone()[0]
-            assert version == 2
+            assert version == len(MIGRATIONS)
 
             # Verify existing data preserved
-            row = conn2.execute("SELECT * FROM contact WHERE id = 1").fetchone()
-            assert row["name"] == "Existing User"
+            row = conn2.execute(
+                "SELECT * FROM resume_version WHERE label = 'Test Resume'"
+            ).fetchone()
+            assert row is not None
             conn2.close()
         finally:
             MIGRATIONS.clear()
@@ -137,33 +144,38 @@ class TestServerReadTools:
         assert isinstance(serialized, str)
 
     def test_performance_under_2s_with_large_dataset(
-        self, db_conn: sqlite3.Connection
+        self, db_conn_with_data: sqlite3.Connection
     ) -> None:
         """SC-003: System starts and is usable within 2 seconds."""
-        import json as json_mod
-
         from persona.tools.read import get_resume
 
-        # Insert 50 experience entries
-        for i in range(50):
-            db_conn.execute(
-                "INSERT INTO experience "
-                "(title, company, start_date, end_date, location, "
-                "highlights, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    f"Engineer {i}",
-                    f"Company {i}",
-                    f"20{i % 25:02d}-01",
-                    f"20{(i % 25) + 1:02d}-01",
-                    f"City {i}",
-                    json_mod.dumps([f"Built feature {i}"]),
-                    i,
-                ),
-            )
-        db_conn.commit()
+        # Update default resume with 50 experience entries
+        large_experience = [
+            {
+                "title": f"Engineer {i}",
+                "company": f"Company {i}",
+                "start_date": f"20{i % 25:02d}-01",
+                "end_date": f"20{(i % 25) + 1:02d}-01",
+                "location": f"City {i}",
+                "highlights": [f"Built feature {i}"],
+            }
+            for i in range(50)
+        ]
+        resume_data = {
+            "contact": {},
+            "summary": "",
+            "experience": large_experience,
+            "education": [],
+            "skills": [],
+        }
+        db_conn_with_data.execute(
+            "UPDATE resume_version SET resume_data = ? WHERE is_default = 1",
+            (json.dumps(resume_data),),
+        )
+        db_conn_with_data.commit()
 
         start = time.monotonic()
-        result = get_resume(conn=db_conn)
+        result = get_resume(conn=db_conn_with_data)
         elapsed = time.monotonic() - start
 
         assert elapsed < 2.0, f"get_resume took {elapsed:.2f}s, expected <2s"
@@ -250,24 +262,23 @@ class TestServerWriteTools:
 
 
 class TestMCPOverHTTP:
-    """Integration tests for MCP accessible via streamable-http (US2)."""
+    """Integration tests for MCP accessible via streamable-http."""
 
     def test_mcp_app_mounted(self, db_conn_with_data: sqlite3.Connection) -> None:
-        """Test US2: MCP server is mounted at /mcp endpoint."""
+        """MCP server is mounted at /mcp endpoint."""
         from persona.resume_service import ResumeService
         from persona.server import create_app
 
         service = ResumeService(db_conn_with_data)
         app = create_app(service=service, conn=db_conn_with_data)
 
-        # Verify the /mcp route is mounted in the app
         routes = [getattr(route, "path", None) for route in app.routes]
         assert "/mcp" in routes, "MCP endpoint should be mounted at /mcp"
 
     def test_rest_and_mcp_share_service(
         self, db_conn_with_data: sqlite3.Connection
     ) -> None:
-        """Test US2/US3: REST API and MCP tools use the same ResumeService instance."""
+        """REST API and MCP tools use the same ResumeService instance."""
         import persona.server
         from persona.resume_service import ResumeService
         from persona.server import create_app
@@ -275,7 +286,6 @@ class TestMCPOverHTTP:
         service = ResumeService(db_conn_with_data)
         create_app(service=service, conn=db_conn_with_data)
 
-        # Verify the global _service is set correctly
         assert persona.server._service is service, (
             "MCP tools should use the same service as REST API"
         )

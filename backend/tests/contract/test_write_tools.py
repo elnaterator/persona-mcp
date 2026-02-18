@@ -304,3 +304,264 @@ class TestRemoveEntry:
 
         with pytest.raises(ValueError, match="Invalid section"):
             remove_entry(section="contact", index=0, conn=db_conn)
+
+
+class TestResumeVersionWriteTools:
+    """Contract tests for resume version MCP write tools."""
+
+    def test_create_resume_returns_message(self, db_conn: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn)
+        result = service.create_resume("My Resume")
+
+        assert result["label"] == "My Resume"
+        assert result["is_default"] is False
+
+    def test_set_default_resume(self, db_conn: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn)
+        new_version = service.create_resume("New Default")
+        msg = service.set_default(new_version["id"])
+
+        assert isinstance(msg, str)
+        default = service.get_resume()
+        assert default["id"] == new_version["id"]
+
+    def test_delete_resume_removes_version(self, db_conn: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn)
+        v2 = service.create_resume("Temp")
+        service.delete_resume(v2["id"])
+
+        versions = service.list_resumes()
+        ids = [v["id"] for v in versions]
+        assert v2["id"] not in ids
+
+    def test_delete_last_resume_raises(self, db_conn: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn)
+        default = service.get_resume()
+        with pytest.raises(ValueError, match="last remaining"):
+            service.delete_resume(default["id"])
+
+    def test_update_resume_section_contact(
+        self, db_conn_with_data: sqlite3.Connection
+    ) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn_with_data)
+        default = service.get_resume()
+        msg = service.update_section(
+            "contact", {"email": "new@example.com"}, default["id"]
+        )
+
+        assert isinstance(msg, str)
+        contact = service.get_section("contact", version_id=default["id"])
+        assert contact["email"] == "new@example.com"
+        assert contact["name"] == "Jane Doe"
+
+    def test_add_resume_entry(self, db_conn: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn)
+        default = service.get_resume()
+        msg = service.add_entry(
+            "experience", {"title": "Dev", "company": "Corp"}, default["id"]
+        )
+
+        assert isinstance(msg, str)
+        experience = service.get_section("experience", version_id=default["id"])
+        assert len(experience) == 1
+
+    def test_update_resume_entry(self, db_conn_with_data: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn_with_data)
+        default = service.get_resume()
+        msg = service.update_entry(
+            "experience", 0, {"title": "Staff Engineer"}, default["id"]
+        )
+
+        assert isinstance(msg, str)
+        experience = service.get_section("experience", version_id=default["id"])
+        assert experience[0]["title"] == "Staff Engineer"
+
+    def test_remove_resume_entry(self, db_conn_with_data: sqlite3.Connection) -> None:
+        from persona.resume_service import ResumeService
+
+        service = ResumeService(db_conn_with_data)
+        default = service.get_resume()
+        initial_count = len(service.get_section("experience", version_id=default["id"]))
+        msg = service.remove_entry("experience", 0, default["id"])
+
+        assert isinstance(msg, str)
+        experience = service.get_section("experience", version_id=default["id"])
+        assert len(experience) == initial_count - 1
+
+
+class TestApplicationTools:
+    """Contract tests for application MCP write tools."""
+
+    def test_create_application(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Acme", "position": "Engineer"})
+
+        assert app["company"] == "Acme"
+        assert app["position"] == "Engineer"
+        assert app["status"] == "Interested"
+
+    def test_update_application(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        updated = svc.update_application(
+            app["id"], {"status": "Applied", "notes": "Good"}
+        )
+
+        assert updated["status"] == "Applied"
+        assert updated["notes"] == "Good"
+
+    def test_delete_application_returns_data(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        deleted = svc.delete_application(app["id"])
+
+        assert deleted["company"] == "Corp"
+        with pytest.raises(ValueError, match="not found"):
+            svc.get_application(app["id"])
+
+    def test_create_application_invalid_status_raises(
+        self, db_conn: sqlite3.Connection
+    ) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        with pytest.raises(ValueError, match="Invalid status"):
+            svc.create_application(
+                {"company": "Corp", "position": "Dev", "status": "NotValid"}
+            )
+
+
+class TestContactTools:
+    """Contract tests for contact MCP write tools."""
+
+    def test_add_contact(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        contact = svc.add_contact(
+            app["id"], {"name": "Alice", "email": "alice@corp.com"}
+        )
+
+        assert contact["name"] == "Alice"
+        assert contact["email"] == "alice@corp.com"
+        assert contact["app_id"] == app["id"]
+
+    def test_update_contact(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        contact = svc.add_contact(app["id"], {"name": "Bob"})
+        updated = svc.update_contact(contact["id"], {"role": "HR"})
+
+        assert updated["role"] == "HR"
+        assert updated["name"] == "Bob"
+
+    def test_remove_contact(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        contact = svc.add_contact(app["id"], {"name": "Alice"})
+        name = svc.remove_contact(contact["id"])
+
+        assert name == "Alice"
+        contacts = svc.list_contacts(app["id"])
+        assert len(contacts) == 0
+
+    def test_remove_contact_not_found_raises(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        with pytest.raises(ValueError, match="not found"):
+            svc.remove_contact(9999)
+
+
+class TestCommunicationTools:
+    """Contract tests for communication MCP write tools."""
+
+    def test_add_communication(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        comm = svc.add_communication(
+            app["id"],
+            {
+                "type": "email",
+                "direction": "sent",
+                "body": "Applying for the role.",
+                "date": "2024-01-15",
+                "subject": "Application",
+                "status": "draft",
+            },
+        )
+
+        assert comm["type"] == "email"
+        assert comm["direction"] == "sent"
+        assert comm["subject"] == "Application"
+        assert comm["status"] == "draft"
+
+    def test_update_communication(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        comm = svc.add_communication(
+            app["id"],
+            {"type": "email", "direction": "sent", "body": "Hi", "date": "2024-01-01"},
+        )
+        updated = svc.update_communication(comm["id"], {"body": "Updated body"})
+
+        assert updated["body"] == "Updated body"
+
+    def test_remove_communication(self, db_conn: sqlite3.Connection) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        app = svc.create_application({"company": "Corp", "position": "Dev"})
+        comm = svc.add_communication(
+            app["id"],
+            {
+                "type": "email",
+                "direction": "sent",
+                "body": "Hello",
+                "date": "2024-01-01",
+                "subject": "Greetings",
+            },
+        )
+        subject = svc.remove_communication(comm["id"])
+
+        assert subject == "Greetings"
+        comms = svc.list_communications(app["id"])
+        assert len(comms) == 0
+
+    def test_remove_communication_not_found_raises(
+        self, db_conn: sqlite3.Connection
+    ) -> None:
+        from persona.application_service import ApplicationService
+
+        svc = ApplicationService(db_conn)
+        with pytest.raises(ValueError, match="not found"):
+            svc.remove_communication(9999)
