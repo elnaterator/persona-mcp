@@ -5,6 +5,7 @@ import {
   listAccomplishmentTags,
   createAccomplishment,
 } from '../services/api'
+import styles from './AccomplishmentListView.module.css'
 
 interface Props {
   onSelectAccomplishment: (id: number) => void
@@ -88,11 +89,11 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
   }
 
   return (
-    <div className="section-container">
-      <div className="section-header">
-        <h2>Accomplishments</h2>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h2 className={styles.heading}>Accomplishments</h2>
         <button
-          className="btn btn-primary"
+          className={styles.newButton}
           onClick={() => {
             setShowForm((v) => !v)
             setFormError('')
@@ -103,14 +104,15 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
       </div>
 
       {showForm && (
-        <div className="form-card">
-          <h3>New Accomplishment</h3>
-          {formError && <p className="form-error">{formError}</p>}
+        <div className={styles.newForm}>
+          <p className={styles.formTitle}>New Accomplishment</p>
+          {formError && <p className={styles.formError}>{formError}</p>}
 
-          <div className="form-group">
-            <label htmlFor="acc-title">Title *</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-title">Title *</label>
             <input
               id="acc-title"
+              className={styles.input}
               type="text"
               value={form.title}
               onChange={(e) => handleFieldChange('title', e.target.value)}
@@ -118,10 +120,11 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="acc-situation">Situation</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-situation">Situation</label>
             <textarea
               id="acc-situation"
+              className={styles.textarea}
               value={form.situation}
               onChange={(e) => handleFieldChange('situation', e.target.value)}
               placeholder="Describe the context or background…"
@@ -129,10 +132,11 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="acc-task">Task</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-task">Task</label>
             <textarea
               id="acc-task"
+              className={styles.textarea}
               value={form.task}
               onChange={(e) => handleFieldChange('task', e.target.value)}
               placeholder="What was your specific responsibility or goal?"
@@ -140,10 +144,11 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="acc-action">Action</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-action">Action</label>
             <textarea
               id="acc-action"
+              className={styles.textarea}
               value={form.action}
               onChange={(e) => handleFieldChange('action', e.target.value)}
               placeholder="What steps did you take to address the situation?"
@@ -151,10 +156,11 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="acc-result">Result</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-result">Result</label>
             <textarea
               id="acc-result"
+              className={styles.textarea}
               value={form.result}
               onChange={(e) => handleFieldChange('result', e.target.value)}
               placeholder="What was the outcome or impact? Include metrics where possible."
@@ -162,20 +168,22 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="acc-date">Accomplishment Date</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-date">Accomplishment Date</label>
             <input
               id="acc-date"
+              className={styles.input}
               type="date"
               value={form.accomplishment_date}
               onChange={(e) => handleFieldChange('accomplishment_date', e.target.value)}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="acc-tags">Tags</label>
+          <div className={styles.formField}>
+            <label className={styles.formLabel} htmlFor="acc-tags">Tags</label>
             <input
               id="acc-tags"
+              className={styles.input}
               type="text"
               value={form.tags}
               onChange={(e) => handleFieldChange('tags', e.target.value)}
@@ -189,16 +197,16 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
             </datalist>
           </div>
 
-          <div className="form-actions">
+          <div className={styles.formActions}>
             <button
-              className="btn btn-primary"
+              className={styles.submitButton}
               onClick={handleSave}
               disabled={saving}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button
-              className="btn btn-secondary"
+              className={styles.cancelButton}
               onClick={() => {
                 setShowForm(false)
                 setFormError('')
@@ -211,10 +219,10 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
         </div>
       )}
 
-      <div className="filter-bar">
-        <label htmlFor="acc-tag-filter">Filter by tag:</label>
+      <div className={styles.filters}>
         <select
           id="acc-tag-filter"
+          className={styles.filterSelect}
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
         >
@@ -228,19 +236,23 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
       </div>
 
       {accomplishments.length === 0 ? (
-        <p className="empty-state">No accomplishments yet. Click "New Accomplishment" to add one.</p>
+        <p className={styles.empty}>No accomplishments yet. Click "New Accomplishment" to add one.</p>
       ) : (
-        <ul className="item-list">
+        <ul className={styles.list}>
           {accomplishments.map((acc) => (
-            <li key={acc.id} className="item-card" onClick={() => onSelectAccomplishment(acc.id)}>
-              <div className="item-title">{acc.title}</div>
+            <li
+              key={acc.id}
+              className={styles.item}
+              onClick={() => onSelectAccomplishment(acc.id)}
+            >
+              <div className={styles.itemTitle}>{acc.title}</div>
               {acc.accomplishment_date && (
-                <div className="item-date">{acc.accomplishment_date}</div>
+                <div className={styles.itemMeta}>{acc.accomplishment_date}</div>
               )}
               {acc.tags.length > 0 && (
-                <div className="item-tags">
+                <div className={styles.itemTags}>
                   {acc.tags.map((tag) => (
-                    <span key={tag} className="tag-badge">
+                    <span key={tag} className={styles.tagBadge}>
                       {tag}
                     </span>
                   ))}
