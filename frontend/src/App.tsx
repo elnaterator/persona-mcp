@@ -4,22 +4,35 @@ import ResumeListView from './components/ResumeListView'
 import ResumeDetailView from './components/ResumeDetailView'
 import ApplicationListView from './components/ApplicationListView'
 import ApplicationDetailView from './components/ApplicationDetailView'
+import AccomplishmentListView from './components/AccomplishmentListView'
+import AccomplishmentDetailView from './components/AccomplishmentDetailView'
 
 type View =
   | { type: 'resume-list' }
   | { type: 'resume-detail'; id: number }
   | { type: 'app-list' }
   | { type: 'app-detail'; id: number }
+  | { type: 'acc-list' }
+  | { type: 'acc-detail'; id: number }
+
+type NavSection = 'resumes' | 'applications' | 'accomplishments'
 
 function App() {
   const [view, setView] = useState<View>({ type: 'resume-list' })
-  const activeNav = view.type.startsWith('resume') ? 'resumes' : 'applications'
 
-  const handleNavigate = (section: 'resumes' | 'applications') => {
+  const activeNav: NavSection = view.type.startsWith('resume')
+    ? 'resumes'
+    : view.type.startsWith('app')
+      ? 'applications'
+      : 'accomplishments'
+
+  const handleNavigate = (section: NavSection) => {
     if (section === 'resumes') {
       setView({ type: 'resume-list' })
-    } else {
+    } else if (section === 'applications') {
       setView({ type: 'app-list' })
+    } else {
+      setView({ type: 'acc-list' })
     }
   }
 
@@ -48,6 +61,17 @@ function App() {
           <ApplicationDetailView
             appId={view.id}
             onBack={() => setView({ type: 'app-list' })}
+          />
+        )}
+        {view.type === 'acc-list' && (
+          <AccomplishmentListView
+            onSelectAccomplishment={(id) => setView({ type: 'acc-detail', id })}
+          />
+        )}
+        {view.type === 'acc-detail' && (
+          <AccomplishmentDetailView
+            accomplishmentId={view.id}
+            onBack={() => setView({ type: 'acc-list' })}
           />
         )}
       </main>

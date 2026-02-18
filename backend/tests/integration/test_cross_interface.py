@@ -1,5 +1,6 @@
 """Cross-interface integration tests — verify REST and MCP share state."""
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -266,3 +267,80 @@ class TestAIDraftWorkflow:
         assert len(comms) == 1
         assert comms[0]["status"] == "draft"
         assert comms[0]["id"] == comm["id"]
+
+
+# ── Accomplishment Cross-Interface Tests ──────────────────────────────────────
+
+
+class TestAccomplishmentCrossInterface:
+    """T049 — Cross-interface tests: service layer ↔ REST API + SC-006 durability."""
+
+    @pytest.fixture
+    def full_app(self, db_conn_with_data: Any) -> tuple[Any, Any, TestClient]:
+        """Create full app (all services) with test database and HTTP test client."""
+        service = ResumeService(db_conn_with_data)
+        app = create_app(service=service, conn=db_conn_with_data)
+        client = TestClient(app)
+        return app, service, client
+
+    def test_create_via_service_visible_via_rest(
+        self, full_app: tuple[Any, Any, TestClient]
+    ) -> None:
+        """Accomplishment created via AccomplishmentService visible via REST API."""
+        _app, _service, client = full_app
+        acc_svc = persona.server._acc_service
+        assert acc_svc is not None
+
+        created = acc_svc.create_accomplishment(
+            {"title": "Cross-interface test", "result": "Success"}
+        )
+
+        resp = client.get(f"/api/accomplishments/{created['id']}")
+        assert resp.status_code == 200
+        assert resp.json()["title"] == "Cross-interface test"
+
+    def test_create_via_rest_visible_via_service(
+        self, full_app: tuple[Any, Any, TestClient]
+    ) -> None:
+        """Accomplishment created via REST API visible via AccomplishmentService."""
+        _app, _service, client = full_app
+        acc_svc = persona.server._acc_service
+        assert acc_svc is not None
+
+        resp = client.post(
+            "/api/accomplishments",
+            json={"title": "REST creation", "tags": ["test"]},
+        )
+        assert resp.status_code == 201
+        acc_id = resp.json()["id"]
+
+        acc = acc_svc.get_accomplishment(acc_id)
+        assert acc["title"] == "REST creation"
+
+    def test_global_acc_service_shared(
+        self, full_app: tuple[Any, Any, TestClient]
+    ) -> None:
+        """Verify global _acc_service used by MCP is the same instance."""
+        _app, _service, client = full_app
+        assert persona.server._acc_service is not None
+
+    def test_durability_across_connection_reopen(self, tmp_path: Path) -> None:
+        """SC-006: Accomplishment persists after DB connection closed and reopened."""
+        from persona.accomplishment_service import AccomplishmentService
+        from persona.database import init_database
+
+        data_dir = tmp_path / "data"
+
+        # First connection — create an accomplishment
+        conn1 = init_database(data_dir)
+        svc1 = AccomplishmentService(conn1)
+        created = svc1.create_accomplishment({"title": "Durability test"})
+        acc_id = created["id"]
+        conn1.close()
+
+        # Second connection — verify it's still there
+        conn2 = init_database(data_dir)
+        svc2 = AccomplishmentService(conn2)
+        recovered = svc2.get_accomplishment(acc_id)
+        assert recovered["title"] == "Durability test"
+        conn2.close()

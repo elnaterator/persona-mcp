@@ -1,8 +1,10 @@
 import styles from './Navigation.module.css'
 
+type NavSection = 'resumes' | 'applications' | 'accomplishments'
+
 interface NavigationProps {
-  activeView: 'resumes' | 'applications'
-  onNavigate: (view: 'resumes' | 'applications') => void
+  activeView: NavSection
+  onNavigate: (view: NavSection) => void
 }
 
 export default function Navigation({ activeView, onNavigate }: NavigationProps) {
@@ -21,6 +23,13 @@ export default function Navigation({ activeView, onNavigate }: NavigationProps) 
         aria-current={activeView === 'applications' ? 'page' : undefined}
       >
         Applications
+      </button>
+      <button
+        className={`${styles.navItem} ${activeView === 'accomplishments' ? styles.active : ''}`}
+        onClick={() => onNavigate('accomplishments')}
+        aria-current={activeView === 'accomplishments' ? 'page' : undefined}
+      >
+        Accomplishments
       </button>
     </nav>
   )

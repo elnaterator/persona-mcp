@@ -4,6 +4,7 @@ A personal data server that helps you manage your resume and job applications, w
 
 ## Features
 
+- **Accomplishment Tracking**: Record and manage career accomplishments using the STAR format (Situation, Task, Action, Result). Tag accomplishments for easy filtering and use them to craft compelling job application materials.
 - **Job Application Tracking**: Manage job applications from "Interested" to "Offer".
 - **Resume Versioning**: Maintain multiple resume versions and tailor them for specific jobs.
 - **Web UI**: A clean web interface for managing your data.
@@ -39,6 +40,17 @@ Data is stored in a `data/` directory, which is created automatically.
 
 The API is available at `http://localhost:8000/api`.
 
+**Accomplishments**
+
+*   `GET /api/accomplishments`: List all accomplishments (summaries: title, date, tags). Supports `?tag=X` to filter by tag and `?q=Y` for text search.
+*   `GET /api/accomplishments/tags`: Get a sorted list of all unique tags across accomplishments.
+*   `POST /api/accomplishments`: Create a new accomplishment (title required; situation, task, action, result, accomplishment_date, tags optional).
+*   `GET /api/accomplishments/{id}`: Get a single accomplishment with full STAR content.
+*   `PATCH /api/accomplishments/{id}`: Partially update an accomplishment (only provided fields are changed).
+*   `DELETE /api/accomplishments/{id}`: Delete an accomplishment.
+
+**Resumes**
+
 *   `GET /api/resumes`: List all resume versions.
 *   `GET /api/resumes/{id}`: Get a specific resume version.
 *   `POST /api/resumes`: Create a new resume version.
@@ -58,6 +70,16 @@ The API is available at `http://localhost:8000/api`.
 
 The MCP server is available at `http://localhost:8000/mcp`.
 AI assistants can use tools like:
+
+**Accomplishment tools**
+
+*   `list_accomplishments`: List accomplishments with optional `tag` and `q` filter params. Returns summaries (no STAR body).
+*   `get_accomplishment`: Get full STAR detail for a single accomplishment by `id`.
+*   `create_accomplishment`: Create a new accomplishment. Required: `title`. Optional: `situation`, `task`, `action`, `result`, `accomplishment_date` (YYYY-MM-DD), `tags` (list of strings).
+*   `update_accomplishment`: Partially update an accomplishment by `id`. All fields except `id` are optional.
+*   `delete_accomplishment`: Delete an accomplishment by `id`.
+
+**Resume and application tools**
 
 *   `list_resumes`: List all available resume versions.
 *   `get_resume`: Get a specific resume version (or the default).

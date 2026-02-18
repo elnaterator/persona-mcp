@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from persona.accomplishment_service import AccomplishmentService
 from persona.application_service import ApplicationService
 from persona.models import Resume
 from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
@@ -12,6 +13,7 @@ from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
 def create_router(
     service: ResumeService,
     app_service: ApplicationService | None = None,
+    acc_service: AccomplishmentService | None = None,
 ) -> APIRouter:
     """Create an APIRouter with all endpoints."""
     router = APIRouter()
@@ -421,5 +423,55 @@ def create_router(
                 return app_service.get_application_context(app_id)
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
+
+    # ==========================================================
+    # Accomplishment Routes
+    # ==========================================================
+
+    if acc_service is not None:
+
+        @router.get("/api/accomplishments")
+        def list_accomplishments(
+            tag: str | None = None, q: str | None = None
+        ) -> list[dict[str, Any]]:
+            return acc_service.list_accomplishments(tag=tag, q=q)
+
+        @router.post("/api/accomplishments", status_code=201)
+        def create_accomplishment(data: dict[str, Any]) -> dict[str, Any]:
+            try:
+                return acc_service.create_accomplishment(data)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
+
+        # NOTE: /tags MUST be registered BEFORE /{acc_id} to prevent FastAPI
+        # matching the literal string "tags" as an integer path parameter.
+        @router.get("/api/accomplishments/tags")
+        def list_accomplishment_tags() -> list[str]:
+            return acc_service.list_tags()
+
+        @router.get("/api/accomplishments/{acc_id}")
+        def get_accomplishment(acc_id: int) -> dict[str, Any]:
+            try:
+                return acc_service.get_accomplishment(acc_id)
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @router.patch("/api/accomplishments/{acc_id}")
+        def update_accomplishment(acc_id: int, data: dict[str, Any]) -> dict[str, Any]:
+            try:
+                return acc_service.update_accomplishment(acc_id, data)
+            except ValueError as e:
+                detail = str(e)
+                if "not found" in detail:
+                    raise HTTPException(status_code=404, detail=detail)
+                raise HTTPException(status_code=422, detail=detail)
+
+        @router.delete("/api/accomplishments/{acc_id}")
+        def delete_accomplishment(acc_id: int) -> dict[str, str]:
+            try:
+                acc = acc_service.delete_accomplishment(acc_id)
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+            return {"message": f"Deleted accomplishment '{acc['title']}'"}
 
     return router

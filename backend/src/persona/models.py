@@ -147,6 +147,32 @@ class ApplicationContact(BaseModel):
     notes: str = ""
 
 
+class Accomplishment(BaseModel):
+    """A career accomplishment in STAR format."""
+
+    id: int
+    title: str
+    situation: str = ""
+    task: str = ""
+    action: str = ""
+    result: str = ""
+    accomplishment_date: str | None = None
+    tags: list[str] = []
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class AccomplishmentSummary(BaseModel):
+    """Accomplishment summary for list views (STAR body omitted)."""
+
+    id: int
+    title: str
+    accomplishment_date: str | None = None
+    tags: list[str] = []
+    created_at: str = ""
+    updated_at: str = ""
+
+
 class Communication(BaseModel):
     """A communication entry for a job application."""
 

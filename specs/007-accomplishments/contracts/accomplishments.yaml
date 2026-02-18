@@ -1,0 +1,319 @@
+openapi: 3.0.3
+info:
+  title: Persona — Accomplishments API
+  version: "1.0"
+  description: REST endpoints for managing STAR-format accomplishments.
+
+tags:
+  - name: accomplishments
+    description: CRUD operations for career accomplishments
+
+paths:
+
+  /api/accomplishments:
+    get:
+      summary: List accomplishments
+      description: >
+        Returns a list of AccomplishmentSummary objects (STAR body omitted for
+        performance). Results are ordered reverse-chronologically by
+        accomplishment_date (NULLS LAST), then by created_at.
+      tags: [accomplishments]
+      parameters:
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to accomplishments whose tags array contains this exact tag value.
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Case-insensitive substring search across title, situation, task, action, and result.
+      responses:
+        "200":
+          description: List of accomplishment summaries (may be empty).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccomplishmentSummary'
+              example:
+                - id: 1
+                  title: "Led cross-functional platform migration"
+                  accomplishment_date: "2024-03-15"
+                  tags: ["leadership", "technical"]
+                  created_at: "2026-02-18T10:00:00"
+                  updated_at: "2026-02-18T10:00:00"
+
+    post:
+      summary: Create an accomplishment
+      tags: [accomplishments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccomplishmentCreate'
+            example:
+              title: "Led cross-functional platform migration"
+              situation: "Our monolith was causing 4-hour deployment windows."
+              task: "Migrate 3 services to microservices in 6 months."
+              action: "Coordinated 4 teams, introduced feature flags, shipped incrementally."
+              result: "Reduced deployment time by 80%; zero downtime cutover."
+              accomplishment_date: "2024-03-15"
+              tags: ["leadership", "technical"]
+      responses:
+        "201":
+          description: Accomplishment created. Returns the full record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accomplishment'
+        "422":
+          description: Validation error (e.g. missing title, invalid date format).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+              example:
+                detail: "title is required"
+
+  /api/accomplishments/tags:
+    get:
+      summary: List all unique tags
+      description: >
+        Returns a sorted, deduplicated list of all tag strings across all
+        accomplishments. Used by the UI for tag autocomplete.
+        IMPORTANT: This route must be registered before /api/accomplishments/{id}
+        to prevent FastAPI matching "tags" as an integer path parameter.
+      tags: [accomplishments]
+      responses:
+        "200":
+          description: Sorted unique tag list (may be empty).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example: ["cross-functional", "leadership", "technical"]
+
+  /api/accomplishments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Accomplishment ID.
+
+    get:
+      summary: Get a single accomplishment
+      tags: [accomplishments]
+      responses:
+        "200":
+          description: Full accomplishment record including all STAR fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accomplishment'
+        "404":
+          description: Accomplishment not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+    patch:
+      summary: Update an accomplishment (partial)
+      description: >
+        Updates only the fields provided in the request body. Omitted fields
+        retain their existing values. To clear a STAR field, pass an empty string.
+        To clear accomplishment_date, pass null. To replace tags, pass the full
+        new array.
+      tags: [accomplishments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccomplishmentUpdate'
+            example:
+              result: "Reduced deployment time by 80%; zero downtime cutover. Saved $200k/year."
+              tags: ["leadership", "technical", "cost-savings"]
+      responses:
+        "200":
+          description: Updated accomplishment record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accomplishment'
+        "404":
+          description: Accomplishment not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        "422":
+          description: Validation error (e.g. title set to blank, invalid date).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+    delete:
+      summary: Delete an accomplishment
+      tags: [accomplishments]
+      responses:
+        "200":
+          description: Accomplishment deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+              example:
+                message: "Deleted accomplishment 'Led cross-functional platform migration'"
+        "404":
+          description: Accomplishment not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+components:
+  schemas:
+
+    Accomplishment:
+      type: object
+      required: [id, title, situation, task, action, result, tags, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          description: Unique identifier (auto-assigned).
+        title:
+          type: string
+          description: Short name for the accomplishment.
+        situation:
+          type: string
+          description: "STAR: Context or background. Empty string if not yet filled."
+        task:
+          type: string
+          description: "STAR: Responsibility or goal. Empty string if not yet filled."
+        action:
+          type: string
+          description: "STAR: Steps taken. Empty string if not yet filled."
+        result:
+          type: string
+          description: "STAR: Outcome, ideally with quantified impact. Empty string if not yet filled."
+        accomplishment_date:
+          type: string
+          format: date
+          nullable: true
+          description: Date the achievement occurred (YYYY-MM-DD). Null if not specified.
+        tags:
+          type: array
+          items:
+            type: string
+          description: User-defined categorization tags.
+        created_at:
+          type: string
+          format: date-time
+          description: UTC datetime of record creation (system-managed).
+        updated_at:
+          type: string
+          format: date-time
+          description: UTC datetime of last modification (system-managed).
+
+    AccomplishmentSummary:
+      type: object
+      description: Compact view for list endpoints (STAR body omitted).
+      required: [id, title, tags, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        accomplishment_date:
+          type: string
+          format: date
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AccomplishmentCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        situation:
+          type: string
+          default: ""
+        task:
+          type: string
+          default: ""
+        action:
+          type: string
+          default: ""
+        result:
+          type: string
+          default: ""
+        accomplishment_date:
+          type: string
+          format: date
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+
+    AccomplishmentUpdate:
+      type: object
+      description: All fields are optional. Only provided fields are updated.
+      properties:
+        title:
+          type: string
+          minLength: 1
+        situation:
+          type: string
+        task:
+          type: string
+        action:
+          type: string
+        result:
+          type: string
+        accomplishment_date:
+          type: string
+          format: date
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+
+    SuccessMessage:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ErrorDetail:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string

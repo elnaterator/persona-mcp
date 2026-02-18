@@ -232,9 +232,33 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA foreign_keys = ON")
 
 
+def migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
+    """Add accomplishment table with STAR fields and tags."""
+    conn.executescript("""
+        CREATE TABLE accomplishment (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            title           TEXT    NOT NULL,
+            situation       TEXT    NOT NULL DEFAULT '',
+            task            TEXT    NOT NULL DEFAULT '',
+            action          TEXT    NOT NULL DEFAULT '',
+            result          TEXT    NOT NULL DEFAULT '',
+            accomplishment_date TEXT,
+            tags            TEXT    NOT NULL DEFAULT '[]',
+            created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX idx_accomplishment_date
+            ON accomplishment(accomplishment_date DESC);
+        CREATE INDEX idx_accomplishment_created
+            ON accomplishment(created_at DESC);
+    """)
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
+    migrate_v2_to_v3,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)
