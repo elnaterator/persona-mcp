@@ -32,6 +32,11 @@ decision = "allow"
 priority = 100
 
 [[rule]]
+toolName = "write_todos"
+decision = "allow"
+priority = 100
+
+[[rule]]
 toolName = "google_web_search"
 decision = "allow"
 priority = 100
@@ -93,6 +98,12 @@ priority = 100
 [[rule]]
 toolName = "run_shell_command"
 commandPrefix = "echo"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "ls"
 decision = "allow"
 priority = 100
 
