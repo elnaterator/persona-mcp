@@ -53,3 +53,4 @@ yarn-error.log*
 
 # AI
 .mcp.json
+.mcp.disabled*.json
