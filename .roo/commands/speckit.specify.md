@@ -24,45 +24,48 @@ The text the user typed after `/speckit.specify` in the triggering message **is*
 
 Given that feature description, do this:
 
-1. **Generate a concise short name** (2-4 words) for the branch:
-   - Analyze the feature description and extract the most meaningful keywords
-   - Create a 2-4 word short name that captures the essence of the feature
-   - Use action-noun format when possible (e.g., "add-user-auth", "fix-payment-bug")
-   - Preserve technical terms and acronyms (OAuth2, API, JWT, etc.)
-   - Keep it concise but descriptive enough to understand the feature at a glance
-   - Examples:
-     - "I want to add user authentication" → "user-auth"
-     - "Implement OAuth2 integration for the API" → "oauth2-api-integration"
-     - "Create a dashboard for analytics" → "analytics-dashboard"
-     - "Fix payment processing timeout bug" → "fix-payment-timeout"
+1. **Validate the current branch** (the user should already be on the correct branch/worktree):
 
-2. **Check for existing branches before creating new one**:
-
-   a. First, fetch all remote branches to ensure we have the latest information:
+   a. Get the current branch name:
 
       ```bash
-      git fetch --all --prune
+      git rev-parse --abbrev-ref HEAD
       ```
 
-   b. Find the highest feature number across all sources for the short-name:
-      - Remote branches: `git ls-remote --heads origin | grep -E 'refs/heads/[0-9]+-<short-name>$'`
-      - Local branches: `git branch | grep -E '^[* ]*[0-9]+-<short-name>$'`
-      - Specs directories: Check for directories matching `specs/[0-9]+-<short-name>`
+   b. **If the current branch is `main` or `master`**: STOP and ask the user to confirm. Explain that this workflow expects them to have already created a git worktree and branch for the feature before running `/speckit.specify`. Example:
+      ```
+      You are currently on the `main` branch. This workflow expects you to create a
+      worktree and branch first, then run /speckit.specify from within it.
 
-   c. Determine the next available number:
-      - Extract all numbers from all three sources
-      - Find the highest number N
-      - Use N+1 for the new branch number
+      Example:
+        git worktree add ../worktrees/feat-003-user-auth -b feat-003-user-auth
+        cd ../worktrees/feat-003-user-auth
 
-   d. Run the script `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS"` with the calculated number and short-name:
-      - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-      - Bash example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
-      - PowerShell example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
+      Is `main` the correct branch for this feature, or would you like to create a worktree first?
+      ```
+      Wait for the user to confirm before proceeding.
+
+   c. **If the branch name does not appear related to the feature description**: Ask the user to verify the branch is correct. Compare the branch name keywords against the feature description keywords. If they seem unrelated, present both and ask the user to confirm. Example:
+      ```
+      You are on branch `feat-003-payment-flow` but the feature description is about
+      "user authentication". Is this the correct branch?
+      ```
+      Wait for the user to confirm before proceeding.
+
+   d. **If the branch looks correct**: Proceed without interruption.
+
+   e. **Extract the number and short-name from the current branch**:
+      - Parse the branch name to extract the feature number and short-name suffix
+      - Expected patterns: `feat-NNN-short-name`, `NNN-short-name`, or similar numbered prefixes
+      - If the branch name doesn't follow a numbered pattern, derive a short-name from the branch name and let the script auto-detect the next number
+
+2. **Run the setup script** to create the spec directory and files:
+
+   Run `.specify/scripts/bash/create-new-feature.sh --json` with the appropriate arguments derived from the current branch:
+   - Pass `--number N` and `--short-name "short-name"` extracted from the current branch name, along with the feature description
+   - Example: `.specify/scripts/bash/create-new-feature.sh --json --number 3 --short-name "user-auth" "Add user authentication"`
 
    **IMPORTANT**:
-   - Check all three sources (remote branches, local branches, specs directories) to find the highest number
-   - Only match branches/directories with the exact short-name pattern
-   - If no existing branches/directories found with this short-name, start with number 1
    - You must only ever run this script once per feature
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
@@ -192,7 +195,7 @@ Given that feature description, do this:
 
 7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.plan`).
 
-**NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
+**NOTE:** The script initializes the spec directory and file. It does NOT create or checkout a branch — the user should already be on the correct branch/worktree before running this command.
 
 ## General Guidelines
 
