@@ -255,10 +255,122 @@ def migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
     """)
 
 
+def migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
+    """Add users table and thread user_id FK into owned tables.
+
+    Adds multi-user support: resume_version, application, and accomplishment
+    each gain a user_id column referencing users(id) ON DELETE CASCADE.
+    """
+    conn.execute("PRAGMA foreign_keys = OFF")
+
+    conn.executescript("""
+        -- Step 1: users table (FK anchor for all owned data)
+        CREATE TABLE users (
+            id           TEXT PRIMARY KEY,
+            email        TEXT,
+            display_name TEXT,
+            created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        -- Insert placeholder for pre-existing (single-user era) rows
+        INSERT INTO users (id) VALUES ('legacy');
+
+        -- Step 2a: resume_version
+        CREATE TABLE resume_version_v4 (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id      TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label        TEXT    NOT NULL,
+            is_default   INTEGER NOT NULL DEFAULT 0,
+            resume_data  TEXT    NOT NULL DEFAULT '{}',
+            created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO resume_version_v4
+            SELECT id, 'legacy', label, is_default, resume_data, created_at, updated_at
+            FROM resume_version;
+        DROP TABLE resume_version;
+        ALTER TABLE resume_version_v4 RENAME TO resume_version;
+
+        -- Step 2b: application
+        CREATE TABLE application_v4 (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id           TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            company           TEXT    NOT NULL,
+            position          TEXT    NOT NULL,
+            description       TEXT    NOT NULL DEFAULT '',
+            status            TEXT    NOT NULL DEFAULT 'Interested',
+            url               TEXT,
+            notes             TEXT    NOT NULL DEFAULT '',
+            resume_version_id INTEGER REFERENCES resume_version(id) ON DELETE SET NULL,
+            created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO application_v4
+            SELECT id, 'legacy', company, position, description, status, url,
+                notes, resume_version_id, created_at, updated_at
+            FROM application;
+        DROP TABLE application;
+        ALTER TABLE application_v4 RENAME TO application;
+
+        -- Step 2c: accomplishment
+        CREATE TABLE accomplishment_v4 (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id              TEXT    NOT NULL
+                REFERENCES users(id) ON DELETE CASCADE,
+            title                TEXT    NOT NULL,
+            situation            TEXT    NOT NULL DEFAULT '',
+            task                 TEXT    NOT NULL DEFAULT '',
+            action               TEXT    NOT NULL DEFAULT '',
+            result               TEXT    NOT NULL DEFAULT '',
+            accomplishment_date  TEXT,
+            tags                 TEXT    NOT NULL DEFAULT '[]',
+            created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO accomplishment_v4
+            SELECT id, 'legacy', title, situation, task, action, result,
+                accomplishment_date, tags, created_at, updated_at
+            FROM accomplishment;
+        DROP TABLE accomplishment;
+        ALTER TABLE accomplishment_v4 RENAME TO accomplishment;
+
+        -- Step 3: drop old indexes (they reference now-dropped tables)
+        DROP INDEX IF EXISTS idx_application_status;
+        DROP INDEX IF EXISTS idx_application_updated;
+        DROP INDEX IF EXISTS idx_application_contact_app;
+        DROP INDEX IF EXISTS idx_communication_app;
+        DROP INDEX IF EXISTS idx_communication_date;
+        DROP INDEX IF EXISTS idx_resume_version_default;
+        DROP INDEX IF EXISTS idx_accomplishment_date;
+        DROP INDEX IF EXISTS idx_accomplishment_created;
+
+        -- Recreate all indexes
+        CREATE INDEX idx_resume_version_user ON resume_version(user_id);
+        CREATE INDEX idx_resume_version_user_default
+            ON resume_version(user_id, is_default) WHERE is_default = 1;
+        CREATE INDEX idx_application_user ON application(user_id);
+        CREATE INDEX idx_accomplishment_user ON accomplishment(user_id);
+
+        CREATE INDEX idx_application_status ON application(status);
+        CREATE INDEX idx_application_updated ON application(updated_at DESC);
+        CREATE INDEX idx_application_contact_app ON application_contact(app_id);
+        CREATE INDEX idx_communication_app ON communication(app_id);
+        CREATE INDEX idx_communication_date ON communication(date DESC);
+        CREATE INDEX idx_resume_version_default
+            ON resume_version(is_default) WHERE is_default = 1;
+        CREATE INDEX idx_accomplishment_date
+            ON accomplishment(accomplishment_date DESC);
+        CREATE INDEX idx_accomplishment_created ON accomplishment(created_at DESC);
+    """)
+
+    conn.execute("PRAGMA foreign_keys = ON")
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
     migrate_v2_to_v3,
+    migrate_v3_to_v4,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)

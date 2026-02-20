@@ -25,7 +25,21 @@ def init_database(data_dir: Path) -> DBConnection:
     data_dir.mkdir(parents=True, exist_ok=True)
     db_path = data_dir / DB_FILENAME
 
-    conn = sqlite3.connect(str(db_path), check_same_thread=False)
+    # isolation_level=None enables true autocommit mode so each statement commits
+    # immediately. This prevents "cannot commit - no transaction is active" errors
+    # when the shared connection is used from multiple threads (FastAPI thread pool).
+    # Multi-statement atomic operations use explicit conn.execute("BEGIN")/commit().
+    #
+    # cached_statements=0 disables the per-connection statement cache. The cache is
+    # not thread-safe: concurrent threads executing the same SQL reuse the same
+    # sqlite3_stmt* object, which triggers SQLITE_MISUSE. Disabling it ensures
+    # each execute() call prepares a fresh statement.
+    conn = sqlite3.connect(
+        str(db_path),
+        check_same_thread=False,
+        isolation_level=None,
+        cached_statements=0,
+    )
     conn.row_factory = sqlite3.Row
 
     conn.execute("PRAGMA journal_mode = WAL")
@@ -36,6 +50,35 @@ def init_database(data_dir: Path) -> DBConnection:
 
     logger.info("Database initialized at %s", db_path)
     return conn
+
+
+# --- User operations ---
+
+
+def upsert_user(
+    conn: DBConnection,
+    user_id: str,
+    email: str | None,
+    display_name: str | None,
+) -> None:
+    """Insert or update a user row. Called on each successful sign-in."""
+    conn.execute(
+        """
+        INSERT INTO users (id, email, display_name)
+        VALUES (?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            email        = excluded.email,
+            display_name = excluded.display_name
+        """,
+        (user_id, email, display_name),
+    )
+    conn.commit()
+
+
+def delete_user(conn: DBConnection, user_id: str) -> None:
+    """Hard-delete a user and all their owned data (cascade via FK)."""
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
 
 
 # --- Resume Version operations ---
@@ -54,13 +97,18 @@ def _row_to_resume_data(row: Any) -> dict[str, Any]:
 
 
 def create_resume_version(
-    conn: DBConnection, label: str, resume_data: dict[str, Any]
+    conn: DBConnection,
+    label: str,
+    resume_data: dict[str, Any],
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     """Create a new resume version. Returns the created version."""
+    effective_uid = user_id or "legacy"
     data_json = json.dumps(resume_data)
     cursor = conn.execute(
-        "INSERT INTO resume_version (label, is_default, resume_data) VALUES (?, 0, ?)",
-        (label, data_json),
+        "INSERT INTO resume_version (user_id, label, is_default, resume_data) "
+        "VALUES (?, ?, 0, ?)",
+        (effective_uid, label, data_json),
     )
     conn.commit()
     row = conn.execute(
@@ -70,26 +118,44 @@ def create_resume_version(
     return _row_to_resume_data(row)
 
 
-def load_resume_version(conn: DBConnection, version_id: int) -> dict[str, Any]:
+def load_resume_version(
+    conn: DBConnection,
+    version_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Load a resume version by ID. Raises ValueError if not found."""
     row = conn.execute(
         "SELECT * FROM resume_version WHERE id = ?", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(
+            f"Resume version {version_id} belongs to a different user"
+        )
     return _row_to_resume_data(row)
 
 
-def load_resume_versions(conn: DBConnection) -> list[dict[str, Any]]:
+def load_resume_versions(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[dict[str, Any]]:
     """Load all resume versions with metadata and app_count."""
-    rows = conn.execute(
+    query = (
         "SELECT rv.id, rv.label, rv.is_default, rv.created_at, rv.updated_at, "
         "COUNT(a.id) AS app_count "
         "FROM resume_version rv "
-        "LEFT JOIN application a ON a.resume_version_id = rv.id "
-        "GROUP BY rv.id "
-        "ORDER BY rv.id"
-    ).fetchall()
+        "LEFT JOIN application a ON a.resume_version_id = rv.id"
+    )
+    params: list[Any] = []
+
+    if user_id is not None:
+        query += " WHERE rv.user_id = ?"
+        params.append(user_id)
+
+    query += " GROUP BY rv.id ORDER BY rv.id"
+
+    rows = conn.execute(query, params).fetchall()
     return [
         {
             "id": row["id"],
@@ -103,23 +169,47 @@ def load_resume_versions(conn: DBConnection) -> list[dict[str, Any]]:
     ]
 
 
-def load_default_resume_version(conn: DBConnection) -> dict[str, Any]:
+def load_default_resume_version(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Load the default resume version. Raises ValueError if none."""
-    row = conn.execute("SELECT * FROM resume_version WHERE is_default = 1").fetchone()
+    if user_id is not None:
+        row = conn.execute(
+            "SELECT * FROM resume_version WHERE user_id = ? AND is_default = 1",
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            # Fall back to global default
+            row = conn.execute(
+                "SELECT * FROM resume_version WHERE is_default = 1"
+            ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT * FROM resume_version WHERE is_default = 1"
+        ).fetchone()
+
     if row is None:
         raise ValueError("No default resume version found")
     return _row_to_resume_data(row)
 
 
 def update_resume_version_metadata(
-    conn: DBConnection, version_id: int, label: str
+    conn: DBConnection,
+    version_id: int,
+    label: str,
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     """Update resume version label. Returns updated version."""
     row = conn.execute(
-        "SELECT id FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(
+            f"Resume version {version_id} belongs to a different user"
+        )
 
     conn.execute(
         "UPDATE resume_version SET label = ?, updated_at = datetime('now') "
@@ -131,14 +221,21 @@ def update_resume_version_metadata(
 
 
 def update_resume_version_data(
-    conn: DBConnection, version_id: int, resume_data: dict[str, Any]
+    conn: DBConnection,
+    version_id: int,
+    resume_data: dict[str, Any],
+    user_id: str | None = None,
 ) -> None:
     """Update the resume_data JSON blob for a version."""
     row = conn.execute(
-        "SELECT id FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(
+            f"Resume version {version_id} belongs to a different user"
+        )
 
     conn.execute(
         "UPDATE resume_version "
@@ -149,7 +246,11 @@ def update_resume_version_data(
     conn.commit()
 
 
-def delete_resume_version(conn: DBConnection, version_id: int) -> str:
+def delete_resume_version(
+    conn: DBConnection,
+    version_id: int,
+    user_id: str | None = None,
+) -> str:
     """Delete a resume version. Returns label of deleted version.
 
     If deleting the default and other versions exist, auto-promotes
@@ -160,46 +261,88 @@ def delete_resume_version(conn: DBConnection, version_id: int) -> str:
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(
+            f"Resume version {version_id} belongs to a different user"
+        )
 
     label = row["label"]
     is_default = bool(row["is_default"])
 
-    count = conn.execute("SELECT COUNT(*) FROM resume_version").fetchone()[0]
+    if user_id is not None:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM resume_version WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
+    else:
+        count = conn.execute("SELECT COUNT(*) FROM resume_version").fetchone()[0]
+
     if count <= 1:
         raise ValueError("Cannot delete the last remaining resume version")
 
-    conn.execute("DELETE FROM resume_version WHERE id = ?", (version_id,))
+    # DELETE + optional UPDATE must be atomic so we never leave the table
+    # with no default after deleting the default version.
+    conn.execute("BEGIN")
+    try:
+        conn.execute("DELETE FROM resume_version WHERE id = ?", (version_id,))
 
-    if is_default:
-        # Promote most recently updated version
-        conn.execute(
-            "UPDATE resume_version SET is_default = 1 "
-            "WHERE id = ("
-            "  SELECT id FROM resume_version "
-            "  ORDER BY updated_at DESC LIMIT 1"
-            ")"
-        )
+        if is_default:
+            # Promote most recently updated version
+            if user_id is not None:
+                conn.execute(
+                    "UPDATE resume_version SET is_default = 1 "
+                    "WHERE id = ("
+                    "  SELECT id FROM resume_version "
+                    "  WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1"
+                    ")",
+                    (user_id,),
+                )
+            else:
+                conn.execute(
+                    "UPDATE resume_version SET is_default = 1 "
+                    "WHERE id = ("
+                    "  SELECT id FROM resume_version "
+                    "  ORDER BY updated_at DESC LIMIT 1"
+                    ")"
+                )
 
-    conn.commit()
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     return label
 
 
-def set_default_resume_version(conn: DBConnection, version_id: int) -> str:
+def set_default_resume_version(
+    conn: DBConnection,
+    version_id: int,
+    user_id: str | None = None,
+) -> str:
     """Set a resume version as default. Returns its label."""
     row = conn.execute(
         "SELECT * FROM resume_version WHERE id = ?", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(
+            f"Resume version {version_id} belongs to a different user"
+        )
 
     label = row["label"]
 
-    # Unset old default, set new default in same transaction
-    conn.execute("UPDATE resume_version SET is_default = 0")
-    conn.execute(
-        "UPDATE resume_version SET is_default = 1 WHERE id = ?",
-        (version_id,),
-    )
+    # Unset old default and set new default atomically in one statement.
+    if user_id is not None:
+        conn.execute(
+            "UPDATE resume_version "
+            "SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END "
+            "WHERE user_id = ?",
+            (version_id, user_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE resume_version SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END",
+            (version_id,),
+        )
     conn.commit()
     return label
 
@@ -207,14 +350,20 @@ def set_default_resume_version(conn: DBConnection, version_id: int) -> str:
 # --- Application operations ---
 
 
-def create_application(conn: DBConnection, data: dict[str, Any]) -> dict[str, Any]:
+def create_application(
+    conn: DBConnection,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Create a new application. Returns the created application."""
+    effective_uid = user_id or "legacy"
     cursor = conn.execute(
         "INSERT INTO application "
-        "(company, position, description, status, url, notes, "
+        "(user_id, company, position, description, status, url, notes, "
         "resume_version_id) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
+            effective_uid,
             data["company"],
             data["position"],
             data.get("description", ""),
@@ -228,11 +377,17 @@ def create_application(conn: DBConnection, data: dict[str, Any]) -> dict[str, An
     return load_application(conn, cursor.lastrowid)
 
 
-def load_application(conn: DBConnection, app_id: int) -> dict[str, Any]:
+def load_application(
+    conn: DBConnection,
+    app_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Load a single application by ID."""
     row = conn.execute("SELECT * FROM application WHERE id = ?", (app_id,)).fetchone()
     if row is None:
         raise ValueError(f"Application {app_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(f"Application {app_id} belongs to a different user")
     return dict(row)
 
 
@@ -240,6 +395,7 @@ def load_applications(
     conn: DBConnection,
     status: str | None = None,
     q: str | None = None,
+    user_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load applications with optional status filter and search."""
     query = (
@@ -250,6 +406,9 @@ def load_applications(
     conditions: list[str] = []
     params: list[Any] = []
 
+    if user_id is not None:
+        conditions.append("user_id = ?")
+        params.append(user_id)
     if status:
         conditions.append("status = ?")
         params.append(status)
@@ -268,10 +427,13 @@ def load_applications(
 
 
 def update_application(
-    conn: DBConnection, app_id: int, data: dict[str, Any]
+    conn: DBConnection,
+    app_id: int,
+    data: dict[str, Any],
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     """Update application fields. Returns updated application."""
-    existing = load_application(conn, app_id)
+    existing = load_application(conn, app_id, user_id=user_id)
 
     updatable = (
         "company",
@@ -303,9 +465,13 @@ def update_application(
     return load_application(conn, app_id)
 
 
-def delete_application(conn: DBConnection, app_id: int) -> dict[str, Any]:
+def delete_application(
+    conn: DBConnection,
+    app_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Delete an application and cascade. Returns deleted app data."""
-    app = load_application(conn, app_id)
+    app = load_application(conn, app_id, user_id=user_id)
     conn.execute("DELETE FROM application WHERE id = ?", (app_id,))
     conn.commit()
     return app
@@ -536,13 +702,19 @@ def _row_to_accomplishment_summary(row: Any) -> dict[str, Any]:
     }
 
 
-def create_accomplishment(conn: DBConnection, data: dict[str, Any]) -> dict[str, Any]:
+def create_accomplishment(
+    conn: DBConnection,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Insert a new accomplishment row and return it."""
+    effective_uid = user_id or "legacy"
     cursor = conn.execute(
         "INSERT INTO accomplishment "
-        "(title, situation, task, action, result, accomplishment_date, tags) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "(user_id, title, situation, task, action, result, accomplishment_date, tags) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
+            effective_uid,
             data["title"],
             data.get("situation", ""),
             data.get("task", ""),
@@ -556,13 +728,19 @@ def create_accomplishment(conn: DBConnection, data: dict[str, Any]) -> dict[str,
     return load_accomplishment(conn, cursor.lastrowid)
 
 
-def load_accomplishment(conn: DBConnection, acc_id: int) -> dict[str, Any]:
+def load_accomplishment(
+    conn: DBConnection,
+    acc_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Load a single accomplishment by ID. Raises ValueError if not found."""
     row = conn.execute(
         "SELECT * FROM accomplishment WHERE id = ?", (acc_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Accomplishment {acc_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(f"Accomplishment {acc_id} belongs to a different user")
     return _row_to_accomplishment(row)
 
 
@@ -570,12 +748,14 @@ def load_accomplishments(
     conn: DBConnection,
     tag: str | None = None,
     q: str | None = None,
+    user_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """List accomplishments ordered reverse-chronologically with optional filters.
 
     Args:
         tag: Filter by exact tag match (substring in JSON array).
         q: Case-insensitive substring search across title and STAR fields.
+        user_id: If set, restrict results to this user's accomplishments.
     """
     query = (
         "SELECT id, title, accomplishment_date, tags, created_at, updated_at "
@@ -584,6 +764,9 @@ def load_accomplishments(
     conditions: list[str] = []
     params: list[Any] = []
 
+    if user_id is not None:
+        conditions.append("user_id = ?")
+        params.append(user_id)
     if tag:
         conditions.append("tags LIKE ?")
         params.append(f'%"{tag}"%')
@@ -610,11 +793,14 @@ def load_accomplishments(
 
 
 def update_accomplishment(
-    conn: DBConnection, acc_id: int, data: dict[str, Any]
+    conn: DBConnection,
+    acc_id: int,
+    data: dict[str, Any],
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     """Patch an accomplishment with provided fields. Raises ValueError if not found."""
-    # Verify exists first
-    load_accomplishment(conn, acc_id)
+    # Verify exists and check ownership
+    load_accomplishment(conn, acc_id, user_id=user_id)
 
     updatable = (
         "title",
@@ -650,17 +836,29 @@ def update_accomplishment(
     return load_accomplishment(conn, acc_id)
 
 
-def delete_accomplishment(conn: DBConnection, acc_id: int) -> dict[str, Any]:
+def delete_accomplishment(
+    conn: DBConnection,
+    acc_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
     """Delete an accomplishment. Returns the deleted row. ValueError if not found."""
-    acc = load_accomplishment(conn, acc_id)
+    acc = load_accomplishment(conn, acc_id, user_id=user_id)
     conn.execute("DELETE FROM accomplishment WHERE id = ?", (acc_id,))
     conn.commit()
     return acc
 
 
-def load_accomplishment_tags(conn: DBConnection) -> list[str]:
+def load_accomplishment_tags(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[str]:
     """Return a sorted unique list of all tags across all accomplishments."""
-    rows = conn.execute("SELECT tags FROM accomplishment").fetchall()
+    if user_id is not None:
+        rows = conn.execute(
+            "SELECT tags FROM accomplishment WHERE user_id = ?", (user_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT tags FROM accomplishment").fetchall()
     all_tags: set[str] = set()
     for row in rows:
         tags = json.loads(row["tags"])

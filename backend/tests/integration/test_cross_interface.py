@@ -159,7 +159,7 @@ class TestResumeVersionCrossInterface:
         resp = client.post("/api/resumes", json={"label": "Promoted"})
         new_id = resp.json()["id"]
 
-        client.put(f"/api/resumes/{new_id}/default")
+        client.post(f"/api/resumes/{new_id}/default")
 
         default = service.get_resume()
         assert default["id"] == new_id

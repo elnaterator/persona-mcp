@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from persona.resume_service import ResumeService
 from persona.server import create_app
 
 
@@ -43,7 +44,8 @@ class TestStaticFileServing:
         # Override the frontend directory config
         os.environ["PERSONA_FRONTEND_DIR"] = str(temp_frontend_dir)
         try:
-            app = create_app(conn=db_conn)
+            # Pass an explicit service so auth is not wired (test mode).
+            app = create_app(service=ResumeService(db_conn), conn=db_conn)
         finally:
             os.environ.pop("PERSONA_FRONTEND_DIR", None)
         return app
@@ -53,7 +55,8 @@ class TestStaticFileServing:
         """Create app with non-existent frontend directory."""
         os.environ["PERSONA_FRONTEND_DIR"] = "/nonexistent/path"
         try:
-            app = create_app(conn=db_conn)
+            # Pass an explicit service so auth is not wired (test mode).
+            app = create_app(service=ResumeService(db_conn), conn=db_conn)
         finally:
             os.environ.pop("PERSONA_FRONTEND_DIR", None)
         return app

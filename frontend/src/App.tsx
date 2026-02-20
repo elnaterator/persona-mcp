@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { SignedIn, SignedOut, RedirectToSignIn, useAuth } from '@clerk/clerk-react'
 import Navigation from './components/Navigation'
+import UserMenu from './components/UserMenu'
+import { setTokenGetter } from './services/api'
 import ResumeListView from './components/ResumeListView'
 import ResumeDetailView from './components/ResumeDetailView'
 import ApplicationListView from './components/ApplicationListView'
@@ -18,7 +21,13 @@ type View =
 type NavSection = 'resumes' | 'applications' | 'accomplishments'
 
 function App() {
+  const { getToken } = useAuth()
   const [view, setView] = useState<View>({ type: 'resume-list' })
+
+  useEffect(() => {
+    setTokenGetter(() => getToken())
+    return () => setTokenGetter(null)
+  }, [getToken])
 
   const activeNav: NavSection = view.type.startsWith('resume')
     ? 'resumes'
@@ -37,45 +46,53 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <h1>Persona</h1>
-          <Navigation activeView={activeNav} onNavigate={handleNavigate} />
+    <>
+      <SignedIn>
+        <div className="app">
+          <header className="app-header">
+            <div className="app-header-inner">
+              <h1>Persona</h1>
+              <Navigation activeView={activeNav} onNavigate={handleNavigate} />
+              <UserMenu />
+            </div>
+          </header>
+          <main>
+            {view.type === 'resume-list' && (
+              <ResumeListView onSelectResume={(id) => setView({ type: 'resume-detail', id })} />
+            )}
+            {view.type === 'resume-detail' && (
+              <ResumeDetailView
+                versionId={view.id}
+                onBack={() => setView({ type: 'resume-list' })}
+              />
+            )}
+            {view.type === 'app-list' && (
+              <ApplicationListView onSelectApp={(id) => setView({ type: 'app-detail', id })} />
+            )}
+            {view.type === 'app-detail' && (
+              <ApplicationDetailView
+                appId={view.id}
+                onBack={() => setView({ type: 'app-list' })}
+              />
+            )}
+            {view.type === 'acc-list' && (
+              <AccomplishmentListView
+                onSelectAccomplishment={(id) => setView({ type: 'acc-detail', id })}
+              />
+            )}
+            {view.type === 'acc-detail' && (
+              <AccomplishmentDetailView
+                accomplishmentId={view.id}
+                onBack={() => setView({ type: 'acc-list' })}
+              />
+            )}
+          </main>
         </div>
-      </header>
-      <main>
-        {view.type === 'resume-list' && (
-          <ResumeListView onSelectResume={(id) => setView({ type: 'resume-detail', id })} />
-        )}
-        {view.type === 'resume-detail' && (
-          <ResumeDetailView
-            versionId={view.id}
-            onBack={() => setView({ type: 'resume-list' })}
-          />
-        )}
-        {view.type === 'app-list' && (
-          <ApplicationListView onSelectApp={(id) => setView({ type: 'app-detail', id })} />
-        )}
-        {view.type === 'app-detail' && (
-          <ApplicationDetailView
-            appId={view.id}
-            onBack={() => setView({ type: 'app-list' })}
-          />
-        )}
-        {view.type === 'acc-list' && (
-          <AccomplishmentListView
-            onSelectAccomplishment={(id) => setView({ type: 'acc-detail', id })}
-          />
-        )}
-        {view.type === 'acc-detail' && (
-          <AccomplishmentDetailView
-            accomplishmentId={view.id}
-            onBack={() => setView({ type: 'acc-list' })}
-          />
-        )}
-      </main>
-    </div>
+      </SignedIn>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+    </>
   )
 }
 

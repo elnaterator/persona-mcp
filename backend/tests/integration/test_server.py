@@ -39,10 +39,10 @@ class TestServerAutoInit:
         conn.execute("PRAGMA foreign_keys = ON")
         apply_migrations(conn)
 
-        # Insert data at current version
+        # Insert data at current version (user_id required since schema v4)
         conn.execute(
-            "INSERT INTO resume_version (label, is_default, resume_data) "
-            "VALUES ('Test Resume', 0, '{}')"
+            "INSERT INTO resume_version (user_id, label, is_default, resume_data) "
+            "VALUES ('legacy', 'Test Resume', 0, '{}')"
         )
         conn.commit()
         conn.close()

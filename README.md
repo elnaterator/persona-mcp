@@ -90,6 +90,28 @@ AI assistants can use tools like:
 *   `add_contact_to_application`: Add a contact to a job application.
 *   `add_communication_to_application`: Add a communication to a job application.
 
+## Authentication Setup
+
+Persona uses [Clerk](https://clerk.com) for authentication. You must configure Clerk before running the application.
+
+### Prerequisites
+
+- A Clerk account and application (free tier is sufficient)
+- Google and/or GitHub OAuth configured in the Clerk dashboard (optional, for social login)
+
+### Required Environment Variables
+
+| Variable | Where to set | Description |
+|---|---|---|
+| `VITE_CLERK_PUBLISHABLE_KEY` | `frontend/.env.local` | Clerk publishable key (`pk_test_...`) |
+| `CLERK_JWKS_URL` | backend env | Clerk JWKS endpoint (`https://<instance>.clerk.accounts.dev/.well-known/jwks.json`) |
+| `CLERK_ISSUER` | backend env | Clerk issuer URL (`https://<instance>.clerk.accounts.dev`) |
+| `CLERK_WEBHOOK_SECRET` | backend env | Webhook signing secret (`whsec_...`) from the Clerk webhooks dashboard |
+
+Copy `frontend/.env.local.example` to `frontend/.env.local` and fill in your Clerk publishable key.
+
+See [`specs/008-authentication/quickstart.md`](specs/008-authentication/quickstart.md) for step-by-step setup instructions including social login configuration and webhook setup.
+
 ## Development
 
 The following `make` commands are available for development:

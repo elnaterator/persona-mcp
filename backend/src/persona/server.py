@@ -1,6 +1,7 @@
 """Persona server — FastAPI REST API + MCP tools, with --stdio backward compat."""
 
 import argparse
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -9,10 +10,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
 
 from persona.accomplishment_service import AccomplishmentService
 from persona.api.routes import create_router
 from persona.application_service import ApplicationService
+from persona.auth import build_get_current_user
 from persona.config import (
     configure_logging,
     resolve_cors_origins,
@@ -57,6 +61,40 @@ register_application_tools(mcp, _get_app_service)
 register_accomplishment_tools(mcp, _get_acc_service)
 
 
+# --- UserContextMiddleware ---
+
+
+class UserContextMiddleware(BaseHTTPMiddleware):
+    """Set current_user_id_var from Bearer JWT or PERSONA_USER_ID env var."""
+
+    async def dispatch(self, request: StarletteRequest, call_next):  # type: ignore[override]
+        from persona.auth import current_user_id_var, verify_clerk_jwt
+
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            try:
+                claims = verify_clerk_jwt(token)
+                token_ctx = current_user_id_var.set(claims.get("sub"))
+                try:
+                    return await call_next(request)
+                finally:
+                    current_user_id_var.reset(token_ctx)
+            except Exception:
+                pass
+
+        # Also support stdio mode: check env var
+        stdio_user = os.environ.get("PERSONA_USER_ID")
+        if stdio_user:
+            token_ctx = current_user_id_var.set(stdio_user)
+            try:
+                return await call_next(request)
+            finally:
+                current_user_id_var.reset(token_ctx)
+
+        return await call_next(request)
+
+
 # --- FastAPI application factory ---
 
 
@@ -72,6 +110,10 @@ def create_app(
             If service and conn are None, initializes from environment config.
     """
     global _conn, _service, _app_service, _acc_service
+
+    # Track production mode before service is overwritten below.
+    # Auth is only wired in production (no pre-built service injected).
+    _production_mode = service is None
 
     if service is None:
         logger = configure_logging()
@@ -111,12 +153,20 @@ def create_app(
             allow_headers=["*"],
         )
 
-    # Mount REST API routes
+    # UserContextMiddleware: populate current_user_id_var for MCP tool handlers
+    app.add_middleware(UserContextMiddleware)
+
+    # Wire auth in production mode only; test callers that inject a pre-built
+    # service bypass auth so existing cross-interface tests keep working.
+    get_user = (
+        build_get_current_user(conn) if _production_mode and conn is not None else None
+    )
     app.include_router(
         create_router(
             service,
             app_service=_app_service,
             acc_service=_acc_service,
+            get_current_user=get_user,
         )
     )
 
