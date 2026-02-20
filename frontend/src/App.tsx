@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SignedIn, SignedOut, RedirectToSignIn, useAuth } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, useAuth } from '@clerk/clerk-react'
 import Navigation from './components/Navigation'
 import UserMenu from './components/UserMenu'
 import { setTokenGetter } from './services/api'
@@ -9,6 +9,7 @@ import ApplicationListView from './components/ApplicationListView'
 import ApplicationDetailView from './components/ApplicationDetailView'
 import AccomplishmentListView from './components/AccomplishmentListView'
 import AccomplishmentDetailView from './components/AccomplishmentDetailView'
+import LandingPage from './components/LandingPage'
 
 type View =
   | { type: 'resume-list' }
@@ -90,7 +91,7 @@ function App() {
         </div>
       </SignedIn>
       <SignedOut>
-        <RedirectToSignIn />
+        <LandingPage />
       </SignedOut>
     </>
   )
