@@ -80,6 +80,30 @@ def resolve_frontend_dir() -> Path | None:
     return path
 
 
+def resolve_clerk_jwks_url() -> str:
+    """Resolve CLERK_JWKS_URL env var. Raises on missing."""
+    value = os.environ.get("CLERK_JWKS_URL", "")
+    if not value.strip():
+        raise ValueError("CLERK_JWKS_URL environment variable is required")
+    return value.strip()
+
+
+def resolve_clerk_issuer() -> str:
+    """Resolve CLERK_ISSUER env var. Raises on missing."""
+    value = os.environ.get("CLERK_ISSUER", "")
+    if not value.strip():
+        raise ValueError("CLERK_ISSUER environment variable is required")
+    return value.strip()
+
+
+def resolve_clerk_webhook_secret() -> str:
+    """Resolve CLERK_WEBHOOK_SECRET env var. Raises on missing."""
+    value = os.environ.get("CLERK_WEBHOOK_SECRET", "")
+    if not value.strip():
+        raise ValueError("CLERK_WEBHOOK_SECRET environment variable is required")
+    return value.strip()
+
+
 def configure_logging() -> logging.Logger:
     """Configure logging to stderr with level from LOG_LEVEL env var."""
     level_name = os.environ.get("LOG_LEVEL", "INFO").upper()

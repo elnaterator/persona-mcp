@@ -1,6 +1,7 @@
 """Unit tests for persona.database module (v2 schema)."""
 
 import sqlite3
+import threading
 from pathlib import Path
 
 import pytest
@@ -1025,3 +1026,65 @@ class TestDeleteCommunication:
 
         with pytest.raises(ValueError, match="not found"):
             delete_communication(db_conn, 9999)
+
+
+class TestConcurrentUpsertUser:
+    """Verify upsert_user is safe from multiple threads sharing one connection.
+
+    These tests use init_database (isolation_level=None / autocommit) to
+    replicate the production connection configuration, where FastAPI's thread
+    pool runs synchronous dependencies concurrently on the same SQLite handle.
+    The original bug was: Thread A's implicit COMMIT cleared the transaction
+    state before Thread B's COMMIT ran, raising
+    'sqlite3.OperationalError: cannot commit – no transaction is active'.
+    """
+
+    def test_concurrent_upsert_no_errors(self, tmp_path: Path) -> None:
+        """Concurrent upsert_user calls must not raise OperationalError."""
+        from persona.database import init_database, upsert_user
+
+        conn = init_database(tmp_path)
+        errors: list[Exception] = []
+
+        def worker(user_id: str, email: str) -> None:
+            try:
+                upsert_user(conn, user_id, email, None)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [
+            threading.Thread(target=worker, args=(f"user_{i}", f"user{i}@test.com"))
+            for i in range(20)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        conn.close()
+        assert errors == [], f"Concurrent upsert_user raised: {errors}"
+
+    def test_concurrent_upsert_all_users_persisted(self, tmp_path: Path) -> None:
+        """Every user inserted concurrently must appear in the database."""
+        from persona.database import init_database, upsert_user
+
+        n = 20
+        conn = init_database(tmp_path)
+
+        threads = [
+            threading.Thread(
+                target=upsert_user,
+                args=(conn, f"user_{i}", f"user{i}@test.com", f"User {i}"),
+            )
+            for i in range(n)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        count = conn.execute(
+            "SELECT COUNT(*) FROM users WHERE id LIKE 'user_%'"
+        ).fetchone()[0]
+        conn.close()
+        assert count == n

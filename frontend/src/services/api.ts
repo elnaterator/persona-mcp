@@ -21,6 +21,12 @@ import type {
   WorkExperience,
 } from '../types/resume'
 
+let _getToken: (() => Promise<string | null>) | null = null
+
+export function setTokenGetter(getter: (() => Promise<string | null>) | null): void {
+  _getToken = getter
+}
+
 const API_BASE = '/api'
 
 /**
@@ -61,16 +67,32 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 /**
  * Wrapper to handle network errors (TypeError from fetch)
- * Converts network failures into user-friendly error messages
+ * Converts network failures into user-friendly error messages.
+ * Attaches a Bearer token from the token getter if one is configured.
  */
 async function fetchWithErrorHandling(
   url: string,
   options?: RequestInit
 ): Promise<Response> {
   try {
-    return await fetch(url, options)
+    let fetchOptions: RequestInit | undefined = options
+    if (_getToken) {
+      const token = await _getToken()
+      if (token) {
+        const headers: Record<string, string> = {
+          ...(options?.headers as Record<string, string> | undefined),
+          Authorization: `Bearer ${token}`,
+        }
+        fetchOptions = { ...options, headers }
+      } else {
+        // User signed out — redirect to home
+        window.location.href = '/'
+        throw new ApiClientError('Not authenticated', 401, 'Not authenticated')
+      }
+    }
+    return await fetch(url, fetchOptions)
   } catch (error) {
-    // TypeError is thrown by fetch for network failures (CORS, DNS, connection refused, etc.)
+    if (error instanceof ApiClientError) throw error
     if (error instanceof TypeError) {
       throw new ApiClientError(
         'Network error: Unable to connect to server. Please check your connection and try again.',
@@ -78,7 +100,6 @@ async function fetchWithErrorHandling(
         'Network error: Failed to fetch'
       )
     }
-    // Re-throw other errors
     throw error
   }
 }

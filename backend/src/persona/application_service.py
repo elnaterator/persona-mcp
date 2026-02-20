@@ -31,7 +31,9 @@ class ApplicationService:
 
     # --- Application CRUD ---
 
-    def create_application(self, data: dict[str, Any]) -> dict[str, Any]:
+    def create_application(
+        self, data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Create a new application."""
         if not data.get("company"):
             raise ValueError("Company is required")
@@ -41,32 +43,39 @@ class ApplicationService:
         if status not in APPLICATION_STATUSES:
             valid = ", ".join(APPLICATION_STATUSES)
             raise ValueError(f"Invalid status: '{status}'. Must be one of: {valid}")
-        return create_application(self._conn, data)
+        return create_application(self._conn, data, user_id=user_id)
 
-    def get_application(self, app_id: int) -> dict[str, Any]:
+    def get_application(
+        self, app_id: int, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Get a single application by ID."""
-        return load_application(self._conn, app_id)
+        return load_application(self._conn, app_id, user_id=user_id)
 
     def list_applications(
         self,
         status: str | None = None,
         q: str | None = None,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """List applications with optional filter/search."""
-        return load_applications(self._conn, status=status, q=q)
+        return load_applications(self._conn, status=status, q=q, user_id=user_id)
 
-    def update_application(self, app_id: int, data: dict[str, Any]) -> dict[str, Any]:
+    def update_application(
+        self, app_id: int, data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Update application fields."""
         if "status" in data:
             status = data["status"]
             if status not in APPLICATION_STATUSES:
                 valid = ", ".join(APPLICATION_STATUSES)
                 raise ValueError(f"Invalid status: '{status}'. Must be one of: {valid}")
-        return update_application(self._conn, app_id, data)
+        return update_application(self._conn, app_id, data, user_id=user_id)
 
-    def delete_application(self, app_id: int) -> dict[str, Any]:
+    def delete_application(
+        self, app_id: int, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Delete an application and cascade."""
-        return delete_application(self._conn, app_id)
+        return delete_application(self._conn, app_id, user_id=user_id)
 
     # --- Contact CRUD ---
 
@@ -118,9 +127,11 @@ class ApplicationService:
 
     # --- Context (AI composite) ---
 
-    def get_application_context(self, app_id: int) -> dict[str, Any]:
+    def get_application_context(
+        self, app_id: int, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Get full context for AI-assisted operations."""
-        app = load_application(self._conn, app_id)
+        app = load_application(self._conn, app_id, user_id=user_id)
         contacts = load_contacts(self._conn, app_id)
         communications = load_communications(self._conn, app_id)
 

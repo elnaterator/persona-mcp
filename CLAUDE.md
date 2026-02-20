@@ -85,6 +85,8 @@ specs/                    # Feature specifications
 <!-- MANUAL ADDITIONS END -->
 
 ## Active Technologies
+- Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, `@clerk/clerk-react` v5+, `python-jose[cryptography]`, `svix` (008-authentication)
+- SQLite (schema v3 → v4); `users` table added as FK anchor for `resume_version`, `application`, `accomplishment` (008-authentication)
 
 ### Backend
 - Python 3.11+ with type hints and Pydantic validation

@@ -27,8 +27,8 @@ env/
 Thumbs.db
 
 # Environment variables
+.env.local
 .env
-.env.*
 
 # Testing / Coverage
 .pytest_cache/

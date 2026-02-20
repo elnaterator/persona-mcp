@@ -43,20 +43,24 @@ class AccomplishmentService:
         self._conn = conn
 
     def list_accomplishments(
-        self, tag: str | None = None, q: str | None = None
+        self, tag: str | None = None, q: str | None = None, user_id: str | None = None
     ) -> list[dict[str, Any]]:
         """Return AccomplishmentSummary dicts, ordered reverse-chronologically."""
-        return load_accomplishments(self._conn, tag=tag, q=q)
+        return load_accomplishments(self._conn, tag=tag, q=q, user_id=user_id)
 
-    def list_tags(self) -> list[str]:
+    def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
-        return load_accomplishment_tags(self._conn)
+        return load_accomplishment_tags(self._conn, user_id=user_id)
 
-    def get_accomplishment(self, acc_id: int) -> dict[str, Any]:
+    def get_accomplishment(
+        self, acc_id: int, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Return full Accomplishment dict. Raises ValueError if not found."""
-        return load_accomplishment(self._conn, acc_id)
+        return load_accomplishment(self._conn, acc_id, user_id=user_id)
 
-    def create_accomplishment(self, data: dict[str, Any]) -> dict[str, Any]:
+    def create_accomplishment(
+        self, data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Validate and persist a new accomplishment.
 
         Raises:
@@ -81,10 +85,10 @@ class AccomplishmentService:
             "accomplishment_date": acc_date,
             "tags": tags,
         }
-        return create_accomplishment(self._conn, cleaned)
+        return create_accomplishment(self._conn, cleaned, user_id=user_id)
 
     def update_accomplishment(
-        self, acc_id: int, data: dict[str, Any]
+        self, acc_id: int, data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
         """Patch fields. Raises ValueError if not found or title would become empty.
 
@@ -102,8 +106,10 @@ class AccomplishmentService:
         if "tags" in data and data["tags"] is not None:
             data = {**data, "tags": _normalize_tags(data["tags"])}
 
-        return update_accomplishment(self._conn, acc_id, data)
+        return update_accomplishment(self._conn, acc_id, data, user_id=user_id)
 
-    def delete_accomplishment(self, acc_id: int) -> dict[str, Any]:
+    def delete_accomplishment(
+        self, acc_id: int, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Delete. Raises ValueError if not found."""
-        return delete_accomplishment(self._conn, acc_id)
+        return delete_accomplishment(self._conn, acc_id, user_id=user_id)

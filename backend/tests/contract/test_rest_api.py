@@ -398,7 +398,7 @@ class TestResumeVersionEndpoints:
         client = _make_full_client(service, app_service)
         versions = client.get("/api/resumes").json()
         version_id = versions[0]["id"]
-        resp = client.put(f"/api/resumes/{version_id}", json={"label": "Renamed"})
+        resp = client.patch(f"/api/resumes/{version_id}", json={"label": "Renamed"})
         assert resp.status_code == 200
         assert resp.json()["label"] == "Renamed"
 
@@ -431,7 +431,7 @@ class TestResumeVersionEndpoints:
     ) -> None:
         client = _make_full_client(service, app_service)
         created = client.post("/api/resumes", json={"label": "New Default"}).json()
-        resp = client.put(f"/api/resumes/{created['id']}/default")
+        resp = client.post(f"/api/resumes/{created['id']}/default")
         assert resp.status_code == 200
         assert "message" in resp.json()
 
@@ -615,7 +615,7 @@ class TestApplicationEndpoints:
             "/api/applications",
             json={"company": "Acme", "position": "Dev"},
         ).json()
-        resp = client.put(
+        resp = client.patch(
             f"/api/applications/{created['id']}",
             json={"status": "Applied"},
         )
@@ -632,7 +632,7 @@ class TestApplicationEndpoints:
             "/api/applications",
             json={"company": "Acme", "position": "Dev"},
         ).json()
-        resp = client.put(
+        resp = client.patch(
             f"/api/applications/{created['id']}",
             json={"status": "Nope"},
         )
@@ -763,7 +763,7 @@ class TestContactEndpoints:
             f"/api/applications/{app['id']}/contacts",
             json={"name": "Alice"},
         ).json()
-        resp = client.put(
+        resp = client.patch(
             f"/api/applications/{app['id']}/contacts/{contact['id']}",
             json={"role": "Engineering Manager"},
         )
@@ -897,7 +897,7 @@ class TestCommunicationEndpoints:
                 "date": "2024-01-01",
             },
         ).json()
-        resp = client.put(
+        resp = client.patch(
             f"/api/applications/{app['id']}/communications/{comm['id']}",
             json={"status": "draft"},
         )

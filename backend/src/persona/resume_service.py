@@ -34,55 +34,69 @@ class ResumeService:
 
     # --- Version management ---
 
-    def list_resumes(self) -> list[dict[str, Any]]:
+    def list_resumes(self, user_id: str | None = None) -> list[dict[str, Any]]:
         """List all resume versions with metadata."""
-        return load_resume_versions(self._conn)
+        return load_resume_versions(self._conn, user_id=user_id)
 
-    def get_resume(self, version_id: int | None = None) -> dict[str, Any]:
+    def get_resume(
+        self, version_id: int | None = None, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Get a resume version. If id is None, returns the default."""
         if version_id is None:
-            return load_default_resume_version(self._conn)
-        return load_resume_version(self._conn, version_id)
+            return load_default_resume_version(self._conn, user_id=user_id)
+        return load_resume_version(self._conn, version_id, user_id=user_id)
 
-    def create_resume(self, label: str) -> dict[str, Any]:
+    def create_resume(self, label: str, user_id: str | None = None) -> dict[str, Any]:
         """Create a new resume version copied from the default."""
         if not label or not label.strip():
             raise ValueError("Label must not be empty")
-        default = load_default_resume_version(self._conn)
-        return create_resume_version(self._conn, label.strip(), default["resume_data"])
+        default = load_default_resume_version(self._conn, user_id=user_id)
+        return create_resume_version(
+            self._conn, label.strip(), default["resume_data"], user_id=user_id
+        )
 
-    def set_default(self, version_id: int) -> str:
+    def set_default(self, version_id: int, user_id: str | None = None) -> str:
         """Set a resume version as default."""
-        label = set_default_resume_version(self._conn, version_id)
+        label = set_default_resume_version(self._conn, version_id, user_id=user_id)
         return f"Set '{label}' as default resume"
 
-    def delete_resume(self, version_id: int) -> str:
+    def delete_resume(self, version_id: int, user_id: str | None = None) -> str:
         """Delete a resume version."""
-        label = delete_resume_version(self._conn, version_id)
+        label = delete_resume_version(self._conn, version_id, user_id=user_id)
         return f"Deleted resume version '{label}'"
 
-    def update_metadata(self, version_id: int, label: str) -> dict[str, Any]:
+    def update_metadata(
+        self, version_id: int, label: str, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Update resume version label."""
         if not label or not label.strip():
             raise ValueError("Label must not be empty")
-        return update_resume_version_metadata(self._conn, version_id, label.strip())
+        return update_resume_version_metadata(
+            self._conn, version_id, label.strip(), user_id=user_id
+        )
 
     # --- Section operations (version-scoped) ---
 
-    def get_section(self, section: str, version_id: int | None = None) -> Any:
+    def get_section(
+        self, section: str, version_id: int | None = None, user_id: str | None = None
+    ) -> Any:
         """Get a section from a resume version."""
         if section not in ALL_SECTIONS:
             raise ValueError(
                 f"Invalid section: '{section}'. "
                 f"Must be one of: {', '.join(ALL_SECTIONS)}"
             )
-        version = self.get_resume(version_id)
+        version = self.get_resume(version_id, user_id=user_id)
         resume_data = version["resume_data"]
         value = resume_data.get(section)
         return value
 
     def update_section(
-        self, section: str, data: dict[str, Any], version_id: int | None = None
+        self,
+        section: str,
+        data: dict[str, Any],
+        version_id: int | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Update a singleton section (contact or summary) on a version."""
         if section not in SECTION_UPDATE:
@@ -91,7 +105,7 @@ class ResumeService:
                 f"Must be one of: {', '.join(SECTION_UPDATE)}"
             )
 
-        version = self.get_resume(version_id)
+        version = self.get_resume(version_id, user_id=user_id)
         vid = version["id"]
         resume_data = version["resume_data"]
 
@@ -115,7 +129,11 @@ class ResumeService:
         return "Updated summary"
 
     def add_entry(
-        self, section: str, data: dict[str, Any], version_id: int | None = None
+        self,
+        section: str,
+        data: dict[str, Any],
+        version_id: int | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Add an entry to a list section of a resume version."""
         if section not in SECTION_LIST:
@@ -128,7 +146,7 @@ class ResumeService:
         model_cls = _SECTION_MODELS[section]
         entry = model_cls(**data)
 
-        version = self.get_resume(version_id)
+        version = self.get_resume(version_id, user_id=user_id)
         vid = version["id"]
         resume_data = version["resume_data"]
 
@@ -160,6 +178,7 @@ class ResumeService:
         index: int,
         data: dict[str, Any],
         version_id: int | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Update an entry in a list section by index."""
         if section not in SECTION_LIST:
@@ -168,7 +187,7 @@ class ResumeService:
                 f"Must be one of: {', '.join(SECTION_LIST)}"
             )
 
-        version = self.get_resume(version_id)
+        version = self.get_resume(version_id, user_id=user_id)
         vid = version["id"]
         resume_data = version["resume_data"]
         entries = resume_data.get(section, [])
@@ -192,7 +211,11 @@ class ResumeService:
         )
 
     def remove_entry(
-        self, section: str, index: int, version_id: int | None = None
+        self,
+        section: str,
+        index: int,
+        version_id: int | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Remove an entry from a list section by index."""
         if section not in SECTION_LIST:
@@ -201,7 +224,7 @@ class ResumeService:
                 f"Must be one of: {', '.join(SECTION_LIST)}"
             )
 
-        version = self.get_resume(version_id)
+        version = self.get_resume(version_id, user_id=user_id)
         vid = version["id"]
         resume_data = version["resume_data"]
         entries = resume_data.get(section, [])

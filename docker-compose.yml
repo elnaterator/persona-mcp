@@ -10,6 +10,9 @@ services:
       - PERSONA_DATA_DIR=/data
       - PERSONA_FRONTEND_DIR=/app/frontend-dist
       - LOG_LEVEL=INFO
+      - CLERK_JWKS_URL=${CLERK_JWKS_URL}
+      - CLERK_ISSUER=${CLERK_ISSUER}
+      - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
     volumes:
       - persona-data:/data
     healthcheck:
