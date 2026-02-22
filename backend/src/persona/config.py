@@ -1,27 +1,13 @@
-"""Configuration for persona MCP server — data directory and logging."""
+"""Configuration for persona MCP server — database, server, and logging."""
 
 import logging
 import os
 import sys
 from pathlib import Path
 
-DEFAULT_DATA_DIR = "~/.persona"
-DB_FILENAME = "persona.db"
 DEFAULT_PORT = 8000
 
 logger = logging.getLogger("persona")
-
-
-def resolve_data_dir() -> Path:
-    """Resolve the data directory path.
-
-    Uses PERSONA_DATA_DIR env var if set, otherwise defaults to ~/.persona/.
-    Relative paths are resolved against the current working directory.
-    """
-    raw = os.environ.get("PERSONA_DATA_DIR", DEFAULT_DATA_DIR)
-    path = Path(raw).expanduser().resolve()
-    logger.info("Data directory resolved to: %s", path)
-    return path
 
 
 def resolve_port() -> int:
@@ -102,6 +88,27 @@ def resolve_clerk_webhook_secret() -> str:
     if not value.strip():
         raise ValueError("CLERK_WEBHOOK_SECRET environment variable is required")
     return value.strip()
+
+
+def resolve_db_url() -> str:
+    """Resolve PERSONA_DB_URL env var (required for PostgreSQL).
+
+    Raises ValueError if not set.
+    """
+    value = os.environ.get("PERSONA_DB_URL", "")
+    if not value.strip():
+        raise ValueError("PERSONA_DB_URL environment variable is required")
+    return value.strip()
+
+
+def resolve_pool_min() -> int:
+    """Resolve PERSONA_DB_POOL_MIN env var (default 1)."""
+    return int(os.environ.get("PERSONA_DB_POOL_MIN", "1"))
+
+
+def resolve_pool_max() -> int:
+    """Resolve PERSONA_DB_POOL_MAX env var (default 10)."""
+    return int(os.environ.get("PERSONA_DB_POOL_MAX", "10"))
 
 
 def configure_logging() -> logging.Logger:

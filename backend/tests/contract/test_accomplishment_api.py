@@ -4,37 +4,25 @@ Tests are grouped by user story. Each story's MCP contract tests appear
 BEFORE the tool implementations (TDD per Constitution III).
 """
 
-import sqlite3
-from collections.abc import Generator
 from typing import Any
 
+import psycopg
 import pytest
+from psycopg import Connection
 from starlette.testclient import TestClient
 
 # ── Shared fixtures ───────────────────────────────────────────────────────────
 
 
 @pytest.fixture
-def acc_db() -> Generator[sqlite3.Connection, None, None]:
-    """In-memory DB for accomplishment API tests."""
-    from persona.migrations import apply_migrations
-
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    apply_migrations(conn)
-    yield conn
-    conn.close()
-
-
-@pytest.fixture
-def acc_service(acc_db: sqlite3.Connection) -> Any:
+def acc_service(db_conn: Connection[Any]) -> Any:
     """AccomplishmentService for use in MCP tool tests."""
     from persona.accomplishment_service import AccomplishmentService
 
-    return AccomplishmentService(acc_db)
+    return AccomplishmentService(db_conn)  # type: ignore[arg-type]
 
 
-def _make_acc_client(acc_db: sqlite3.Connection) -> TestClient:
+def _make_acc_client(db_conn: Connection[Any]) -> TestClient:
     """TestClient with accomplishment routes enabled."""
     from fastapi import FastAPI
 
@@ -42,8 +30,8 @@ def _make_acc_client(acc_db: sqlite3.Connection) -> TestClient:
     from persona.api.routes import create_router
     from persona.resume_service import ResumeService
 
-    svc = ResumeService(acc_db)
-    app_acc_svc = AccomplishmentService(acc_db)
+    svc = ResumeService(db_conn)  # type: ignore[arg-type]
+    app_acc_svc = AccomplishmentService(db_conn)  # type: ignore[arg-type]
     app = FastAPI()
     app.include_router(create_router(svc, acc_service=app_acc_svc))
     return TestClient(app)
@@ -152,8 +140,8 @@ class TestMCPCreateGetAccomplishment:
 class TestRESTCreateGetAccomplishment:
     """T007 — REST contract tests for POST + GET /api/accomplishments/{id}."""
 
-    def test_post_valid_returns_201(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_post_valid_returns_201(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         resp = client.post(
             "/api/accomplishments",
             json={"title": "Led migration", "situation": "Slow deploys"},
@@ -164,13 +152,13 @@ class TestRESTCreateGetAccomplishment:
         assert data["situation"] == "Slow deploys"
         assert "id" in data
 
-    def test_post_missing_title_returns_422(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_post_missing_title_returns_422(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         resp = client.post("/api/accomplishments", json={"situation": "No title"})
         assert resp.status_code == 422
 
-    def test_get_by_id_returns_full_record(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_get_by_id_returns_full_record(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         created = client.post(
             "/api/accomplishments",
             json={"title": "Test", "result": "Great outcome"},
@@ -181,8 +169,8 @@ class TestRESTCreateGetAccomplishment:
         assert data["id"] == created["id"]
         assert data["result"] == "Great outcome"
 
-    def test_get_unknown_id_returns_404(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_get_unknown_id_returns_404(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         resp = client.get("/api/accomplishments/9999")
         assert resp.status_code == 404
 
@@ -258,8 +246,8 @@ class TestMCPListAccomplishments:
 class TestRESTListTagsAccomplishments:
     """T019 — REST contract tests for GET /api/accomplishments and /tags."""
 
-    def test_list_returns_summaries(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_list_returns_summaries(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         client.post("/api/accomplishments", json={"title": "A"})
         client.post("/api/accomplishments", json={"title": "B"})
         resp = client.get("/api/accomplishments")
@@ -271,14 +259,14 @@ class TestRESTListTagsAccomplishments:
             assert "situation" not in item
             assert "title" in item
 
-    def test_list_empty_returns_empty_array(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_list_empty_returns_empty_array(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         resp = client.get("/api/accomplishments")
         assert resp.status_code == 200
         assert resp.json() == []
 
-    def test_list_filter_by_tag(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_list_filter_by_tag(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         client.post(
             "/api/accomplishments", json={"title": "Leader", "tags": ["leadership"]}
         )
@@ -292,18 +280,18 @@ class TestRESTListTagsAccomplishments:
         assert data[0]["title"] == "Leader"
 
     def test_list_tag_no_match_empty_not_error(
-        self, acc_db: sqlite3.Connection
+        self, db_conn: psycopg.Connection
     ) -> None:
-        client = _make_acc_client(acc_db)
+        client = _make_acc_client(db_conn)
         client.post("/api/accomplishments", json={"title": "A", "tags": ["technical"]})
         resp = client.get("/api/accomplishments?tag=nonexistent")
         assert resp.status_code == 200
         assert resp.json() == []
 
     def test_get_tags_returns_sorted_unique_list(
-        self, acc_db: sqlite3.Connection
+        self, db_conn: psycopg.Connection
     ) -> None:
-        client = _make_acc_client(acc_db)
+        client = _make_acc_client(db_conn)
         client.post(
             "/api/accomplishments",
             json={"title": "A", "tags": ["technical", "leadership"]},
@@ -317,9 +305,9 @@ class TestRESTListTagsAccomplishments:
         assert tags == sorted(tags)
 
     def test_get_tags_empty_when_no_accomplishments(
-        self, acc_db: sqlite3.Connection
+        self, db_conn: psycopg.Connection
     ) -> None:
-        client = _make_acc_client(acc_db)
+        client = _make_acc_client(db_conn)
         resp = client.get("/api/accomplishments/tags")
         assert resp.status_code == 200
         assert resp.json() == []
@@ -404,9 +392,9 @@ class TestRESTUpdateAccomplishment:
     """T031 — REST contract test for PATCH /api/accomplishments/{id}."""
 
     def test_patch_returns_200_with_updated_record(
-        self, acc_db: sqlite3.Connection
+        self, db_conn: psycopg.Connection
     ) -> None:
-        client = _make_acc_client(acc_db)
+        client = _make_acc_client(db_conn)
         created = client.post(
             "/api/accomplishments",
             json={"title": "Original", "situation": "Old situation"},
@@ -420,13 +408,13 @@ class TestRESTUpdateAccomplishment:
         assert data["result"] == "Updated result"
         assert data["situation"] == "Old situation"
 
-    def test_patch_unknown_id_returns_404(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_patch_unknown_id_returns_404(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         resp = client.patch("/api/accomplishments/9999", json={"result": "x"})
         assert resp.status_code == 404
 
-    def test_patch_blank_title_returns_422(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_patch_blank_title_returns_422(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         created = client.post("/api/accomplishments", json={"title": "Original"}).json()
         resp = client.patch(f"/api/accomplishments/{created['id']}", json={"title": ""})
         assert resp.status_code == 422
@@ -470,8 +458,8 @@ class TestMCPDeleteAccomplishment:
 class TestRESTDeleteAccomplishment:
     """T040 — REST contract test for DELETE /api/accomplishments/{id}."""
 
-    def test_delete_returns_200_with_message(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_delete_returns_200_with_message(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         created = client.post(
             "/api/accomplishments", json={"title": "Delete me"}
         ).json()
@@ -479,22 +467,22 @@ class TestRESTDeleteAccomplishment:
         assert resp.status_code == 200
         assert "message" in resp.json()
 
-    def test_deleted_not_retrievable(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_deleted_not_retrievable(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         created = client.post("/api/accomplishments", json={"title": "Gone"}).json()
         client.delete(f"/api/accomplishments/{created['id']}")
         resp = client.get(f"/api/accomplishments/{created['id']}")
         assert resp.status_code == 404
 
-    def test_second_delete_returns_404(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_second_delete_returns_404(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         created = client.post("/api/accomplishments", json={"title": "Gone"}).json()
         client.delete(f"/api/accomplishments/{created['id']}")
         resp = client.delete(f"/api/accomplishments/{created['id']}")
         assert resp.status_code == 404
 
-    def test_delete_unknown_returns_404(self, acc_db: sqlite3.Connection) -> None:
-        client = _make_acc_client(acc_db)
+    def test_delete_unknown_returns_404(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
         resp = client.delete("/api/accomplishments/9999")
         assert resp.status_code == 404
 

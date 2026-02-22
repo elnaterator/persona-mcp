@@ -1,46 +1,32 @@
 """Contract tests for REST API endpoints per openapi.yaml."""
 
-import sqlite3
-from collections.abc import Generator
+from typing import Any
 
 import pytest
+from psycopg import Connection
 from starlette.testclient import TestClient
 
 from persona.api.routes import create_router
 from persona.application_service import ApplicationService
 from persona.resume_service import ResumeService
-from tests.conftest import populate_sample_data
 
 
 @pytest.fixture
-def _rest_db() -> Generator[sqlite3.Connection, None, None]:
-    """In-memory DB that allows cross-thread use (needed by Starlette TestClient)."""
-    from persona.migrations import apply_migrations
-
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    apply_migrations(conn)
-    yield conn
-    conn.close()
+def service(db_conn: Connection[Any]) -> ResumeService:
+    """ResumeService backed by an empty PostgreSQL database."""
+    return ResumeService(db_conn)  # type: ignore[arg-type]
 
 
 @pytest.fixture
-def service(_rest_db: sqlite3.Connection) -> ResumeService:
-    """ResumeService backed by an empty in-memory database."""
-    return ResumeService(_rest_db)
-
-
-@pytest.fixture
-def service_with_data(_rest_db: sqlite3.Connection) -> ResumeService:
+def service_with_data(db_conn_with_data: Connection[Any]) -> ResumeService:
     """ResumeService backed by a pre-populated database."""
-    populate_sample_data(_rest_db)
-    return ResumeService(_rest_db)
+    return ResumeService(db_conn_with_data)  # type: ignore[arg-type]
 
 
 @pytest.fixture
-def app_service(_rest_db: sqlite3.Connection) -> ApplicationService:
-    """ApplicationService backed by an empty in-memory database."""
-    return ApplicationService(_rest_db)
+def app_service(db_conn: Connection[Any]) -> ApplicationService:
+    """ApplicationService backed by an empty PostgreSQL database."""
+    return ApplicationService(db_conn)  # type: ignore[arg-type]
 
 
 def _make_client(svc: ResumeService) -> TestClient:

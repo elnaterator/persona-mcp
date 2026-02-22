@@ -1,16 +1,17 @@
 """Unit tests for AccomplishmentService and accomplishment DB functions."""
 
-import sqlite3
+from typing import Any
 
 import pytest
+from psycopg import Connection
 
 
 @pytest.fixture
-def acc_service(db_conn: sqlite3.Connection):  # type: ignore[no-untyped-def]
-    """AccomplishmentService backed by an empty in-memory database."""
+def acc_service(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
+    """AccomplishmentService backed by an empty PostgreSQL database."""
     from persona.accomplishment_service import AccomplishmentService
 
-    return AccomplishmentService(db_conn)
+    return AccomplishmentService(db_conn)  # type: ignore[arg-type]
 
 
 # ── US1: Create ──────────────────────────────────────────────────────────────

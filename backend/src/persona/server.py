@@ -2,14 +2,16 @@
 
 import argparse
 import os
+from collections.abc import AsyncIterator, Generator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import Any, cast
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
+from psycopg_pool import ConnectionPool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
@@ -20,11 +22,13 @@ from persona.auth import build_get_current_user
 from persona.config import (
     configure_logging,
     resolve_cors_origins,
-    resolve_data_dir,
+    resolve_db_url,
     resolve_frontend_dir,
+    resolve_pool_max,
+    resolve_pool_min,
     resolve_port,
 )
-from persona.database import init_database
+from persona.database import init_pool
 from persona.db import DBConnection
 from persona.resume_service import ResumeService
 from persona.tools.accomplishment_tools import register_accomplishment_tools
@@ -34,6 +38,8 @@ from persona.tools.resume_tools import register_resume_tools
 mcp = FastMCP("persona")
 
 # Resolved at startup, used by MCP tool handlers.
+_pool: ConnectionPool[Any] | None = None
+_raw_conn: Any = None  # raw psycopg.Connection — needed for pool.putconn()
 _conn: DBConnection | None = None
 _service: ResumeService | None = None
 _app_service: ApplicationService | None = None
@@ -53,6 +59,13 @@ def _get_app_service() -> ApplicationService:
 def _get_acc_service() -> AccomplishmentService:
     assert _acc_service is not None
     return _acc_service
+
+
+def get_db() -> Generator[DBConnection, None, None]:
+    """FastAPI dependency: yields a per-request PostgreSQL connection from the pool."""
+    assert _pool is not None, "Database pool not initialized"
+    with _pool.connection() as conn:
+        yield cast(DBConnection, conn)
 
 
 # Register MCP tools from modules
@@ -107,9 +120,9 @@ def create_app(
     Args:
         service: Optional pre-built ResumeService (for testing).
         conn: Optional pre-built DBConnection (for testing / MCP globals).
-            If service and conn are None, initializes from environment config.
+            If service and conn are None, initializes pool from environment config.
     """
-    global _conn, _service, _app_service, _acc_service
+    global _pool, _raw_conn, _conn, _service, _app_service, _acc_service
 
     # Track production mode before service is overwritten below.
     # Auth is only wired in production (no pre-built service injected).
@@ -117,10 +130,13 @@ def create_app(
 
     if service is None:
         logger = configure_logging()
-        data_dir = resolve_data_dir()
-        conn = init_database(data_dir)
+        _pool = init_pool(resolve_db_url(), resolve_pool_min(), resolve_pool_max())
+        raw = _pool.getconn()
+        raw.autocommit = True
+        _raw_conn = raw
+        conn = cast(DBConnection, raw)
         service = ResumeService(conn)
-        logger.info("Persona server starting, data dir: %s", data_dir)
+        logger.info("Persona server starting (PostgreSQL pool initialized)")
 
     _conn = conn
     _service = service
@@ -130,15 +146,17 @@ def create_app(
     # Get MCP HTTP app first to access its lifespan
     mcp_app = mcp.http_app(path="/")
 
-    # Create combined lifespan that wraps MCP lifespan and closes DB on shutdown
+    # Create combined lifespan that wraps MCP lifespan and closes pool on shutdown
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Startup: delegate to MCP lifespan
         async with mcp_app.lifespan(app):
             yield
-        # Shutdown: close DB connection
-        if _conn is not None:
-            _conn.close()
+        # Shutdown: return connection to pool, then close pool
+        if _pool is not None:
+            if _raw_conn is not None:
+                _pool.putconn(_raw_conn)
+            _pool.close()
 
     app = FastAPI(title="Persona", lifespan=lifespan)
 
@@ -197,15 +215,22 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.stdio:
-        global _conn, _service, _app_service, _acc_service
+        global _pool, _raw_conn, _conn, _service, _app_service, _acc_service
         logger = configure_logging()
-        data_dir = resolve_data_dir()
-        _conn = init_database(data_dir)
+        _pool = init_pool(resolve_db_url(), resolve_pool_min(), resolve_pool_max())
+        raw = _pool.getconn()
+        raw.autocommit = True
+        _raw_conn = raw
+        _conn = cast(DBConnection, raw)
         _service = ResumeService(_conn)
         _app_service = ApplicationService(_conn)
         _acc_service = AccomplishmentService(_conn)
-        logger.info("Persona MCP server starting (stdio), data dir: %s", data_dir)
-        mcp.run(transport="stdio")
+        logger.info("Persona MCP server starting (stdio, PostgreSQL pool initialized)")
+        try:
+            mcp.run(transport="stdio")
+        finally:
+            _pool.putconn(_raw_conn)
+            _pool.close()
     else:
         port = resolve_port()
         app = create_app()

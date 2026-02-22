@@ -4,7 +4,6 @@ Verifies that Alice and Bob each see only their own data and that
 cross-user detail access raises 403. Also tests account deletion cascade.
 """
 
-import sqlite3
 import time
 from typing import Any
 from unittest.mock import patch
@@ -14,6 +13,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
 from jose import jwt
+from psycopg import Connection
 from starlette.testclient import TestClient
 
 from persona.accomplishment_service import AccomplishmentService
@@ -74,25 +74,17 @@ def _make_token(
 
 
 @pytest.fixture
-def multi_user_db() -> sqlite3.Connection:  # type: ignore[return]
-    """In-memory DB with migrations applied and both users seeded."""
-    from persona.migrations import apply_migrations
-
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    apply_migrations(conn)
-    conn.execute(
+def multi_user_db(db_conn: Connection[Any]) -> Connection[Any]:
+    """PostgreSQL connection with both users seeded (rolled back after test)."""
+    db_conn.execute(
         "INSERT INTO users (id, email) VALUES ('user_alice', 'alice@test.com')"
     )
-    conn.execute("INSERT INTO users (id, email) VALUES ('user_bob', 'bob@test.com')")
-    conn.commit()
-    yield conn  # pyright: ignore [reportReturnType]
-    conn.close()
+    db_conn.execute("INSERT INTO users (id, email) VALUES ('user_bob', 'bob@test.com')")
+    return db_conn
 
 
 @pytest.fixture
-def two_user_setup(multi_user_db: sqlite3.Connection) -> dict[str, Any]:  # type: ignore[return]
+def two_user_setup(multi_user_db: Connection[Any]) -> dict[str, Any]:  # type: ignore[return]
     """Build a shared TestClient plus tokens for Alice and Bob."""
     import persona.auth as auth_module
 
@@ -102,12 +94,12 @@ def two_user_setup(multi_user_db: sqlite3.Connection) -> dict[str, Any]:  # type
     auth_module._JWKS_FETCHED_AT = time.monotonic()
 
     app = FastAPI()
-    get_user = build_get_current_user(multi_user_db)
+    get_user = build_get_current_user(multi_user_db)  # type: ignore[arg-type]
     app.include_router(
         create_router(
-            ResumeService(multi_user_db),
-            app_service=ApplicationService(multi_user_db),
-            acc_service=AccomplishmentService(multi_user_db),
+            ResumeService(multi_user_db),  # type: ignore[arg-type]
+            app_service=ApplicationService(multi_user_db),  # type: ignore[arg-type]
+            acc_service=AccomplishmentService(multi_user_db),  # type: ignore[arg-type]
             get_current_user=get_user,
         )
     )
@@ -321,7 +313,7 @@ class TestUserDeletionCascade:
 
         # The resume row must be gone.
         row = db.execute(
-            "SELECT id FROM resume_version WHERE id = ?", (alice_resume_id,)
+            "SELECT id FROM resume_version WHERE id = %s", (alice_resume_id,)
         ).fetchone()
         assert row is None
 
@@ -346,7 +338,7 @@ class TestUserDeletionCascade:
         delete_user(db, "user_alice")
 
         row = db.execute(
-            "SELECT id FROM application WHERE id = ?", (alice_app_id,)
+            "SELECT id FROM application WHERE id = %s", (alice_app_id,)
         ).fetchone()
         assert row is None
 
@@ -371,7 +363,7 @@ class TestUserDeletionCascade:
         delete_user(db, "user_alice")
 
         row = db.execute(
-            "SELECT id FROM accomplishment WHERE id = ?", (alice_acc_id,)
+            "SELECT id FROM accomplishment WHERE id = %s", (alice_acc_id,)
         ).fetchone()
         assert row is None
 
@@ -404,6 +396,6 @@ class TestUserDeletionCascade:
 
         # Bob's resume must still exist.
         row = db.execute(
-            "SELECT id FROM resume_version WHERE id = ?", (bob_resume_id,)
+            "SELECT id FROM resume_version WHERE id = %s", (bob_resume_id,)
         ).fetchone()
         assert row is not None

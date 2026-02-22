@@ -87,6 +87,8 @@ specs/                    # Feature specifications
 ## Active Technologies
 - Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, `@clerk/clerk-react` v5+, `python-jose[cryptography]`, `svix` (008-authentication)
 - SQLite (schema v3 → v4); `users` table added as FK anchor for `resume_version`, `application`, `accomplishment` (008-authentication)
+- Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, psycopg[binary] ≥3.1, psycopg-pool ≥3.1, testcontainers[postgres] ≥4.0 (dev) (009-postgres)
+- PostgreSQL 16+ (009-postgres)
 
 ### Backend
 - Python 3.11+ with type hints and Pydantic validation
