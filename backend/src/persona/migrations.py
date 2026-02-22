@@ -1,8 +1,7 @@
-"""Schema migration framework using PRAGMA user_version."""
+"""Schema migration framework using schema_version table (PostgreSQL)."""
 
 import json
 import logging
-import sqlite3
 
 logger = logging.getLogger("persona")
 
@@ -31,9 +30,39 @@ class MigrationError(Exception):
         self.__cause__ = cause
 
 
-def migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
+def _bootstrap_schema_version(conn) -> None:
+    """Create schema_version table if it doesn't exist and seed with version 0."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO schema_version (version) VALUES (0) ON CONFLICT DO NOTHING"
+    )
+    # If table was just created but INSERT above didn't fire (table already had rows),
+    # ensure there is exactly one row by inserting only when empty.
+    row = conn.execute("SELECT COUNT(*) AS cnt FROM schema_version").fetchone()
+    count = row["cnt"] if isinstance(row, dict) else row[0]
+    if count == 0:
+        conn.execute("INSERT INTO schema_version (version) VALUES (0)")
+    conn.commit()
+
+
+def _get_version(conn) -> int:
+    """Read current schema version."""
+    row = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
+    if row is None:
+        return 0
+    return row["version"] if isinstance(row, dict) else row[0]
+
+
+def migrate_v0_to_v1(conn) -> None:
     """Initial schema: create all tables."""
-    conn.executescript("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS contact (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             name TEXT,
@@ -43,15 +72,21 @@ def migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
             linkedin TEXT,
             website TEXT,
             github TEXT
-        );
-
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS summary (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             text TEXT NOT NULL DEFAULT ''
-        );
-
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS experience (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             company TEXT NOT NULL,
             start_date TEXT,
@@ -59,10 +94,13 @@ def migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
             location TEXT,
             highlights TEXT NOT NULL DEFAULT '[]',
             position INTEGER NOT NULL
-        );
-
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS education (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             institution TEXT NOT NULL,
             degree TEXT NOT NULL,
             field TEXT,
@@ -70,33 +108,43 @@ def migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
             end_date TEXT,
             honors TEXT,
             position INTEGER NOT NULL
-        );
-
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS skill (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL UNIQUE,
             category TEXT NOT NULL DEFAULT 'Other'
-        );
-    """)
+        )
+        """
+    )
+    conn.execute(
+        "UPDATE schema_version SET version = %s",
+        (1,),
+    )
+    conn.commit()
 
 
-def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
+def migrate_v1_to_v2(conn) -> None:
     """Replace singleton resume tables with resume_version + application tables."""
-    conn.execute("PRAGMA foreign_keys = OFF")
-
-    # Create new tables
-    conn.executescript("""
+    conn.execute(
+        """
         CREATE TABLE resume_version (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             label TEXT NOT NULL,
             is_default INTEGER NOT NULL DEFAULT 0,
             resume_data TEXT NOT NULL DEFAULT '{}',
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE application (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             company TEXT NOT NULL,
             position TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
@@ -105,12 +153,15 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
             notes TEXT NOT NULL DEFAULT '',
             resume_version_id INTEGER REFERENCES resume_version(id)
                 ON DELETE SET NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now')),
-            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE application_contact (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             app_id INTEGER NOT NULL REFERENCES application(id)
                 ON DELETE CASCADE,
             name TEXT NOT NULL,
@@ -118,10 +169,13 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
             email TEXT,
             phone TEXT,
             notes TEXT NOT NULL DEFAULT ''
-        );
-
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE communication (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             app_id INTEGER NOT NULL REFERENCES application(id)
                 ON DELETE CASCADE,
             contact_id INTEGER REFERENCES application_contact(id)
@@ -133,22 +187,21 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
             body TEXT NOT NULL,
             date TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'sent',
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-
-        CREATE INDEX idx_application_status
-            ON application(status);
-        CREATE INDEX idx_application_updated
-            ON application(updated_at DESC);
-        CREATE INDEX idx_application_contact_app
-            ON application_contact(app_id);
-        CREATE INDEX idx_communication_app
-            ON communication(app_id);
-        CREATE INDEX idx_communication_date
-            ON communication(date DESC);
-        CREATE INDEX idx_resume_version_default
-            ON resume_version(is_default) WHERE is_default = 1;
-    """)
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute("CREATE INDEX idx_application_status ON application(status)")
+    conn.execute("CREATE INDEX idx_application_updated ON application(updated_at DESC)")
+    conn.execute(
+        "CREATE INDEX idx_application_contact_app ON application_contact(app_id)"
+    )
+    conn.execute("CREATE INDEX idx_communication_app ON communication(app_id)")
+    conn.execute("CREATE INDEX idx_communication_date ON communication(date DESC)")
+    conn.execute(
+        "CREATE INDEX idx_resume_version_default "
+        "ON resume_version(is_default) WHERE is_default = 1"
+    )
 
     # Migrate existing resume data into default version
     resume_data: dict = {
@@ -159,10 +212,8 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
         "skills": [],
     }
 
-    # Read contact
     row = conn.execute("SELECT * FROM contact WHERE id = 1").fetchone()
     if row:
-        contact = {}
         contact_keys = (
             "name",
             "email",
@@ -173,15 +224,12 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
             "github",
         )
         for key in contact_keys:
-            contact[key] = row[key]
-        resume_data["contact"] = contact
+            resume_data["contact"][key] = row[key]
 
-    # Read summary
     row = conn.execute("SELECT text FROM summary WHERE id = 1").fetchone()
     if row:
         resume_data["summary"] = row[0] or ""
 
-    # Read experience
     rows = conn.execute("SELECT * FROM experience ORDER BY position").fetchall()
     for row in rows:
         resume_data["experience"].append(
@@ -195,7 +243,6 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
             }
         )
 
-    # Read education
     rows = conn.execute("SELECT * FROM education ORDER BY position").fetchall()
     for row in rows:
         resume_data["education"].append(
@@ -209,161 +256,108 @@ def migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
             }
         )
 
-    # Read skills
     rows = conn.execute("SELECT * FROM skill ORDER BY id").fetchall()
     for row in rows:
         resume_data["skills"].append({"name": row["name"], "category": row["category"]})
 
-    # Insert default resume version
     conn.execute(
-        "INSERT INTO resume_version (label, is_default, resume_data) VALUES (?, 1, ?)",
+        "INSERT INTO resume_version (label, is_default, resume_data) "
+        "VALUES (%s, 1, %s)",
         ("Default Resume", json.dumps(resume_data)),
     )
 
     # Drop old tables
-    conn.executescript("""
-        DROP TABLE IF EXISTS skill;
-        DROP TABLE IF EXISTS education;
-        DROP TABLE IF EXISTS experience;
-        DROP TABLE IF EXISTS summary;
-        DROP TABLE IF EXISTS contact;
-    """)
+    conn.execute("DROP TABLE IF EXISTS skill CASCADE")
+    conn.execute("DROP TABLE IF EXISTS education CASCADE")
+    conn.execute("DROP TABLE IF EXISTS experience CASCADE")
+    conn.execute("DROP TABLE IF EXISTS summary CASCADE")
+    conn.execute("DROP TABLE IF EXISTS contact CASCADE")
 
-    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("UPDATE schema_version SET version = %s", (2,))
+    conn.commit()
 
 
-def migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
+def migrate_v2_to_v3(conn) -> None:
     """Add accomplishment table with STAR fields and tags."""
-    conn.executescript("""
+    conn.execute(
+        """
         CREATE TABLE accomplishment (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            title           TEXT    NOT NULL,
-            situation       TEXT    NOT NULL DEFAULT '',
-            task            TEXT    NOT NULL DEFAULT '',
-            action          TEXT    NOT NULL DEFAULT '',
-            result          TEXT    NOT NULL DEFAULT '',
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            situation TEXT NOT NULL DEFAULT '',
+            task TEXT NOT NULL DEFAULT '',
+            action TEXT NOT NULL DEFAULT '',
+            result TEXT NOT NULL DEFAULT '',
             accomplishment_date TEXT,
-            tags            TEXT    NOT NULL DEFAULT '[]',
-            created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
-            updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
-        );
+            tags TEXT NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX idx_accomplishment_date "
+        "ON accomplishment(accomplishment_date DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX idx_accomplishment_created ON accomplishment(created_at DESC)"
+    )
+    conn.execute("UPDATE schema_version SET version = %s", (3,))
+    conn.commit()
 
-        CREATE INDEX idx_accomplishment_date
-            ON accomplishment(accomplishment_date DESC);
-        CREATE INDEX idx_accomplishment_created
-            ON accomplishment(created_at DESC);
-    """)
 
-
-def migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
-    """Add users table and thread user_id FK into owned tables.
-
-    Adds multi-user support: resume_version, application, and accomplishment
-    each gain a user_id column referencing users(id) ON DELETE CASCADE.
-    """
-    conn.execute("PRAGMA foreign_keys = OFF")
-
-    conn.executescript("""
-        -- Step 1: users table (FK anchor for all owned data)
+def migrate_v3_to_v4(conn) -> None:
+    """Add users table and thread user_id FK into owned tables."""
+    conn.execute(
+        """
         CREATE TABLE users (
-            id           TEXT PRIMARY KEY,
-            email        TEXT,
+            id TEXT PRIMARY KEY,
+            email TEXT,
             display_name TEXT,
-            created_at   TEXT NOT NULL DEFAULT (datetime('now'))
-        );
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute("INSERT INTO users (id) VALUES ('legacy')")
 
-        -- Insert placeholder for pre-existing (single-user era) rows
-        INSERT INTO users (id) VALUES ('legacy');
+    # resume_version: add user_id column, backfill, add FK constraint
+    conn.execute("ALTER TABLE resume_version ADD COLUMN user_id TEXT")
+    conn.execute("UPDATE resume_version SET user_id = 'legacy'")
+    conn.execute("ALTER TABLE resume_version ALTER COLUMN user_id SET NOT NULL")
+    conn.execute(
+        "ALTER TABLE resume_version ADD CONSTRAINT fk_rv_user "
+        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    )
 
-        -- Step 2a: resume_version
-        CREATE TABLE resume_version_v4 (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id      TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            label        TEXT    NOT NULL,
-            is_default   INTEGER NOT NULL DEFAULT 0,
-            resume_data  TEXT    NOT NULL DEFAULT '{}',
-            created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-            updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
-        );
-        INSERT INTO resume_version_v4
-            SELECT id, 'legacy', label, is_default, resume_data, created_at, updated_at
-            FROM resume_version;
-        DROP TABLE resume_version;
-        ALTER TABLE resume_version_v4 RENAME TO resume_version;
+    # application: add user_id column, backfill, add FK constraint
+    conn.execute("ALTER TABLE application ADD COLUMN user_id TEXT")
+    conn.execute("UPDATE application SET user_id = 'legacy'")
+    conn.execute("ALTER TABLE application ALTER COLUMN user_id SET NOT NULL")
+    conn.execute(
+        "ALTER TABLE application ADD CONSTRAINT fk_app_user "
+        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    )
 
-        -- Step 2b: application
-        CREATE TABLE application_v4 (
-            id                INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id           TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            company           TEXT    NOT NULL,
-            position          TEXT    NOT NULL,
-            description       TEXT    NOT NULL DEFAULT '',
-            status            TEXT    NOT NULL DEFAULT 'Interested',
-            url               TEXT,
-            notes             TEXT    NOT NULL DEFAULT '',
-            resume_version_id INTEGER REFERENCES resume_version(id) ON DELETE SET NULL,
-            created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
-            updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
-        );
-        INSERT INTO application_v4
-            SELECT id, 'legacy', company, position, description, status, url,
-                notes, resume_version_id, created_at, updated_at
-            FROM application;
-        DROP TABLE application;
-        ALTER TABLE application_v4 RENAME TO application;
+    # accomplishment: add user_id column, backfill, add FK constraint
+    conn.execute("ALTER TABLE accomplishment ADD COLUMN user_id TEXT")
+    conn.execute("UPDATE accomplishment SET user_id = 'legacy'")
+    conn.execute("ALTER TABLE accomplishment ALTER COLUMN user_id SET NOT NULL")
+    conn.execute(
+        "ALTER TABLE accomplishment ADD CONSTRAINT fk_acc_user "
+        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    )
 
-        -- Step 2c: accomplishment
-        CREATE TABLE accomplishment_v4 (
-            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id              TEXT    NOT NULL
-                REFERENCES users(id) ON DELETE CASCADE,
-            title                TEXT    NOT NULL,
-            situation            TEXT    NOT NULL DEFAULT '',
-            task                 TEXT    NOT NULL DEFAULT '',
-            action               TEXT    NOT NULL DEFAULT '',
-            result               TEXT    NOT NULL DEFAULT '',
-            accomplishment_date  TEXT,
-            tags                 TEXT    NOT NULL DEFAULT '[]',
-            created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
-            updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
-        );
-        INSERT INTO accomplishment_v4
-            SELECT id, 'legacy', title, situation, task, action, result,
-                accomplishment_date, tags, created_at, updated_at
-            FROM accomplishment;
-        DROP TABLE accomplishment;
-        ALTER TABLE accomplishment_v4 RENAME TO accomplishment;
+    # Add new indexes
+    conn.execute("CREATE INDEX idx_resume_version_user ON resume_version(user_id)")
+    conn.execute(
+        "CREATE INDEX idx_resume_version_user_default "
+        "ON resume_version(user_id, is_default) WHERE is_default = 1"
+    )
+    conn.execute("CREATE INDEX idx_application_user ON application(user_id)")
+    conn.execute("CREATE INDEX idx_accomplishment_user ON accomplishment(user_id)")
 
-        -- Step 3: drop old indexes (they reference now-dropped tables)
-        DROP INDEX IF EXISTS idx_application_status;
-        DROP INDEX IF EXISTS idx_application_updated;
-        DROP INDEX IF EXISTS idx_application_contact_app;
-        DROP INDEX IF EXISTS idx_communication_app;
-        DROP INDEX IF EXISTS idx_communication_date;
-        DROP INDEX IF EXISTS idx_resume_version_default;
-        DROP INDEX IF EXISTS idx_accomplishment_date;
-        DROP INDEX IF EXISTS idx_accomplishment_created;
-
-        -- Recreate all indexes
-        CREATE INDEX idx_resume_version_user ON resume_version(user_id);
-        CREATE INDEX idx_resume_version_user_default
-            ON resume_version(user_id, is_default) WHERE is_default = 1;
-        CREATE INDEX idx_application_user ON application(user_id);
-        CREATE INDEX idx_accomplishment_user ON accomplishment(user_id);
-
-        CREATE INDEX idx_application_status ON application(status);
-        CREATE INDEX idx_application_updated ON application(updated_at DESC);
-        CREATE INDEX idx_application_contact_app ON application_contact(app_id);
-        CREATE INDEX idx_communication_app ON communication(app_id);
-        CREATE INDEX idx_communication_date ON communication(date DESC);
-        CREATE INDEX idx_resume_version_default
-            ON resume_version(is_default) WHERE is_default = 1;
-        CREATE INDEX idx_accomplishment_date
-            ON accomplishment(accomplishment_date DESC);
-        CREATE INDEX idx_accomplishment_created ON accomplishment(created_at DESC);
-    """)
-
-    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("UPDATE schema_version SET version = %s", (4,))
+    conn.commit()
 
 
 MIGRATIONS: list = [
@@ -376,9 +370,10 @@ MIGRATIONS: list = [
 SCHEMA_VERSION: int = len(MIGRATIONS)
 
 
-def apply_migrations(conn: sqlite3.Connection) -> None:
+def apply_migrations(conn) -> None:
     """Apply pending migrations to bring the database to the current schema version."""
-    current = conn.execute("PRAGMA user_version").fetchone()[0]
+    _bootstrap_schema_version(conn)
+    current = _get_version(conn)
 
     if current > len(MIGRATIONS):
         raise SchemaVersionError(db_version=current, code_version=len(MIGRATIONS))
@@ -392,8 +387,6 @@ def apply_migrations(conn: sqlite3.Connection) -> None:
         logger.info("Applying migration v%d → v%d", i, target)
         try:
             MIGRATIONS[i](conn)
-            conn.execute(f"PRAGMA user_version = {target}")
-            conn.commit()
         except Exception as e:
             conn.rollback()
             raise MigrationError(from_version=i, to_version=target, cause=e) from e

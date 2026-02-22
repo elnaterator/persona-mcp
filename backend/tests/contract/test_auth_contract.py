@@ -4,16 +4,17 @@ Phase 3 tests (T009): 401 on missing token, 200 on valid mock JWT.
 Phase 4 tests (T016, T035, T036): 403 on cross-user access; MCP tool auth.
 """
 
-import sqlite3
 import time
 from typing import Any
 from unittest.mock import patch
 
+import psycopg
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
 from jose import jwt
+from psycopg import Connection
 from starlette.testclient import TestClient
 
 from persona.accomplishment_service import AccomplishmentService
@@ -74,22 +75,16 @@ def _make_token(
 
 
 @pytest.fixture
-def auth_db() -> sqlite3.Connection:  # type: ignore[return]
-    from persona.migrations import apply_migrations
+def auth_db(db_conn: Connection[Any]) -> psycopg.Connection:
+    """PostgreSQL connection with schema already applied (via db_conn fixture).
 
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    apply_migrations(conn)
-    # Seed a legacy user so resume list works
-    conn.execute("INSERT OR IGNORE INTO users (id) VALUES ('legacy')")
-    conn.commit()
-    yield conn  # pyright: ignore [reportReturnType]
-    conn.close()
+    The 'legacy' user is seeded by migrate_v3_to_v4, so no manual insert needed.
+    """
+    return db_conn
 
 
 @pytest.fixture
-def auth_app(auth_db: sqlite3.Connection) -> tuple:  # type: ignore[override]
+def auth_app(auth_db: psycopg.Connection) -> tuple:  # type: ignore[override]
     """Full app with auth middleware enabled."""
     import persona.auth as auth_module
 
@@ -99,12 +94,12 @@ def auth_app(auth_db: sqlite3.Connection) -> tuple:  # type: ignore[override]
     auth_module._JWKS_FETCHED_AT = time.monotonic()
 
     app = FastAPI()
-    get_user = build_get_current_user(auth_db)
+    get_user = build_get_current_user(auth_db)  # type: ignore[arg-type]
     app.include_router(
         create_router(
-            ResumeService(auth_db),
-            app_service=ApplicationService(auth_db),
-            acc_service=AccomplishmentService(auth_db),
+            ResumeService(auth_db),  # type: ignore[arg-type]
+            app_service=ApplicationService(auth_db),  # type: ignore[arg-type]
+            acc_service=AccomplishmentService(auth_db),  # type: ignore[arg-type]
             get_current_user=get_user,
         )
     )
@@ -166,19 +161,19 @@ class TestCrossUserOwnershipContract:
 
     def _make_user_client(
         self,
-        auth_db: sqlite3.Connection,
+        auth_db: psycopg.Connection,
         private_key: Any,
         user_id: str,
         email: str,
     ) -> TestClient:
 
         app = FastAPI()
-        get_user = build_get_current_user(auth_db)
+        get_user = build_get_current_user(auth_db)  # type: ignore[arg-type]
         app.include_router(
             create_router(
-                ResumeService(auth_db),
-                app_service=ApplicationService(auth_db),
-                acc_service=AccomplishmentService(auth_db),
+                ResumeService(auth_db),  # type: ignore[arg-type]
+                app_service=ApplicationService(auth_db),  # type: ignore[arg-type]
+                acc_service=AccomplishmentService(auth_db),  # type: ignore[arg-type]
                 get_current_user=get_user,
             )
         )
@@ -193,7 +188,7 @@ class TestCrossUserOwnershipContract:
         return _make_client_with_token()
 
     @pytest.fixture
-    def two_user_setup(self, auth_db: sqlite3.Connection) -> dict:
+    def two_user_setup(self, auth_db: psycopg.Connection) -> dict:
         import persona.auth as auth_module
 
         private_key, public_key = _gen_rsa_key_pair()
@@ -209,15 +204,14 @@ class TestCrossUserOwnershipContract:
         auth_db.execute(
             "INSERT INTO users (id, email) VALUES ('user_bob', 'bob@test.com')"
         )
-        auth_db.commit()
 
         app = FastAPI()
-        get_user = build_get_current_user(auth_db)
+        get_user = build_get_current_user(auth_db)  # type: ignore[arg-type]
         app.include_router(
             create_router(
-                ResumeService(auth_db),
-                app_service=ApplicationService(auth_db),
-                acc_service=AccomplishmentService(auth_db),
+                ResumeService(auth_db),  # type: ignore[arg-type]
+                app_service=ApplicationService(auth_db),  # type: ignore[arg-type]
+                acc_service=AccomplishmentService(auth_db),  # type: ignore[arg-type]
                 get_current_user=get_user,
             )
         )

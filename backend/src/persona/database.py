@@ -1,55 +1,37 @@
-"""SQLite database operations for persona resume data."""
+"""PostgreSQL database operations for persona resume data."""
 
+import datetime
 import json
 import logging
-import sqlite3
-from pathlib import Path
 from typing import Any
 
-from persona.config import DB_FILENAME
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
+
 from persona.db import DBConnection
 from persona.migrations import apply_migrations
 
 logger = logging.getLogger("persona")
 
 
-def init_database(data_dir: Path) -> DBConnection:
-    """Initialize the SQLite database, creating it if needed.
+def init_pool(dsn: str, min_size: int = 1, max_size: int = 10) -> ConnectionPool[Any]:
+    """Initialize a PostgreSQL connection pool and run pending migrations.
 
-    Creates the data directory if it doesn't exist, opens a connection with
-    WAL mode, foreign keys ON, and busy timeout, then runs any pending
-    schema migrations.
-
-    Returns the open connection ready for use.
+    Opens a pool configured with dict_row, applies any pending schema
+    migrations using a single connection checkout, and returns the pool
+    ready for use.
     """
-    data_dir.mkdir(parents=True, exist_ok=True)
-    db_path = data_dir / DB_FILENAME
-
-    # isolation_level=None enables true autocommit mode so each statement commits
-    # immediately. This prevents "cannot commit - no transaction is active" errors
-    # when the shared connection is used from multiple threads (FastAPI thread pool).
-    # Multi-statement atomic operations use explicit conn.execute("BEGIN")/commit().
-    #
-    # cached_statements=0 disables the per-connection statement cache. The cache is
-    # not thread-safe: concurrent threads executing the same SQL reuse the same
-    # sqlite3_stmt* object, which triggers SQLITE_MISUSE. Disabling it ensures
-    # each execute() call prepares a fresh statement.
-    conn = sqlite3.connect(
-        str(db_path),
-        check_same_thread=False,
-        isolation_level=None,
-        cached_statements=0,
+    pool = ConnectionPool(
+        dsn,
+        min_size=min_size,
+        max_size=max_size,
+        open=True,
+        kwargs={"row_factory": dict_row},
     )
-    conn.row_factory = sqlite3.Row
-
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA busy_timeout = 5000")
-
-    apply_migrations(conn)
-
-    logger.info("Database initialized at %s", db_path)
-    return conn
+    with pool.connection() as conn:
+        apply_migrations(conn)
+    logger.info("PostgreSQL pool initialized (min=%d, max=%d)", min_size, max_size)
+    return pool
 
 
 # --- User operations ---
@@ -65,20 +47,18 @@ def upsert_user(
     conn.execute(
         """
         INSERT INTO users (id, email, display_name)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
         ON CONFLICT(id) DO UPDATE SET
             email        = excluded.email,
             display_name = excluded.display_name
         """,
         (user_id, email, display_name),
     )
-    conn.commit()
 
 
 def delete_user(conn: DBConnection, user_id: str) -> None:
     """Hard-delete a user and all their owned data (cascade via FK)."""
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    conn.commit()
+    conn.execute("DELETE FROM users WHERE id = %s", (user_id,))
 
 
 # --- Resume Version operations ---
@@ -105,17 +85,17 @@ def create_resume_version(
     """Create a new resume version. Returns the created version."""
     effective_uid = user_id or "legacy"
     data_json = json.dumps(resume_data)
-    cursor = conn.execute(
-        "INSERT INTO resume_version (user_id, label, is_default, resume_data) "
-        "VALUES (?, ?, 0, ?)",
-        (effective_uid, label, data_json),
-    )
-    conn.commit()
     row = conn.execute(
-        "SELECT * FROM resume_version WHERE id = ?",
-        (cursor.lastrowid,),
+        "INSERT INTO resume_version (user_id, label, is_default, resume_data) "
+        "VALUES (%s, %s, 0, %s) RETURNING id",
+        (effective_uid, label, data_json),
     ).fetchone()
-    return _row_to_resume_data(row)
+    new_id = row["id"]
+    result_row = conn.execute(
+        "SELECT * FROM resume_version WHERE id = %s",
+        (new_id,),
+    ).fetchone()
+    return _row_to_resume_data(result_row)
 
 
 def load_resume_version(
@@ -125,7 +105,7 @@ def load_resume_version(
 ) -> dict[str, Any]:
     """Load a resume version by ID. Raises ValueError if not found."""
     row = conn.execute(
-        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = %s", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
@@ -150,7 +130,7 @@ def load_resume_versions(
     params: list[Any] = []
 
     if user_id is not None:
-        query += " WHERE rv.user_id = ?"
+        query += " WHERE rv.user_id = %s"
         params.append(user_id)
 
     query += " GROUP BY rv.id ORDER BY rv.id"
@@ -176,11 +156,10 @@ def load_default_resume_version(
     """Load the default resume version. Raises ValueError if none."""
     if user_id is not None:
         row = conn.execute(
-            "SELECT * FROM resume_version WHERE user_id = ? AND is_default = 1",
+            "SELECT * FROM resume_version WHERE user_id = %s AND is_default = 1",
             (user_id,),
         ).fetchone()
         if row is None:
-            # Fall back to global default
             row = conn.execute(
                 "SELECT * FROM resume_version WHERE is_default = 1"
             ).fetchone()
@@ -202,7 +181,7 @@ def update_resume_version_metadata(
 ) -> dict[str, Any]:
     """Update resume version label. Returns updated version."""
     row = conn.execute(
-        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = %s", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
@@ -212,11 +191,10 @@ def update_resume_version_metadata(
         )
 
     conn.execute(
-        "UPDATE resume_version SET label = ?, updated_at = datetime('now') "
-        "WHERE id = ?",
+        "UPDATE resume_version SET label = %s, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = %s",
         (label, version_id),
     )
-    conn.commit()
     return load_resume_version(conn, version_id)
 
 
@@ -228,7 +206,7 @@ def update_resume_version_data(
 ) -> None:
     """Update the resume_data JSON blob for a version."""
     row = conn.execute(
-        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = %s", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
@@ -239,11 +217,10 @@ def update_resume_version_data(
 
     conn.execute(
         "UPDATE resume_version "
-        "SET resume_data = ?, updated_at = datetime('now') "
-        "WHERE id = ?",
+        "SET resume_data = %s, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = %s",
         (json.dumps(resume_data), version_id),
     )
-    conn.commit()
 
 
 def delete_resume_version(
@@ -257,7 +234,7 @@ def delete_resume_version(
     the most recently updated version. Rejects deleting the last version.
     """
     row = conn.execute(
-        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = %s", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
@@ -271,28 +248,28 @@ def delete_resume_version(
 
     if user_id is not None:
         count = conn.execute(
-            "SELECT COUNT(*) FROM resume_version WHERE user_id = ?", (user_id,)
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS cnt FROM resume_version WHERE user_id = %s",
+            (user_id,),
+        ).fetchone()["cnt"]
     else:
-        count = conn.execute("SELECT COUNT(*) FROM resume_version").fetchone()[0]
+        count = conn.execute("SELECT COUNT(*) AS cnt FROM resume_version").fetchone()[
+            "cnt"
+        ]
 
     if count <= 1:
         raise ValueError("Cannot delete the last remaining resume version")
 
-    # DELETE + optional UPDATE must be atomic so we never leave the table
-    # with no default after deleting the default version.
-    conn.execute("BEGIN")
+    conn.execute("SAVEPOINT delete_and_promote")
     try:
-        conn.execute("DELETE FROM resume_version WHERE id = ?", (version_id,))
+        conn.execute("DELETE FROM resume_version WHERE id = %s", (version_id,))
 
         if is_default:
-            # Promote most recently updated version
             if user_id is not None:
                 conn.execute(
                     "UPDATE resume_version SET is_default = 1 "
                     "WHERE id = ("
                     "  SELECT id FROM resume_version "
-                    "  WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1"
+                    "  WHERE user_id = %s ORDER BY updated_at DESC LIMIT 1"
                     ")",
                     (user_id,),
                 )
@@ -305,10 +282,10 @@ def delete_resume_version(
                     ")"
                 )
 
-        conn.commit()
     except Exception:
-        conn.rollback()
+        conn.execute("ROLLBACK TO SAVEPOINT delete_and_promote")
         raise
+    conn.execute("RELEASE SAVEPOINT delete_and_promote")
     return label
 
 
@@ -319,7 +296,7 @@ def set_default_resume_version(
 ) -> str:
     """Set a resume version as default. Returns its label."""
     row = conn.execute(
-        "SELECT * FROM resume_version WHERE id = ?", (version_id,)
+        "SELECT * FROM resume_version WHERE id = %s", (version_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Resume version {version_id} not found")
@@ -330,20 +307,19 @@ def set_default_resume_version(
 
     label = row["label"]
 
-    # Unset old default and set new default atomically in one statement.
     if user_id is not None:
         conn.execute(
             "UPDATE resume_version "
-            "SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END "
-            "WHERE user_id = ?",
+            "SET is_default = CASE WHEN id = %s THEN 1 ELSE 0 END "
+            "WHERE user_id = %s",
             (version_id, user_id),
         )
     else:
         conn.execute(
-            "UPDATE resume_version SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END",
+            "UPDATE resume_version "
+            "SET is_default = CASE WHEN id = %s THEN 1 ELSE 0 END",
             (version_id,),
         )
-    conn.commit()
     return label
 
 
@@ -357,11 +333,11 @@ def create_application(
 ) -> dict[str, Any]:
     """Create a new application. Returns the created application."""
     effective_uid = user_id or "legacy"
-    cursor = conn.execute(
+    row = conn.execute(
         "INSERT INTO application "
         "(user_id, company, position, description, status, url, notes, "
         "resume_version_id) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (
             effective_uid,
             data["company"],
@@ -372,9 +348,8 @@ def create_application(
             data.get("notes", ""),
             data.get("resume_version_id"),
         ),
-    )
-    conn.commit()
-    return load_application(conn, cursor.lastrowid)
+    ).fetchone()
+    return load_application(conn, row["id"])
 
 
 def load_application(
@@ -383,7 +358,7 @@ def load_application(
     user_id: str | None = None,
 ) -> dict[str, Any]:
     """Load a single application by ID."""
-    row = conn.execute("SELECT * FROM application WHERE id = ?", (app_id,)).fetchone()
+    row = conn.execute("SELECT * FROM application WHERE id = %s", (app_id,)).fetchone()
     if row is None:
         raise ValueError(f"Application {app_id} not found")
     if user_id is not None and row["user_id"] != user_id:
@@ -407,14 +382,14 @@ def load_applications(
     params: list[Any] = []
 
     if user_id is not None:
-        conditions.append("user_id = ?")
+        conditions.append("user_id = %s")
         params.append(user_id)
     if status:
-        conditions.append("status = ?")
+        conditions.append("status = %s")
         params.append(status)
     if q:
-        conditions.append("(LOWER(company) LIKE ? OR LOWER(position) LIKE ?)")
-        pattern = f"%{q.lower()}%"
+        conditions.append("(company ILIKE %s OR position ILIKE %s)")
+        pattern = f"%{q}%"
         params.extend([pattern, pattern])
 
     if conditions:
@@ -448,20 +423,19 @@ def update_application(
     params: list[Any] = []
     for field in updatable:
         if field in data:
-            sets.append(f"{field} = ?")
+            sets.append(f"{field} = %s")
             params.append(data[field])
 
     if not sets:
         return existing
 
-    sets.append("updated_at = datetime('now')")
+    sets.append("updated_at = CURRENT_TIMESTAMP")
     params.append(app_id)
 
     conn.execute(
-        f"UPDATE application SET {', '.join(sets)} WHERE id = ?",
+        f"UPDATE application SET {', '.join(sets)} WHERE id = %s",
         params,
     )
-    conn.commit()
     return load_application(conn, app_id)
 
 
@@ -472,8 +446,7 @@ def delete_application(
 ) -> dict[str, Any]:
     """Delete an application and cascade. Returns deleted app data."""
     app = load_application(conn, app_id, user_id=user_id)
-    conn.execute("DELETE FROM application WHERE id = ?", (app_id,))
-    conn.commit()
+    conn.execute("DELETE FROM application WHERE id = %s", (app_id,))
     return app
 
 
@@ -484,13 +457,12 @@ def create_contact(
     conn: DBConnection, app_id: int, data: dict[str, Any]
 ) -> dict[str, Any]:
     """Create a contact for an application."""
-    # Verify app exists
     load_application(conn, app_id)
 
-    cursor = conn.execute(
+    row = conn.execute(
         "INSERT INTO application_contact "
         "(app_id, name, role, email, phone, notes) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
+        "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
         (
             app_id,
             data["name"],
@@ -499,19 +471,18 @@ def create_contact(
             data.get("phone"),
             data.get("notes", ""),
         ),
-    )
-    conn.commit()
-    row = conn.execute(
-        "SELECT * FROM application_contact WHERE id = ?",
-        (cursor.lastrowid,),
     ).fetchone()
-    return dict(row)
+    result_row = conn.execute(
+        "SELECT * FROM application_contact WHERE id = %s",
+        (row["id"],),
+    ).fetchone()
+    return dict(result_row)
 
 
 def load_contacts(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
     """Load all contacts for an application."""
     rows = conn.execute(
-        "SELECT * FROM application_contact WHERE app_id = ? ORDER BY id",
+        "SELECT * FROM application_contact WHERE app_id = %s ORDER BY id",
         (app_id,),
     ).fetchall()
     return [dict(row) for row in rows]
@@ -522,7 +493,7 @@ def update_contact(
 ) -> dict[str, Any]:
     """Update a contact. Returns updated contact."""
     row = conn.execute(
-        "SELECT * FROM application_contact WHERE id = ?",
+        "SELECT * FROM application_contact WHERE id = %s",
         (contact_id,),
     ).fetchone()
     if row is None:
@@ -533,7 +504,7 @@ def update_contact(
     params: list[Any] = []
     for field in updatable:
         if field in data:
-            sets.append(f"{field} = ?")
+            sets.append(f"{field} = %s")
             params.append(data[field])
 
     if not sets:
@@ -541,13 +512,12 @@ def update_contact(
 
     params.append(contact_id)
     conn.execute(
-        f"UPDATE application_contact SET {', '.join(sets)} WHERE id = ?",
+        f"UPDATE application_contact SET {', '.join(sets)} WHERE id = %s",
         params,
     )
-    conn.commit()
     return dict(
         conn.execute(
-            "SELECT * FROM application_contact WHERE id = ?",
+            "SELECT * FROM application_contact WHERE id = %s",
             (contact_id,),
         ).fetchone()
     )
@@ -556,15 +526,14 @@ def update_contact(
 def delete_contact(conn: DBConnection, contact_id: int) -> str:
     """Delete a contact. Returns contact name."""
     row = conn.execute(
-        "SELECT * FROM application_contact WHERE id = ?",
+        "SELECT * FROM application_contact WHERE id = %s",
         (contact_id,),
     ).fetchone()
     if row is None:
         raise ValueError(f"Contact {contact_id} not found")
 
     name = row["name"]
-    conn.execute("DELETE FROM application_contact WHERE id = ?", (contact_id,))
-    conn.commit()
+    conn.execute("DELETE FROM application_contact WHERE id = %s", (contact_id,))
     return name
 
 
@@ -581,17 +550,17 @@ def create_communication(
     contact_id = data.get("contact_id")
     if contact_id is not None:
         contact_row = conn.execute(
-            "SELECT name FROM application_contact WHERE id = ?",
+            "SELECT name FROM application_contact WHERE id = %s",
             (contact_id,),
         ).fetchone()
         if contact_row:
             contact_name = contact_row["name"]
 
-    cursor = conn.execute(
+    row = conn.execute(
         "INSERT INTO communication "
         "(app_id, contact_id, contact_name, type, direction, "
         "subject, body, date, status) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (
             app_id,
             contact_id,
@@ -603,19 +572,18 @@ def create_communication(
             data["date"],
             data.get("status", "sent"),
         ),
-    )
-    conn.commit()
-    row = conn.execute(
-        "SELECT * FROM communication WHERE id = ?",
-        (cursor.lastrowid,),
     ).fetchone()
-    return dict(row)
+    result_row = conn.execute(
+        "SELECT * FROM communication WHERE id = %s",
+        (row["id"],),
+    ).fetchone()
+    return dict(result_row)
 
 
 def load_communications(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
     """Load communications for an application, sorted by date desc."""
     rows = conn.execute(
-        "SELECT * FROM communication WHERE app_id = ? ORDER BY date DESC, id DESC",
+        "SELECT * FROM communication WHERE app_id = %s ORDER BY date DESC, id DESC",
         (app_id,),
     ).fetchall()
     return [dict(row) for row in rows]
@@ -626,7 +594,7 @@ def update_communication(
 ) -> dict[str, Any]:
     """Update a communication. Returns updated communication."""
     row = conn.execute(
-        "SELECT * FROM communication WHERE id = ?", (comm_id,)
+        "SELECT * FROM communication WHERE id = %s", (comm_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Communication {comm_id} not found")
@@ -644,17 +612,16 @@ def update_communication(
     params: list[Any] = []
     for field in updatable:
         if field in data:
-            sets.append(f"{field} = ?")
+            sets.append(f"{field} = %s")
             params.append(data[field])
 
-    # If contact_id changed, update contact_name too
     if "contact_id" in data and data["contact_id"] is not None:
         contact_row = conn.execute(
-            "SELECT name FROM application_contact WHERE id = ?",
+            "SELECT name FROM application_contact WHERE id = %s",
             (data["contact_id"],),
         ).fetchone()
         if contact_row:
-            sets.append("contact_name = ?")
+            sets.append("contact_name = %s")
             params.append(contact_row["name"])
 
     if not sets:
@@ -662,16 +629,22 @@ def update_communication(
 
     params.append(comm_id)
     conn.execute(
-        f"UPDATE communication SET {', '.join(sets)} WHERE id = ?",
+        f"UPDATE communication SET {', '.join(sets)} WHERE id = %s",
         params,
     )
-    conn.commit()
     return dict(
-        conn.execute("SELECT * FROM communication WHERE id = ?", (comm_id,)).fetchone()
+        conn.execute("SELECT * FROM communication WHERE id = %s", (comm_id,)).fetchone()
     )
 
 
 # --- Accomplishment operations ---
+
+
+def _dt(value: Any) -> Any:
+    """Return ISO string if value is a datetime/date, otherwise return as-is."""
+    if isinstance(value, (datetime.datetime, datetime.date)):
+        return value.isoformat()
+    return value
 
 
 def _row_to_accomplishment(row: Any) -> dict[str, Any]:
@@ -683,10 +656,10 @@ def _row_to_accomplishment(row: Any) -> dict[str, Any]:
         "task": row["task"],
         "action": row["action"],
         "result": row["result"],
-        "accomplishment_date": row["accomplishment_date"],
+        "accomplishment_date": _dt(row["accomplishment_date"]),
         "tags": json.loads(row["tags"]),
-        "created_at": row["created_at"],
-        "updated_at": row["updated_at"],
+        "created_at": _dt(row["created_at"]),
+        "updated_at": _dt(row["updated_at"]),
     }
 
 
@@ -695,10 +668,10 @@ def _row_to_accomplishment_summary(row: Any) -> dict[str, Any]:
     return {
         "id": row["id"],
         "title": row["title"],
-        "accomplishment_date": row["accomplishment_date"],
+        "accomplishment_date": _dt(row["accomplishment_date"]),
         "tags": json.loads(row["tags"]),
-        "created_at": row["created_at"],
-        "updated_at": row["updated_at"],
+        "created_at": _dt(row["created_at"]),
+        "updated_at": _dt(row["updated_at"]),
     }
 
 
@@ -709,10 +682,10 @@ def create_accomplishment(
 ) -> dict[str, Any]:
     """Insert a new accomplishment row and return it."""
     effective_uid = user_id or "legacy"
-    cursor = conn.execute(
+    row = conn.execute(
         "INSERT INTO accomplishment "
         "(user_id, title, situation, task, action, result, accomplishment_date, tags) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (
             effective_uid,
             data["title"],
@@ -723,9 +696,8 @@ def create_accomplishment(
             data.get("accomplishment_date"),
             json.dumps(data.get("tags", [])),
         ),
-    )
-    conn.commit()
-    return load_accomplishment(conn, cursor.lastrowid)
+    ).fetchone()
+    return load_accomplishment(conn, row["id"])
 
 
 def load_accomplishment(
@@ -735,7 +707,7 @@ def load_accomplishment(
 ) -> dict[str, Any]:
     """Load a single accomplishment by ID. Raises ValueError if not found."""
     row = conn.execute(
-        "SELECT * FROM accomplishment WHERE id = ?", (acc_id,)
+        "SELECT * FROM accomplishment WHERE id = %s", (acc_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Accomplishment {acc_id} not found")
@@ -750,13 +722,7 @@ def load_accomplishments(
     q: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """List accomplishments ordered reverse-chronologically with optional filters.
-
-    Args:
-        tag: Filter by exact tag match (substring in JSON array).
-        q: Case-insensitive substring search across title and STAR fields.
-        user_id: If set, restrict results to this user's accomplishments.
-    """
+    """List accomplishments ordered reverse-chronologically with optional filters."""
     query = (
         "SELECT id, title, accomplishment_date, tags, created_at, updated_at "
         "FROM accomplishment"
@@ -765,16 +731,16 @@ def load_accomplishments(
     params: list[Any] = []
 
     if user_id is not None:
-        conditions.append("user_id = ?")
+        conditions.append("user_id = %s")
         params.append(user_id)
     if tag:
-        conditions.append("tags LIKE ?")
+        conditions.append("tags ILIKE %s")
         params.append(f'%"{tag}"%')
     if q:
-        pattern = f"%{q.lower()}%"
+        pattern = f"%{q}%"
         conditions.append(
-            "(LOWER(title) LIKE ? OR LOWER(situation) LIKE ? "
-            "OR LOWER(task) LIKE ? OR LOWER(action) LIKE ? OR LOWER(result) LIKE ?)"
+            "(title ILIKE %s OR situation ILIKE %s "
+            "OR task ILIKE %s OR action ILIKE %s OR result ILIKE %s)"
         )
         params.extend([pattern, pattern, pattern, pattern, pattern])
 
@@ -799,7 +765,6 @@ def update_accomplishment(
     user_id: str | None = None,
 ) -> dict[str, Any]:
     """Patch an accomplishment with provided fields. Raises ValueError if not found."""
-    # Verify exists and check ownership
     load_accomplishment(conn, acc_id, user_id=user_id)
 
     updatable = (
@@ -815,24 +780,23 @@ def update_accomplishment(
 
     for field in updatable:
         if field in data:
-            sets.append(f"{field} = ?")
+            sets.append(f"{field} = %s")
             params.append(data[field])
 
     if "tags" in data:
-        sets.append("tags = ?")
+        sets.append("tags = %s")
         params.append(json.dumps(data["tags"]))
 
     if not sets:
         return load_accomplishment(conn, acc_id)
 
-    sets.append("updated_at = datetime('now')")
+    sets.append("updated_at = CURRENT_TIMESTAMP")
     params.append(acc_id)
 
     conn.execute(
-        f"UPDATE accomplishment SET {', '.join(sets)} WHERE id = ?",
+        f"UPDATE accomplishment SET {', '.join(sets)} WHERE id = %s",
         params,
     )
-    conn.commit()
     return load_accomplishment(conn, acc_id)
 
 
@@ -843,8 +807,7 @@ def delete_accomplishment(
 ) -> dict[str, Any]:
     """Delete an accomplishment. Returns the deleted row. ValueError if not found."""
     acc = load_accomplishment(conn, acc_id, user_id=user_id)
-    conn.execute("DELETE FROM accomplishment WHERE id = ?", (acc_id,))
-    conn.commit()
+    conn.execute("DELETE FROM accomplishment WHERE id = %s", (acc_id,))
     return acc
 
 
@@ -855,7 +818,7 @@ def load_accomplishment_tags(
     """Return a sorted unique list of all tags across all accomplishments."""
     if user_id is not None:
         rows = conn.execute(
-            "SELECT tags FROM accomplishment WHERE user_id = ?", (user_id,)
+            "SELECT tags FROM accomplishment WHERE user_id = %s", (user_id,)
         ).fetchall()
     else:
         rows = conn.execute("SELECT tags FROM accomplishment").fetchall()
@@ -869,12 +832,11 @@ def load_accomplishment_tags(
 def delete_communication(conn: DBConnection, comm_id: int) -> str:
     """Delete a communication. Returns its subject."""
     row = conn.execute(
-        "SELECT * FROM communication WHERE id = ?", (comm_id,)
+        "SELECT * FROM communication WHERE id = %s", (comm_id,)
     ).fetchone()
     if row is None:
         raise ValueError(f"Communication {comm_id} not found")
 
     subject = row["subject"] or "(no subject)"
-    conn.execute("DELETE FROM communication WHERE id = ?", (comm_id,))
-    conn.commit()
+    conn.execute("DELETE FROM communication WHERE id = %s", (comm_id,))
     return subject

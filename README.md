@@ -32,7 +32,8 @@ The recommended way to run the Persona MCP Server is with Docker.
     *   **REST API**: `http://localhost:8000/api`
     *   **MCP Endpoint**: `http://localhost:8000/mcp`
 
-Data is stored in a `data/` directory, which is created automatically.
+`make run` automatically starts a `postgres:16-alpine` container alongside the app.
+Data is persisted in a named Docker volume (`pg-data`) and survives restarts.
 
 ## Usage
 
@@ -111,6 +112,24 @@ Persona uses [Clerk](https://clerk.com) for authentication. You must configure C
 Copy `frontend/.env.local.example` to `frontend/.env.local` and fill in your Clerk publishable key.
 
 See [`specs/008-authentication/quickstart.md`](specs/008-authentication/quickstart.md) for step-by-step setup instructions including social login configuration and webhook setup.
+
+### Database Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PERSONA_DB_URL` | *(required)* | PostgreSQL DSN, e.g. `postgresql://persona:persona@localhost:5432/persona` |
+| `PERSONA_DB_POOL_MIN` | `1` | Minimum connections in the pool |
+| `PERSONA_DB_POOL_MAX` | `10` | Maximum connections in the pool |
+
+`make run` sets `PERSONA_DB_URL` automatically via `docker-compose.yml`.
+
+For local development outside Docker (e.g. `make run-local`), start Postgres first then export the variable:
+
+```bash
+docker compose up postgres -d
+export PERSONA_DB_URL=postgresql://persona:persona@localhost:5432/persona
+make run-local
+```
 
 ## Development
 

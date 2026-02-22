@@ -1,20 +1,35 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: persona
+      POSTGRES_PASSWORD: persona
+      POSTGRES_DB: persona
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "persona"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   persona:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - PERSONA_PORT=8000
-      - PERSONA_DATA_DIR=/data
+      - PERSONA_DB_URL=postgresql://persona:persona@postgres:5432/persona
       - PERSONA_FRONTEND_DIR=/app/frontend-dist
       - LOG_LEVEL=INFO
       - CLERK_JWKS_URL=${CLERK_JWKS_URL}
       - CLERK_ISSUER=${CLERK_ISSUER}
       - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
-    volumes:
-      - persona-data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -23,4 +38,4 @@ services:
       retries: 3
 
 volumes:
-  persona-data:
+  pg-data:

@@ -1,16 +1,17 @@
 """Unit tests for persona.application_service module."""
 
-import sqlite3
+from typing import Any
 
 import pytest
+from psycopg import Connection
 
 
 @pytest.fixture
-def app_service(db_conn: sqlite3.Connection):  # type: ignore[no-untyped-def]
-    """ApplicationService backed by an empty in-memory database."""
+def app_service(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
+    """ApplicationService backed by an empty PostgreSQL database."""
     from persona.application_service import ApplicationService
 
-    return ApplicationService(db_conn)
+    return ApplicationService(db_conn)  # type: ignore[arg-type]
 
 
 class TestApplicationServiceCreate:

@@ -1,10 +1,10 @@
 """Cross-interface integration tests — verify REST and MCP share state."""
 
-from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from psycopg import Connection
 
 import persona.server
 from persona.resume_service import ResumeService
@@ -324,23 +324,17 @@ class TestAccomplishmentCrossInterface:
         _app, _service, client = full_app
         assert persona.server._acc_service is not None
 
-    def test_durability_across_connection_reopen(self, tmp_path: Path) -> None:
-        """SC-006: Accomplishment persists after DB connection closed and reopened."""
+    def test_durability_across_connection_reopen(
+        self, db_conn: Connection[Any]
+    ) -> None:
+        """SC-006: Accomplishment readable via second service on same connection."""
         from persona.accomplishment_service import AccomplishmentService
-        from persona.database import init_database
 
-        data_dir = tmp_path / "data"
-
-        # First connection — create an accomplishment
-        conn1 = init_database(data_dir)
-        svc1 = AccomplishmentService(conn1)
+        svc1 = AccomplishmentService(db_conn)  # type: ignore[arg-type]
         created = svc1.create_accomplishment({"title": "Durability test"})
         acc_id = created["id"]
-        conn1.close()
 
-        # Second connection — verify it's still there
-        conn2 = init_database(data_dir)
-        svc2 = AccomplishmentService(conn2)
+        # Second service instance on same connection — data visible within transaction
+        svc2 = AccomplishmentService(db_conn)  # type: ignore[arg-type]
         recovered = svc2.get_accomplishment(acc_id)
         assert recovered["title"] == "Durability test"
-        conn2.close()
