@@ -1,0 +1,10 @@
+# Terraform generated files
+.terraform/
+*.tfstate
+*.tfstate.backup
+tfplan
+*.tfplan
+
+# NOTE: .terraform.lock.hcl is intentionally NOT ignored.
+# The provider lock file must be committed to ensure consistent
+# provider versions across developer and CI environments.

@@ -131,6 +131,83 @@ export PERSONA_DB_URL=postgresql://persona:persona@localhost:5432/persona
 make run-local
 ```
 
+## Infrastructure
+
+The application is deployed to AWS Lambda (container image) using Terraform. All infrastructure is defined as code in the `infra/` directory.
+
+### Directory structure
+
+```
+infra/
+├── modules/
+│   ├── lambda/        # ECR repo, IAM role, Lambda function, Function URL
+│   └── observability/ # CloudWatch log group + error alarm
+├── dev/               # Dev environment root (separate state)
+└── prod/              # Prod environment root (separate state)
+```
+
+### Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Terraform](https://developer.hashicorp.com/terraform/install) | 1.7+ | Infrastructure provisioning |
+| [AWS CLI](https://aws.amazon.com/cli/) | 2.x | AWS authentication and ECR push |
+| [Docker](https://docs.docker.com/get-docker/) | Any | Build and push container images |
+
+### CI validation
+
+Every pull request that modifies `infra/**` automatically runs:
+1. **Terraform format check** — `terraform fmt -check -recursive`
+2. **Checkov security scan** — static analysis for misconfigurations
+3. **Terraform plan** — for both `dev` and `prod` (read-only, no apply)
+
+**CI never runs `terraform apply`.** All provisioning is performed manually by the developer.
+
+### Manual provisioning
+
+Follow the step-by-step runbook at [`specs/010-aws-infra/quickstart.md`](specs/010-aws-infra/quickstart.md) to:
+- Bootstrap remote state (S3 + DynamoDB, one-time setup)
+- Provision a new environment
+- Deploy application updates
+- Set SSM secrets before first apply
+
+### Terraform make targets
+
+| Command | Description |
+|---------|-------------|
+| `make tf-lint` | Check Terraform formatting (`terraform fmt -check -recursive infra/`) |
+| `make tf-check` | `tf-lint` + Checkov security scan |
+
+`make check` includes `tf-lint` automatically.
+
+## Developer Setup
+
+### Required tools (install once, manually)
+
+These are binary tools that must be on your `PATH` before running any `make` targets. Use the official installer for your OS — no specific package manager is assumed.
+
+| Tool | Version | Install |
+|------|---------|---------|
+| [uv](https://docs.astral.sh/uv/getting-started/installation/) | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| [Node.js](https://nodejs.org/en/download) | 20+ | Official installer or your preferred version manager |
+| [Docker](https://docs.docker.com/get-docker/) | Any | Official installer |
+| [Terraform](https://developer.hashicorp.com/terraform/install) | 1.7+ | Official installer (infrastructure work only) |
+| [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) | 2.x | Official installer (infrastructure work only) |
+
+### Install managed dependencies
+
+After cloning and installing the required tools above, run:
+
+```bash
+make setup
+```
+
+This installs all automatically managed dependencies:
+- **Python packages** (`uv sync` in `backend/`) — installs the virtualenv and all dev dependencies declared in `pyproject.toml`
+- **Node packages** (`npm ci` in `frontend/`) — installs exact versions from `package-lock.json`
+
+`checkov` (used by `make tf-check`) is **not** pre-installed — it is fetched and cached automatically on first run via `uvx`, which is bundled with `uv`.
+
 ## Development
 
 The following `make` commands are available for development:
