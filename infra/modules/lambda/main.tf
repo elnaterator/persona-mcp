@@ -105,11 +105,33 @@ resource "aws_lambda_function" "app" {
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
-  architectures = ["x86_64"]
+  architectures = ["arm64"]
   memory_size   = var.memory_size
   timeout       = var.timeout
 
+  environment {
+    variables = var.environment_variables
+  }
+
   tags = var.tags
+}
+
+# Allow unauthenticated public invocation via the Function URL.
+# IAM auth is skipped at the URL level; Clerk JWT validation enforces auth in the app.
+# Both InvokeFunctionUrl AND InvokeFunction are required for Function URL access.
+resource "aws_lambda_permission" "allow_public_url" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.app.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "allow_invoke_via_url" {
+  statement_id  = "FunctionURLAllowInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.app.function_name
+  principal     = "*"
 }
 
 # Public HTTPS endpoint for the Lambda function (no auth at URL level;

@@ -13,6 +13,11 @@ RUN npm ci
 # Copy frontend source
 COPY frontend/ ./
 
+# Build-time env var — Vite inlines VITE_* vars into the JS bundle at build time.
+# Pass via: docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_...
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 # Build production bundle
 RUN npm run build
 

@@ -25,6 +25,13 @@ module "lambda" {
   timeout              = var.timeout
   ssm_parameter_prefix = "/persona/${var.environment}"
 
+  environment_variables = {
+    PERSONA_DB_URL       = data.aws_ssm_parameter.database_url.value
+    CLERK_JWKS_URL       = data.aws_ssm_parameter.clerk_jwks_url.value
+    CLERK_ISSUER         = data.aws_ssm_parameter.clerk_issuer.value
+    CLERK_WEBHOOK_SECRET = data.aws_ssm_parameter.clerk_webhook_secret.value
+  }
+
   tags = {
     environment = var.environment
     managed_by  = "terraform"
@@ -88,4 +95,78 @@ resource "aws_ssm_parameter" "clerk_publishable_key" {
     environment = var.environment
     managed_by  = "terraform"
   }
+}
+
+resource "aws_ssm_parameter" "clerk_jwks_url" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/persona/${var.environment}/clerk_jwks_url"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "aws_ssm_parameter" "clerk_issuer" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/persona/${var.environment}/clerk_issuer"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "aws_ssm_parameter" "clerk_webhook_secret" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/persona/${var.environment}/clerk_webhook_secret"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+# Data sources read the current (possibly developer-overridden) value from SSM
+# on every terraform apply, so Lambda env vars always reflect the live secret.
+data "aws_ssm_parameter" "database_url" {
+  name            = aws_ssm_parameter.database_url.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.database_url]
+}
+
+data "aws_ssm_parameter" "clerk_jwks_url" {
+  name            = aws_ssm_parameter.clerk_jwks_url.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.clerk_jwks_url]
+}
+
+data "aws_ssm_parameter" "clerk_issuer" {
+  name            = aws_ssm_parameter.clerk_issuer.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.clerk_issuer]
+}
+
+data "aws_ssm_parameter" "clerk_webhook_secret" {
+  name            = aws_ssm_parameter.clerk_webhook_secret.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.clerk_webhook_secret]
 }

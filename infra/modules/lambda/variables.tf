@@ -30,6 +30,13 @@ variable "ssm_parameter_prefix" {
   type        = string
 }
 
+variable "environment_variables" {
+  description = "Environment variables injected into the Lambda function at runtime."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
 variable "tags" {
   description = "AWS resource tags applied to all resources in this module."
   type        = map(string)
