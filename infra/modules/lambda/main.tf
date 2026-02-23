@@ -93,6 +93,61 @@ resource "aws_iam_role_policy_attachment" "cw_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# KMS key used to encrypt Lambda environment variables at rest
+resource "aws_kms_key" "lambda_env" {
+  description             = "Encrypts Lambda ${var.environment} environment variables at rest"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+  tags                    = var.tags
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowRootAccountFullAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowLambdaExecutionRoleUsage"
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.lambda_exec.arn
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Allow the Lambda execution role to decrypt environment variables using the KMS key
+resource "aws_iam_role_policy" "lambda_env_kms" {
+  name = "lambda-env-kms-decrypt"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+        ]
+        Resource = aws_kms_key.lambda_env.arn
+      }
+    ]
+  })
+}
+
 # Lambda function running the application as a container image
 resource "aws_lambda_function" "app" {
   #checkov:skip=CKV_AWS_50:X-Ray tracing deferred to future — adds cost/complexity not warranted for a personal app (research Decision 4)
@@ -108,6 +163,7 @@ resource "aws_lambda_function" "app" {
   architectures = ["arm64"]
   memory_size   = var.memory_size
   timeout       = var.timeout
+  kms_key_arn   = aws_kms_key.lambda_env.arn
 
   environment {
     variables = var.environment_variables
@@ -120,6 +176,7 @@ resource "aws_lambda_function" "app" {
 # IAM auth is skipped at the URL level; Clerk JWT validation enforces auth in the app.
 # Both InvokeFunctionUrl AND InvokeFunction are required for Function URL access.
 resource "aws_lambda_permission" "allow_public_url" {
+  #checkov:skip=CKV_AWS_301:Public access is intentional — IAM auth is incompatible with browser and MCP clients; Clerk JWT validation enforces auth at the app layer
   statement_id           = "FunctionURLAllowPublicAccess"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.app.function_name
@@ -128,6 +185,7 @@ resource "aws_lambda_permission" "allow_public_url" {
 }
 
 resource "aws_lambda_permission" "allow_invoke_via_url" {
+  #checkov:skip=CKV_AWS_301:Public access is intentional — IAM auth is incompatible with browser and MCP clients; Clerk JWT validation enforces auth at the app layer
   statement_id  = "FunctionURLAllowInvokeFunction"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.app.function_name

@@ -10,7 +10,7 @@ help:
 	@echo "  run-local  - Build frontend then run backend locally"
 	@echo "  lint       - Lint both frontend and backend"
 	@echo "  test       - Test both frontend and backend"
-	@echo "  check      - Run lint + test for both + terraform fmt check"
+	@echo "  check      - Run lint + test for both + terraform fmt check + checkov scan"
 	@echo "  format     - Format both frontend and backend"
 	@echo "  tf-lint    - Check Terraform formatting (infra/)"
 	@echo "  tf-check   - tf-lint + Checkov security scan (infra/)"
@@ -42,7 +42,7 @@ test:
 check:
 	$(MAKE) -C frontend check
 	$(MAKE) -C backend check
-	$(MAKE) tf-lint
+	$(MAKE) tf-check
 
 format:
 	$(MAKE) -C frontend format
