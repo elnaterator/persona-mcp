@@ -13,6 +13,11 @@ RUN npm ci
 # Copy frontend source
 COPY frontend/ ./
 
+# Build-time env var — Vite inlines VITE_* vars into the JS bundle at build time.
+# Pass via: docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_...
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 # Build production bundle
 RUN npm run build
 
@@ -58,6 +63,11 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 # Create data directory
 RUN mkdir -p /data
+
+# Lambda Web Adapter — bridges Lambda events to the app's localhost HTTP server
+# No-op when running outside Lambda (AWS_LWA_PORT is ignored by the app directly)
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+ENV AWS_LWA_PORT=8000
 
 # Expose default port
 EXPOSE 8000

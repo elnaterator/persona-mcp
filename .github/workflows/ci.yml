@@ -15,4 +15,7 @@ jobs:
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
       - run: make check
