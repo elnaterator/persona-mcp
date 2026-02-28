@@ -82,6 +82,18 @@ def resolve_clerk_issuer() -> str:
     return value.strip()
 
 
+def resolve_clerk_secret_key() -> str:
+    """Resolve CLERK_SECRET_KEY env var. Raises on missing."""
+    value = os.environ.get("CLERK_SECRET_KEY", "")
+    if not value.strip():
+        raise RuntimeError(
+            "CLERK_SECRET_KEY environment variable is required for MCP dual-auth "
+            "(session JWTs + API keys). Set it to your Clerk secret key "
+            "(starts with sk_test_ or sk_live_)."
+        )
+    return value.strip()
+
+
 def resolve_clerk_webhook_secret() -> str:
     """Resolve CLERK_WEBHOOK_SECRET env var. Raises on missing."""
     value = os.environ.get("CLERK_WEBHOOK_SECRET", "")

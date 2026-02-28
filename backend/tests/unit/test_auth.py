@@ -256,3 +256,169 @@ class TestVerifyClerkJwt:
                 ).verify_clerk_jwt("not.a.jwt")
 
         assert exc_info.value.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Tests for build_clerk_client and authenticate_mcp_request (011-mcp-instructions)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildClerkClient:
+    """Tests for the build_clerk_client factory."""
+
+    def test_returns_clerk_instance(self) -> None:
+        """build_clerk_client returns a Clerk SDK instance."""
+        from clerk_backend_api import Clerk
+
+        from persona.auth import build_clerk_client
+
+        client = build_clerk_client("sk_test_fake")
+        assert isinstance(client, Clerk)
+
+    def test_different_keys_produce_separate_instances(self) -> None:
+        """Each call with a different key returns a new Clerk instance."""
+        from persona.auth import build_clerk_client
+
+        client_a = build_clerk_client("sk_test_key_a")
+        client_b = build_clerk_client("sk_test_key_b")
+        assert client_a is not client_b
+
+
+class TestAuthenticateMcpRequest:
+    """Tests for authenticate_mcp_request and extract_user_id_from_request_state."""
+
+    def _make_mock_request(self, token: str = "Bearer eyJ.test") -> Any:
+        """Create a minimal mock StarletteRequest."""
+        from unittest.mock import MagicMock
+
+        from starlette.requests import Request
+
+        req = MagicMock(spec=Request)
+        req.method = "POST"
+        req.url = MagicMock()
+        req.url.__str__ = lambda self: "http://localhost/mcp"  # type: ignore[method-assign]
+        req.headers = {"authorization": token}
+        return req
+
+    def test_calls_clerk_authenticate_request(self) -> None:
+        """authenticate_mcp_request calls clerk_client.authenticate_request."""
+        from unittest.mock import MagicMock
+
+        from persona.auth import authenticate_mcp_request
+
+        mock_clerk = MagicMock()
+        mock_state = MagicMock()
+        mock_state.is_signed_in = True
+        mock_clerk.authenticate_request.return_value = mock_state
+
+        result = authenticate_mcp_request(self._make_mock_request(), mock_clerk)
+
+        assert mock_clerk.authenticate_request.called
+        assert result is mock_state
+
+    def test_passes_both_token_types_in_options(self) -> None:
+        """authenticate_mcp_request passes accepts_token=['session_token','api_key']."""
+        from unittest.mock import MagicMock
+
+        from clerk_backend_api import AuthenticateRequestOptions
+
+        from persona.auth import authenticate_mcp_request
+
+        mock_clerk = MagicMock()
+        mock_clerk.authenticate_request.return_value = MagicMock(is_signed_in=True)
+
+        authenticate_mcp_request(self._make_mock_request(), mock_clerk)
+
+        # Verify the options passed to authenticate_request include both token types
+        call_args = mock_clerk.authenticate_request.call_args
+        # options is the second positional argument
+        opts = call_args[0][1]
+        assert isinstance(opts, AuthenticateRequestOptions)
+        assert "session_token" in opts.accepts_token
+        assert "api_key" in opts.accepts_token
+
+    def test_signed_in_true_propagated(self) -> None:
+        """Return value has is_signed_in=True when Clerk says signed in."""
+        from unittest.mock import MagicMock
+
+        from persona.auth import authenticate_mcp_request
+
+        mock_clerk = MagicMock()
+        mock_clerk.authenticate_request.return_value = MagicMock(is_signed_in=True)
+
+        result = authenticate_mcp_request(self._make_mock_request(), mock_clerk)
+        assert result.is_signed_in is True
+
+    def test_signed_in_false_propagated(self) -> None:
+        """Return value has is_signed_in=False when Clerk says not signed in."""
+        from unittest.mock import MagicMock
+
+        from persona.auth import authenticate_mcp_request
+
+        mock_clerk = MagicMock()
+        mock_clerk.authenticate_request.return_value = MagicMock(is_signed_in=False)
+
+        result = authenticate_mcp_request(self._make_mock_request(), mock_clerk)
+        assert result.is_signed_in is False
+
+
+class TestExtractUserIdFromRequestState:
+    """Tests for extract_user_id_from_request_state."""
+
+    def test_signed_out_returns_none(self) -> None:
+        """Returns None when is_signed_in is False."""
+        from unittest.mock import MagicMock
+
+        from persona.auth import extract_user_id_from_request_state
+
+        state = MagicMock()
+        state.is_signed_in = False
+        assert extract_user_id_from_request_state(state) is None
+
+    def test_session_auth_v2_uses_sub(self) -> None:
+        """For SessionAuthObjectV2, extracts user_id from auth.sub."""
+        from unittest.mock import MagicMock
+
+        from clerk_backend_api.security.types import SessionAuthObjectV2
+
+        from persona.auth import extract_user_id_from_request_state
+
+        state = MagicMock()
+        state.is_signed_in = True
+        auth = MagicMock(spec=SessionAuthObjectV2)
+        auth.sub = "user_jwt_abc"
+        state.to_auth.return_value = auth
+
+        result = extract_user_id_from_request_state(state)
+        assert result == "user_jwt_abc"
+
+    def test_api_key_auth_uses_user_id(self) -> None:
+        """For non-SessionAuthObjectV2 (API key), extracts user_id from auth.user_id."""
+        from unittest.mock import MagicMock
+
+        from persona.auth import extract_user_id_from_request_state
+
+        state = MagicMock()
+        state.is_signed_in = True
+        auth = MagicMock()  # Not a SessionAuthObjectV2 instance
+        auth.user_id = "user_api_xyz"
+        # Ensure isinstance(..., SessionAuthObjectV2) returns False
+        state.to_auth.return_value = auth
+
+        result = extract_user_id_from_request_state(state)
+        # MagicMock is not an instance of SessionAuthObjectV2 → falls to getattr
+        assert result == "user_api_xyz"
+
+    def test_missing_user_id_returns_none(self) -> None:
+        """Returns None when auth object has no user_id attribute."""
+        from unittest.mock import MagicMock
+
+        from persona.auth import extract_user_id_from_request_state
+
+        state = MagicMock()
+        state.is_signed_in = True
+        auth = MagicMock(spec=[])  # spec=[] means no attributes
+        state.to_auth.return_value = auth
+
+        result = extract_user_id_from_request_state(state)
+        assert result is None

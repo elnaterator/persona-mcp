@@ -10,6 +10,7 @@ import ApplicationDetailView from './components/ApplicationDetailView'
 import AccomplishmentListView from './components/AccomplishmentListView'
 import AccomplishmentDetailView from './components/AccomplishmentDetailView'
 import LandingPage from './components/LandingPage'
+import ConnectView from './components/ConnectView'
 
 type View =
   | { type: 'resume-list' }
@@ -18,8 +19,9 @@ type View =
   | { type: 'app-detail'; id: number }
   | { type: 'acc-list' }
   | { type: 'acc-detail'; id: number }
+  | { type: 'connect' }
 
-type NavSection = 'resumes' | 'applications' | 'accomplishments'
+type NavSection = 'resumes' | 'applications' | 'accomplishments' | 'connect'
 
 function App() {
   const { getToken } = useAuth()
@@ -34,15 +36,19 @@ function App() {
     ? 'resumes'
     : view.type.startsWith('app')
       ? 'applications'
-      : 'accomplishments'
+      : view.type.startsWith('acc')
+        ? 'accomplishments'
+        : 'connect'
 
   const handleNavigate = (section: NavSection) => {
     if (section === 'resumes') {
       setView({ type: 'resume-list' })
     } else if (section === 'applications') {
       setView({ type: 'app-list' })
-    } else {
+    } else if (section === 'accomplishments') {
       setView({ type: 'acc-list' })
+    } else {
+      setView({ type: 'connect' })
     }
   }
 
@@ -87,6 +93,7 @@ function App() {
                 onBack={() => setView({ type: 'acc-list' })}
               />
             )}
+            {view.type === 'connect' && <ConnectView />}
           </main>
         </div>
       </SignedIn>

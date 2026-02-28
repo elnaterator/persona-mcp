@@ -114,8 +114,8 @@ class TestStaticFileServing:
         # Just verify it's mounted and responds
         response = client.get("/mcp/health")
 
-        # MCP health endpoint should work (or at least not 404)
-        assert response.status_code in [200, 404, 405]  # Depends on MCP implementation
+        # MCP endpoint requires auth; 401 is expected when no token is provided
+        assert response.status_code in [200, 401, 404, 405]
 
     def test_server_starts_without_frontend_dir(self, app_without_frontend):
         """Test that server starts even if frontend directory doesn't exist."""

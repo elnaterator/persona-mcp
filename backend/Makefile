@@ -1,10 +1,11 @@
 .PHONY: build run lint test typecheck check format help
+unexport VIRTUAL_ENV
 
 help:
 	@echo "Backend Makefile targets:"
 	@echo "  build     - Install Python dependencies"
 	@echo "  run       - Start HTTP server locally"
-	@echo "  lint      - Run ruff check + format check"
+	@echo "  lint      - Run ruff check + format check + pyright"
 	@echo "  test      - Run pytest"
 	@echo "  typecheck - Run pyright"
 	@echo "  check     - Run lint + typecheck + test"
@@ -19,6 +20,7 @@ run:
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
+	uv run pyright
 
 test:
 	uv run pytest
@@ -26,7 +28,7 @@ test:
 typecheck:
 	uv run pyright
 
-check: lint typecheck test
+check: lint test
 
 format:
 	uv run ruff format .

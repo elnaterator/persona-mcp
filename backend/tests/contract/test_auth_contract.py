@@ -296,6 +296,141 @@ class TestCrossUserOwnershipContract:
 
 
 # ---------------------------------------------------------------------------
+# Phase 3 (011) — T-MCP-01 through T-MCP-05: /mcp endpoint dual-auth contract
+# ---------------------------------------------------------------------------
+
+
+class TestMCPDualAuth:
+    """T-MCP-01 through T-MCP-05: /mcp dual-auth (JWT + API key) contract tests."""
+
+    @pytest.fixture
+    def mcp_test_app(self) -> TestClient:
+        """Minimal FastAPI app with UserContextMiddleware and mock /mcp endpoint.
+
+        The mock endpoint always returns 200 with the current_user_id_var value;
+        the middleware is responsible for returning 401 on auth failure.
+        """
+        from persona.server import UserContextMiddleware
+
+        app = FastAPI()
+        app.add_middleware(UserContextMiddleware)
+
+        @app.post("/mcp")
+        async def mock_mcp() -> dict:
+            from persona.auth import current_user_id_var
+
+            return {"user_id": current_user_id_var.get()}
+
+        return TestClient(app, raise_server_exceptions=False)
+
+    def _signed_in_state(self, user_id: str = "user_123") -> Any:
+        """Build a mock RequestState with is_signed_in=True."""
+        from unittest.mock import MagicMock
+
+        from clerk_backend_api.security.types import SessionAuthObjectV2
+
+        state = MagicMock()
+        state.is_signed_in = True
+        auth = MagicMock(spec=SessionAuthObjectV2)
+        auth.sub = user_id
+        state.to_auth.return_value = auth
+        return state
+
+    def _signed_out_state(self, message: str = "Token invalid") -> Any:
+        """Build a mock RequestState with is_signed_in=False."""
+        from unittest.mock import MagicMock
+
+        state = MagicMock()
+        state.is_signed_in = False
+        state.message = message
+        return state
+
+    def test_mcp_01_valid_jwt_returns_200_with_user_id(
+        self, mcp_test_app: TestClient
+    ) -> None:
+        """T-MCP-01: /mcp with valid Clerk session JWT → 200 and user_id set."""
+        signed_in = self._signed_in_state("user_jwt_123")
+        with (
+            patch("persona.auth.authenticate_mcp_request", return_value=signed_in),
+            patch("persona.auth.build_clerk_client"),
+            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
+            patch("persona.server.upsert_user"),
+        ):
+            resp = mcp_test_app.post(
+                "/mcp", headers={"Authorization": "Bearer eyJ.valid.jwt"}
+            )
+        assert resp.status_code == 200
+        assert resp.json()["user_id"] == "user_jwt_123"
+
+    def test_mcp_02_valid_api_key_returns_200_with_user_id(
+        self, mcp_test_app: TestClient
+    ) -> None:
+        """T-MCP-02: /mcp with valid Clerk API key (ak_...) → 200 and user_id set."""
+        signed_in = self._signed_in_state("user_api_456")
+        with (
+            patch("persona.auth.authenticate_mcp_request", return_value=signed_in),
+            patch("persona.auth.build_clerk_client"),
+            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
+            patch("persona.server.upsert_user"),
+        ):
+            resp = mcp_test_app.post(
+                "/mcp", headers={"Authorization": "Bearer ak_live_fakeapikey12345"}
+            )
+        assert resp.status_code == 200
+        assert resp.json()["user_id"] == "user_api_456"
+
+    def test_mcp_03_no_auth_header_returns_401(self, mcp_test_app: TestClient) -> None:
+        """T-MCP-03: /mcp with no Authorization header → 401."""
+        resp = mcp_test_app.post("/mcp")
+        assert resp.status_code == 401
+
+    def test_mcp_04_expired_token_returns_401(self, mcp_test_app: TestClient) -> None:
+        """T-MCP-04: /mcp with expired/invalid token → 401."""
+        signed_out = self._signed_out_state("Token has expired")
+        with (
+            patch("persona.auth.authenticate_mcp_request", return_value=signed_out),
+            patch("persona.auth.build_clerk_client"),
+            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
+        ):
+            resp = mcp_test_app.post(
+                "/mcp", headers={"Authorization": "Bearer expired.token.here"}
+            )
+        assert resp.status_code == 401
+
+    def test_mcp_05_malformed_token_returns_401(self, mcp_test_app: TestClient) -> None:
+        """T-MCP-05: /mcp with malformed token → 401."""
+        signed_out = self._signed_out_state("Malformed token")
+        with (
+            patch("persona.auth.authenticate_mcp_request", return_value=signed_out),
+            patch("persona.auth.build_clerk_client"),
+            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
+        ):
+            resp = mcp_test_app.post(
+                "/mcp", headers={"Authorization": "Bearer not-valid"}
+            )
+        assert resp.status_code == 401
+
+    def test_mcp_06_revoked_api_key_returns_401(self, mcp_test_app: TestClient) -> None:
+        """T-MCP-06: /mcp with a revoked Clerk API key → 401.
+
+        After key regeneration the old key is invalidated by Clerk. When a
+        previously-valid ak_ token is presented, Clerk returns is_signed_in=False
+        and UserContextMiddleware must reject the request with 401.
+        """
+        signed_out = self._signed_out_state("API key has been revoked")
+        with (
+            patch("persona.auth.authenticate_mcp_request", return_value=signed_out),
+            patch("persona.auth.build_clerk_client"),
+            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
+        ):
+            resp = mcp_test_app.post(
+                "/mcp",
+                headers={"Authorization": "Bearer ak_live_revokedkey99999"},
+            )
+        assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # Phase 4 — T035/T036: MCP tool auth via ContextVar
 # ---------------------------------------------------------------------------
 
