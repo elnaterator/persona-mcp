@@ -7,8 +7,9 @@ A personal data server that helps you manage your resume and job applications, w
 - **Accomplishment Tracking**: Record and manage career accomplishments using the STAR format (Situation, Task, Action, Result). Tag accomplishments for easy filtering and use them to craft compelling job application materials.
 - **Job Application Tracking**: Manage job applications from "Interested" to "Offer".
 - **Resume Versioning**: Maintain multiple resume versions and tailor them for specific jobs.
+- **Connect Tab**: Generate a Clerk API key and get copy-ready configuration commands for Claude Code, Cursor, GitHub Copilot, and Amazon Kiro — connect any AI coding assistant directly to your personal data via MCP.
 - **Web UI**: A clean web interface for managing your data.
-- **REST + MCP APIs**: Access your data programmatically via a REST API or the Model Context Protocol (MCP).
+- **REST + MCP APIs**: Access your data programmatically via a REST API or the Model Context Protocol (MCP). The `/mcp` endpoint supports dual authentication: Clerk session JWTs (browser) and Clerk API keys (AI coding assistants).
 - **Docker Support**: Run the entire application with a single command.
 
 ## Quick Start
@@ -38,11 +39,13 @@ Persona uses [Clerk](https://clerk.com) for authentication. You need a Clerk acc
 | Variable | Where to set | Description |
 |---|---|---|
 | `VITE_CLERK_PUBLISHABLE_KEY` | `frontend/.env.local` | Clerk publishable key (`pk_test_...`) |
+| `VITE_MCP_SERVER_URL` | `frontend/.env.local` | MCP server URL shown in Connect tab config commands (e.g. `https://your-server.com/mcp`). Defaults to `https://your-persona-server.com/mcp` if unset. |
 | `CLERK_JWKS_URL` | backend env | Clerk JWKS endpoint (`https://<instance>.clerk.accounts.dev/.well-known/jwks.json`) |
 | `CLERK_ISSUER` | backend env | Clerk issuer URL (`https://<instance>.clerk.accounts.dev`) |
+| `CLERK_SECRET_KEY` | backend env | **Required** — Clerk secret key (`sk_test_...` or `sk_live_...`) for MCP dual-auth (session JWTs + API keys). The server will fail to start if this is missing. |
 | `CLERK_WEBHOOK_SECRET` | backend env | Webhook signing secret (`whsec_...`) from the Clerk webhooks dashboard |
 
-Copy `frontend/.env.local.example` to `frontend/.env.local` and fill in your Clerk publishable key.
+Copy `frontend/.env.local.example` to `frontend/.env.local` and fill in your Clerk publishable key and MCP server URL.
 
 See [`specs/008-authentication/quickstart.md`](specs/008-authentication/quickstart.md) for step-by-step Clerk setup including social login and webhook configuration.
 

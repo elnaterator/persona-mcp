@@ -1,19 +1,21 @@
 """Persona server — FastAPI REST API + MCP tools, with --stdio backward compat."""
 
 import argparse
+import logging
 import os
 from collections.abc import AsyncIterator, Generator
 from contextlib import asynccontextmanager
 from typing import Any, cast
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from psycopg_pool import ConnectionPool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
+from starlette.responses import JSONResponse
 
 from persona.accomplishment_service import AccomplishmentService
 from persona.api.routes import create_router
@@ -21,6 +23,7 @@ from persona.application_service import ApplicationService
 from persona.auth import build_get_current_user
 from persona.config import (
     configure_logging,
+    resolve_clerk_secret_key,
     resolve_cors_origins,
     resolve_db_url,
     resolve_frontend_dir,
@@ -28,12 +31,14 @@ from persona.config import (
     resolve_pool_min,
     resolve_port,
 )
-from persona.database import init_pool
+from persona.database import init_pool, upsert_user
 from persona.db import DBConnection
 from persona.resume_service import ResumeService
 from persona.tools.accomplishment_tools import register_accomplishment_tools
 from persona.tools.application_tools import register_application_tools
 from persona.tools.resume_tools import register_resume_tools
+
+logger = logging.getLogger("persona")
 
 mcp = FastMCP("persona")
 
@@ -78,11 +83,75 @@ register_accomplishment_tools(mcp, _get_acc_service)
 
 
 class UserContextMiddleware(BaseHTTPMiddleware):
-    """Set current_user_id_var from Bearer JWT or PERSONA_USER_ID env var."""
+    """Set current_user_id_var from Bearer token or PERSONA_USER_ID env var.
+
+    For /mcp paths: enforces dual-auth (JWT + API key) via the Clerk SDK.
+      - Missing or invalid token → 401 Unauthorized.
+      - Valid token → sets current_user_id_var and calls next handler.
+
+    For all other paths: attempts JWT-only auth (backward compat for REST API
+    callers that also set the context var) but never blocks the request.
+    """
 
     async def dispatch(self, request: StarletteRequest, call_next):  # type: ignore[override]
-        from persona.auth import current_user_id_var, verify_clerk_jwt
+        from persona.auth import (
+            authenticate_mcp_request,
+            build_clerk_client,
+            current_user_id_var,
+            extract_user_id_from_request_state,
+            verify_clerk_jwt,
+        )
 
+        # -------------------------------------------------------------------
+        # /mcp paths: enforce dual-auth (Clerk SDK — JWT + API key)
+        # -------------------------------------------------------------------
+        if request.url.path.startswith("/mcp"):
+            auth_header = request.headers.get("authorization", "")
+            if not auth_header.startswith("Bearer "):
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Not authenticated"},
+                )
+
+            try:
+                secret_key = resolve_clerk_secret_key()
+                clerk_client = build_clerk_client(secret_key)
+                request_state = authenticate_mcp_request(request, clerk_client)
+            except RuntimeError as exc:
+                logger.error("Clerk configuration error: %s", exc)
+                return JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content={"detail": "Authentication service not configured"},
+                )
+            except Exception as exc:
+                logger.exception("Clerk authentication error: %s", exc)
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Authentication failed"},
+                )
+
+            if not request_state.is_signed_in:
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": request_state.message or "Not authenticated"},
+                )
+
+            user_id = extract_user_id_from_request_state(request_state)
+            if user_id and _conn is not None:
+                try:
+                    upsert_user(_conn, user_id, email=None, display_name=None)
+                except Exception as exc:
+                    logger.warning("upsert_user failed in MCP auth: %s", exc)
+
+            token_ctx = current_user_id_var.set(user_id)
+            try:
+                return await call_next(request)
+            finally:
+                current_user_id_var.reset(token_ctx)
+
+        # -------------------------------------------------------------------
+        # Non-/mcp paths: try JWT auth (sets context var), never blocks
+        # -------------------------------------------------------------------
         auth_header = request.headers.get("authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
@@ -130,6 +199,7 @@ def create_app(
 
     if service is None:
         logger = configure_logging()
+        resolve_clerk_secret_key()  # Startup validation — fail fast if key is missing
         _pool = init_pool(resolve_db_url(), resolve_pool_min(), resolve_pool_max())
         raw = _pool.getconn()
         raw.autocommit = True

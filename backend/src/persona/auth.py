@@ -8,10 +8,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
+from clerk_backend_api import AuthenticateRequestOptions, Clerk
+from clerk_backend_api.security.types import RequestState, SessionAuthObjectV2
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
+from starlette.requests import Request as StarletteRequest
 
 from persona.database import upsert_user
 from persona.db import DBConnection
@@ -185,6 +188,45 @@ def get_current_user(
         upsert_user(conn, user_id, email, display_name)
 
     return UserContext(id=user_id, email=email, display_name=display_name)
+
+
+# ---------------------------------------------------------------------------
+# Clerk SDK dual-auth helpers (session JWTs + native API keys)
+# ---------------------------------------------------------------------------
+
+
+def build_clerk_client(secret_key: str) -> Clerk:
+    """Initialise a Clerk SDK client with the given secret key."""
+    return Clerk(bearer_auth=secret_key)
+
+
+def authenticate_mcp_request(
+    request: StarletteRequest, clerk_client: Clerk
+) -> RequestState:
+    """Authenticate a FastAPI/Starlette request via the Clerk SDK.
+
+    Supports both Clerk session JWTs (``Bearer eyJ...``) and native Clerk API
+    keys (``Bearer ak_...``).  Returns a ``RequestState`` whose ``is_signed_in``
+    property is ``True`` on success.
+
+    The ``to_auth()`` helper on the returned state can be used to extract the
+    user identity:
+    - ``SessionAuthObjectV2``: ``auth.sub``  (Clerk user ID)
+    - ``SessionAuthObjectV1`` or ``APIKeyMachineAuthObject``: ``auth.user_id``
+    """
+    opts = AuthenticateRequestOptions(accepts_token=["session_token", "api_key"])
+    return clerk_client.authenticate_request(request, opts)
+
+
+def extract_user_id_from_request_state(request_state: RequestState) -> str | None:
+    """Return the Clerk user ID from an authenticated RequestState, or None."""
+    if not request_state.is_signed_in:
+        return None
+    auth = request_state.to_auth()
+    if isinstance(auth, SessionAuthObjectV2):
+        return auth.sub
+    user_id: str | None = getattr(auth, "user_id", None)
+    return user_id
 
 
 def build_get_current_user(conn: DBConnection):  # type: ignore[no-untyped-def]

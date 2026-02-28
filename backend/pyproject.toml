@@ -16,6 +16,7 @@ dependencies = [
     "svix>=1.0.0",
     "psycopg[binary]>=3.1",
     "psycopg-pool>=3.1",
+    "clerk-backend-api>=1.0.0",
 ]
 
 [project.scripts]
