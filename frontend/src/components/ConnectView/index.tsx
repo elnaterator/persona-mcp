@@ -153,6 +153,7 @@ export default function ConnectView() {
   const [apiKey, setApiKey] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(ASSISTANTS[0].id)
+  const [bannerDismissed, setBannerDismissed] = useState(false)
 
   const displayKey = apiKey.trim() || KEY_PLACEHOLDER
 
@@ -177,16 +178,25 @@ export default function ConnectView() {
         setup instructions for your assistant.
       </p>
 
-      {/* Static tip — always visible to remind users to copy new keys */}
-      <div className={styles.warningBanner} role="note">
-        <span className={styles.warningIcon} aria-hidden="true">
-          ⚠️
-        </span>
-        <p className={styles.warningText}>
-          When you create an API key, copy it immediately — you will only see it in full
-          once. If you lose it, you will need to generate a new one.
-        </p>
-      </div>
+      {/* Dismissable tip — reminds users to copy new keys */}
+      {!bannerDismissed && (
+        <div className={styles.warningBanner} role="note">
+          <span className={styles.warningIcon} aria-hidden="true">
+            ⚠️
+          </span>
+          <p className={styles.warningText}>
+            When you create an API key, copy it immediately — you will only see it in full
+            once. If you lose it, you will need to generate a new one.
+          </p>
+          <button
+            className={styles.warningDismiss}
+            onClick={() => setBannerDismissed(true)}
+            aria-label="Dismiss warning"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       <div className={styles.layout}>
         {/* Left: API key management */}

@@ -288,17 +288,24 @@ class TestAuthenticateMcpRequest:
     """Tests for authenticate_mcp_request and extract_user_id_from_request_state."""
 
     def _make_mock_request(self, token: str = "Bearer eyJ.test") -> Any:
-        """Create a minimal mock StarletteRequest."""
-        from unittest.mock import MagicMock
-
+        """Create a minimal Starlette Request for testing."""
         from starlette.requests import Request
 
-        req = MagicMock(spec=Request)
-        req.method = "POST"
-        req.url = MagicMock()
-        req.url.__str__ = lambda self: "http://localhost/mcp"  # type: ignore[method-assign]
-        req.headers = {"authorization": token}
-        return req
+        # Build a real Starlette Request from an ASGI scope
+        scope = {
+            "type": "http",
+            "method": "POST",
+            "path": "/mcp",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [
+                (b"authorization", token.encode()),
+                (b"content-type", b"application/json"),
+            ],
+            "server": ("localhost", 8000),
+            "scheme": "http",
+        }
+        return Request(scope)
 
     def test_calls_clerk_authenticate_request(self) -> None:
         """authenticate_mcp_request calls clerk_client.authenticate_request."""
@@ -315,6 +322,26 @@ class TestAuthenticateMcpRequest:
 
         assert mock_clerk.authenticate_request.called
         assert result is mock_state
+
+    def test_wraps_request_as_httpx_request(self) -> None:
+        """authenticate_mcp_request wraps Starlette Request as httpx.Request."""
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        from persona.auth import authenticate_mcp_request
+
+        mock_clerk = MagicMock()
+        mock_clerk.authenticate_request.return_value = MagicMock(is_signed_in=True)
+
+        req = self._make_mock_request("Bearer ak_test_key")
+        authenticate_mcp_request(req, mock_clerk)
+
+        call_args = mock_clerk.authenticate_request.call_args
+        httpx_req = call_args[0][0]
+        assert isinstance(httpx_req, httpx.Request)
+        assert httpx_req.method == "POST"
+        assert httpx_req.headers.get("authorization") == "Bearer ak_test_key"
 
     def test_passes_both_token_types_in_options(self) -> None:
         """authenticate_mcp_request passes accepts_token=['session_token','api_key']."""
