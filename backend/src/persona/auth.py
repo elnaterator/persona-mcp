@@ -209,13 +209,29 @@ def authenticate_mcp_request(
     keys (``Bearer ak_...``).  Returns a ``RequestState`` whose ``is_signed_in``
     property is ``True`` on success.
 
+    The incoming Starlette request is wrapped as an ``httpx.Request`` to ensure
+    full compatibility with the Clerk SDK's ``Requestish`` protocol.
+
     The ``to_auth()`` helper on the returned state can be used to extract the
     user identity:
     - ``SessionAuthObjectV2``: ``auth.sub``  (Clerk user ID)
     - ``SessionAuthObjectV1`` or ``APIKeyMachineAuthObject``: ``auth.user_id``
     """
+    # Wrap Starlette request as httpx.Request for Clerk SDK compatibility.
+    httpx_req = httpx.Request(
+        method=request.method,
+        url=str(request.url),
+        headers=dict(request.headers),
+    )
     opts = AuthenticateRequestOptions(accepts_token=["session_token", "api_key"])
-    return clerk_client.authenticate_request(request, opts)
+    result = clerk_client.authenticate_request(httpx_req, opts)
+    if not result.is_signed_in:
+        logger.warning(
+            "MCP auth failed: reason=%s message=%s",
+            result.reason,
+            result.message,
+        )
+    return result
 
 
 def extract_user_id_from_request_state(request_state: RequestState) -> str | None:

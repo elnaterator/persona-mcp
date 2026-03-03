@@ -207,6 +207,15 @@ Each story adds value without breaking previous stories.
 
 ---
 
+## Phase 9: Defect Fixes (Round 2)
+
+**Purpose**: Fix runtime issues discovered during end-to-end testing.
+
+- [x] T030 Fix JWT auth failure at `POST /mcp` — wrap the incoming Starlette `Request` as an `httpx.Request` in `authenticate_mcp_request()` (`backend/src/persona/auth.py`) before passing to the Clerk SDK's `authenticate_request()`, ensuring full protocol compatibility for session token verification; add warning log on auth failure with reason/message for diagnostics; add unit test `test_wraps_request_as_httpx_request` in `backend/tests/unit/test_auth.py`; update `_make_mock_request` to use a real Starlette `Request` instead of `MagicMock` for better test fidelity
+- [x] T031 Make warning banner dismissable in `ConnectView` — add `bannerDismissed` boolean state (default `false`) to `frontend/src/components/ConnectView/index.tsx`; wrap banner in conditional render `{!bannerDismissed && ...}`; add dismiss `<button>` with `&times;` icon that sets `bannerDismissed` to `true`; update `frontend/src/__tests__/ConnectView.test.tsx` with new `tip is dismissable via close button` test; CSS `.warningDismiss` styles already present
+
+---
+
 ## Notes
 
 - `[P]` tasks touch different files — no dependency conflicts, safe to run in parallel
