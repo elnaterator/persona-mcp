@@ -195,6 +195,18 @@ Each story adds value without breaking previous stories.
 
 ---
 
+## Phase 8: Defect Fixes
+
+**Purpose**: Fix build and runtime errors discovered after initial implementation.
+
+- [x] T025 Fix TypeScript build error in `frontend/src/components/ConnectView/index.tsx` — remove invalid `onKeyCreated` and `onKeyRegenerated` props from `<APIKeys />` (Clerk's `APIKeysProps` does not accept these); convert conditional warning banner (`keyJustCreated` state) to a static informational tip that is always visible; remove `testKeyJustCreated` test-only prop; add `APIKeysErrorBoundary` error boundary around `<APIKeys />` to gracefully handle Clerk API keys being disabled
+- [x] T026 [P] Update `frontend/src/__tests__/ConnectView.test.tsx` to match new static banner behavior — replace `keyJustCreated`-dependent assertions with static tip assertions; add error boundary fallback test
+- [x] T027 [P] Add `.apiKeysDisabled` error boundary fallback styles to `frontend/src/components/ConnectView/ConnectView.module.css`
+- [x] T028 Fix `make run` failure — add `CLERK_SECRET_KEY=${CLERK_SECRET_KEY}` passthrough to `docker-compose.yml`; add `VITE_CLERK_PUBLISHABLE_KEY` as Docker build arg; add both to `.env.example`
+- [x] T029 [P] Fix MCP route matching in `backend/src/persona/server.py` — replace `app.mount("/mcp", mcp_app)` with direct route injection (`app.router.routes.append`) to prevent Starlette's `Mount` regex from requiring a trailing slash, which caused `POST /mcp` to fall through to `StaticFiles` returning 405
+
+---
+
 ## Notes
 
 - `[P]` tasks touch different files — no dependency conflicts, safe to run in parallel

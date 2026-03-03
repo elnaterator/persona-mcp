@@ -236,3 +236,23 @@
   padding: 0.625rem 0.875rem;
   margin-top: 0.5rem;
 }
+
+/* API keys disabled / error boundary fallback */
+.apiKeysDisabled {
+  font-size: 0.875rem;
+  color: #92400e;
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 0.375rem;
+  padding: 0.875rem 1rem;
+  line-height: 1.5;
+}
+
+.apiKeysDisabled a {
+  color: #b45309;
+  text-decoration: underline;
+}
+
+.apiKeysDisabled a:hover {
+  color: #92400e;
+}

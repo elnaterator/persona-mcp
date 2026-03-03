@@ -16,9 +16,53 @@
  * in this component.
  */
 
-import { useState } from 'react'
+import { Component, useState } from 'react'
+import type { ErrorInfo, ReactNode } from 'react'
 import { APIKeys } from '@clerk/clerk-react'
 import styles from './ConnectView.module.css'
+
+/**
+ * Error boundary that catches Clerk <APIKeys /> errors (e.g. when API keys
+ * are disabled in the Clerk dashboard) and renders a helpful fallback.
+ */
+class APIKeysErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn('APIKeys component error:', error.message, info.componentStack)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className={styles.apiKeysDisabled} role="alert">
+          <strong>API keys are not enabled.</strong> To use this feature, enable
+          native API keys in your{' '}
+          <a
+            href="https://dashboard.clerk.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Clerk Dashboard
+          </a>{' '}
+          under <em>Configure &rarr; API Keys</em>. Once enabled, refresh this
+          page.
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const MCP_SERVER_URL =
   import.meta.env.VITE_MCP_SERVER_URL ?? 'https://your-persona-server.com/mcp'
@@ -105,14 +149,8 @@ const ASSISTANTS: Assistant[] = [
   },
 ]
 
-interface ConnectViewProps {
-  /** Test-only prop: force keyJustCreated=true to test warning banner. */
-  testKeyJustCreated?: boolean
-}
-
-export default function ConnectView({ testKeyJustCreated = false }: ConnectViewProps) {
+export default function ConnectView() {
   const [apiKey, setApiKey] = useState('')
-  const [keyJustCreated, setKeyJustCreated] = useState(testKeyJustCreated)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(ASSISTANTS[0].id)
 
@@ -139,34 +177,24 @@ export default function ConnectView({ testKeyJustCreated = false }: ConnectViewP
         setup instructions for your assistant.
       </p>
 
-      {/* Warning banner — shown after key creation */}
-      {keyJustCreated && (
-        <div className={styles.warningBanner} role="alert">
-          <span className={styles.warningIcon} aria-hidden="true">
-            ⚠️
-          </span>
-          <p className={styles.warningText}>
-            Copy your API key now — this is the only time you will see it in full. If you
-            lose it, you will need to generate a new one.
-          </p>
-          <button
-            className={styles.warningDismiss}
-            aria-label="Dismiss"
-            onClick={() => setKeyJustCreated(false)}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {/* Static tip — always visible to remind users to copy new keys */}
+      <div className={styles.warningBanner} role="note">
+        <span className={styles.warningIcon} aria-hidden="true">
+          ⚠️
+        </span>
+        <p className={styles.warningText}>
+          When you create an API key, copy it immediately — you will only see it in full
+          once. If you lose it, you will need to generate a new one.
+        </p>
+      </div>
 
       <div className={styles.layout}>
         {/* Left: API key management */}
         <div className={styles.apiKeySection}>
           <h3 className={styles.sectionTitle}>Your API Key</h3>
-          <APIKeys
-            onKeyCreated={() => setKeyJustCreated(true)}
-            onKeyRegenerated={() => setKeyJustCreated(true)}
-          />
+          <APIKeysErrorBoundary>
+            <APIKeys />
+          </APIKeysErrorBoundary>
 
           {/* Paste-input field */}
           <div className={styles.pasteInputWrapper}>
