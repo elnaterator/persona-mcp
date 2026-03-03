@@ -47,12 +47,19 @@ class ResumeService:
         return load_resume_version(self._conn, version_id, user_id=user_id)
 
     def create_resume(self, label: str, user_id: str | None = None) -> dict[str, Any]:
-        """Create a new resume version copied from the default."""
+        """Create a new resume version copied from the default.
+
+        If the user has no existing default resume, creates one with empty data.
+        """
         if not label or not label.strip():
             raise ValueError("Label must not be empty")
-        default = load_default_resume_version(self._conn, user_id=user_id)
+        try:
+            default = load_default_resume_version(self._conn, user_id=user_id)
+            resume_data = default["resume_data"]
+        except ValueError:
+            resume_data = {}
         return create_resume_version(
-            self._conn, label.strip(), default["resume_data"], user_id=user_id
+            self._conn, label.strip(), resume_data, user_id=user_id
         )
 
     def set_default(self, version_id: int, user_id: str | None = None) -> str:

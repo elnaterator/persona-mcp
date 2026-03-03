@@ -159,10 +159,6 @@ def load_default_resume_version(
             "SELECT * FROM resume_version WHERE user_id = %s AND is_default = 1",
             (user_id,),
         ).fetchone()
-        if row is None:
-            row = conn.execute(
-                "SELECT * FROM resume_version WHERE is_default = 1"
-            ).fetchone()
     else:
         row = conn.execute(
             "SELECT * FROM resume_version WHERE is_default = 1"

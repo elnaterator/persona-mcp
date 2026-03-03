@@ -5,6 +5,7 @@ from typing import Any
 from fastmcp import FastMCP
 
 from persona.accomplishment_service import AccomplishmentService
+from persona.auth import require_user_id
 
 
 def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
@@ -21,8 +22,9 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
                 accomplishments that include this tag.
             q: Case-insensitive substring search across title and STAR fields.
         """
+        user_id = require_user_id()
         service: AccomplishmentService = get_service()
-        return service.list_accomplishments(tag=tag, q=q)
+        return service.list_accomplishments(tag=tag, q=q, user_id=user_id)
 
     @mcp.tool()
     def get_accomplishment(id: int) -> dict[str, Any] | str:
@@ -31,9 +33,10 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Accomplishment ID.
         """
+        user_id = require_user_id()
         service: AccomplishmentService = get_service()
         try:
-            return service.get_accomplishment(id)
+            return service.get_accomplishment(id, user_id=user_id)
         except ValueError as e:
             return f"Error: {e}"
 
@@ -58,6 +61,7 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
             accomplishment_date: Date of the achievement (YYYY-MM-DD).
             tags: Category tags (e.g., ["leadership", "technical"]).
         """
+        user_id = require_user_id()
         service: AccomplishmentService = get_service()
         try:
             acc = service.create_accomplishment(
@@ -69,7 +73,8 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
                     "result": result,
                     "accomplishment_date": accomplishment_date,
                     "tags": tags or [],
-                }
+                },
+                user_id=user_id,
             )
             return f"Created accomplishment '{acc['title']}' (id={acc['id']})"
         except ValueError as e:
@@ -100,6 +105,7 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
             accomplishment_date: Updated date (YYYY-MM-DD) or None to clear.
             tags: Updated tag list (replaces existing tags).
         """
+        user_id = require_user_id()
         service: AccomplishmentService = get_service()
         data: dict[str, Any] = {}
         for field, value in [
@@ -114,7 +120,7 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
             if value is not None:
                 data[field] = value
         try:
-            service.update_accomplishment(id, data)
+            service.update_accomplishment(id, data, user_id=user_id)
             return f"Updated accomplishment {id}"
         except ValueError as e:
             return f"Error: {e}"
@@ -126,9 +132,10 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Accomplishment ID.
         """
+        user_id = require_user_id()
         service: AccomplishmentService = get_service()
         try:
-            acc = service.delete_accomplishment(id)
+            acc = service.delete_accomplishment(id, user_id=user_id)
             return f"Deleted accomplishment '{acc['title']}' (id={id})"
         except ValueError as e:
             return f"Error: {e}"

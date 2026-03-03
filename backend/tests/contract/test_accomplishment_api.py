@@ -4,6 +4,7 @@ Tests are grouped by user story. Each story's MCP contract tests appear
 BEFORE the tool implementations (TDD per Constitution III).
 """
 
+from collections.abc import Generator
 from typing import Any
 
 import psycopg
@@ -11,13 +12,34 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
+from persona.auth import current_user_id_var
+
 # ── Shared fixtures ───────────────────────────────────────────────────────────
+
+_TEST_USER = "test_user"
+
+
+@pytest.fixture(autouse=True)
+def _set_user_context() -> Generator[None, None, None]:
+    """Set current_user_id_var for MCP tool handler tests."""
+    token = current_user_id_var.set(_TEST_USER)
+    try:
+        yield
+    finally:
+        current_user_id_var.reset(token)
 
 
 @pytest.fixture
 def acc_service(db_conn: Connection[Any]) -> Any:
     """AccomplishmentService for use in MCP tool tests."""
     from persona.accomplishment_service import AccomplishmentService
+
+    # Seed the test user
+    db_conn.execute(
+        "INSERT INTO users (id, email) VALUES (%s, 'test@test.com') "
+        "ON CONFLICT (id) DO NOTHING",
+        (_TEST_USER,),
+    )
 
     return AccomplishmentService(db_conn)  # type: ignore[arg-type]
 
@@ -115,7 +137,7 @@ class TestMCPCreateGetAccomplishment:
             tags=[],
         )
         # Get ID from the service
-        accs = acc_service.list_accomplishments()
+        accs = acc_service.list_accomplishments(user_id=_TEST_USER)
         assert len(accs) == 1
         acc_id = accs[0]["id"]
 
@@ -189,8 +211,12 @@ class TestMCPListAccomplishments:
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
 
-        acc_service.create_accomplishment({"title": "A", "tags": ["leadership"]})
-        acc_service.create_accomplishment({"title": "B", "tags": ["technical"]})
+        acc_service.create_accomplishment(
+            {"title": "A", "tags": ["leadership"]}, user_id=_TEST_USER
+        )
+        acc_service.create_accomplishment(
+            {"title": "B", "tags": ["technical"]}, user_id=_TEST_USER
+        )
 
         list_fn = _get_tool_fn(mcp, "list_accomplishments")
         result = list_fn(tag=None, q=None)
@@ -209,8 +235,12 @@ class TestMCPListAccomplishments:
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
 
-        acc_service.create_accomplishment({"title": "Leader", "tags": ["leadership"]})
-        acc_service.create_accomplishment({"title": "Coder", "tags": ["technical"]})
+        acc_service.create_accomplishment(
+            {"title": "Leader", "tags": ["leadership"]}, user_id=_TEST_USER
+        )
+        acc_service.create_accomplishment(
+            {"title": "Coder", "tags": ["technical"]}, user_id=_TEST_USER
+        )
 
         list_fn = _get_tool_fn(mcp, "list_accomplishments")
         result = list_fn(tag="leadership", q=None)
@@ -237,7 +267,9 @@ class TestMCPListAccomplishments:
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
 
-        acc_service.create_accomplishment({"title": "A", "tags": ["technical"]})
+        acc_service.create_accomplishment(
+            {"title": "A", "tags": ["technical"]}, user_id=_TEST_USER
+        )
         list_fn = _get_tool_fn(mcp, "list_accomplishments")
         result = list_fn(tag="nonexistent", q=None)
         assert result == []
@@ -327,7 +359,9 @@ class TestMCPUpdateAccomplishment:
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
 
-        created = acc_service.create_accomplishment({"title": "Original"})
+        created = acc_service.create_accomplishment(
+            {"title": "Original"}, user_id=_TEST_USER
+        )
         update_fn = _get_tool_fn(mcp, "update_accomplishment")
         result = update_fn(
             id=created["id"],
@@ -372,7 +406,9 @@ class TestMCPUpdateAccomplishment:
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
 
-        created = acc_service.create_accomplishment({"title": "Original"})
+        created = acc_service.create_accomplishment(
+            {"title": "Original"}, user_id=_TEST_USER
+        )
         update_fn = _get_tool_fn(mcp, "update_accomplishment")
         result = update_fn(
             id=created["id"],
@@ -434,7 +470,9 @@ class TestMCPDeleteAccomplishment:
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
 
-        created = acc_service.create_accomplishment({"title": "Delete me"})
+        created = acc_service.create_accomplishment(
+            {"title": "Delete me"}, user_id=_TEST_USER
+        )
         delete_fn = _get_tool_fn(mcp, "delete_accomplishment")
         result = delete_fn(id=created["id"])
         assert isinstance(result, str)

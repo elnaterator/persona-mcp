@@ -5,6 +5,7 @@ from typing import Any
 from fastmcp import FastMCP
 
 from persona.application_service import ApplicationService
+from persona.auth import require_user_id
 
 
 def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
@@ -20,8 +21,9 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             status: Filter by status (exact match).
             q: Search company/position (case-insensitive substring).
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
-        return service.list_applications(status=status, q=q)
+        return service.list_applications(status=status, q=q, user_id=user_id)
 
     @mcp.tool()
     def get_application(id: int) -> dict[str, Any]:
@@ -30,8 +32,9 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Application ID.
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
-        return service.get_application(id)
+        return service.get_application(id, user_id=user_id)
 
     @mcp.tool()
     def create_application(
@@ -54,6 +57,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             notes: Free-text notes.
             resume_version_id: Associated resume version.
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
         app = service.create_application(
             {
@@ -64,7 +68,8 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
                 "url": url,
                 "notes": notes,
                 "resume_version_id": resume_version_id,
-            }
+            },
+            user_id=user_id,
         )
         return f"Created application for '{position}' at '{company}' (id={app['id']})"
 
@@ -91,6 +96,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             notes: Updated notes.
             resume_version_id: Updated resume version.
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
         data: dict[str, Any] = {}
         for field, value in [
@@ -104,7 +110,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         ]:
             if value is not None:
                 data[field] = value
-        service.update_application(id, data)
+        service.update_application(id, data, user_id=user_id)
         return f"Updated application {id}"
 
     @mcp.tool()
@@ -114,8 +120,9 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Application ID.
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
-        app = service.delete_application(id)
+        app = service.delete_application(id, user_id=user_id)
         return (
             f"Deleted application '{app['position']}' at "
             f"'{app['company']}' and all associated data"
@@ -140,7 +147,10 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             phone: Phone number.
             notes: Notes about contact.
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
+        # Verify ownership of the parent application
+        service.get_application(app_id, user_id=user_id)
         contact = service.add_contact(
             app_id,
             {
@@ -172,6 +182,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             phone: Updated phone.
             notes: Updated notes.
         """
+        require_user_id()
         service: ApplicationService = get_service()
         data: dict[str, Any] = {}
         for field, value in [
@@ -193,6 +204,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Contact ID.
         """
+        require_user_id()
         service: ApplicationService = get_service()
         name = service.remove_contact(id)
         return f"Removed contact '{name}'"
@@ -220,7 +232,10 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             subject: Subject line.
             status: draft, ready, sent, or archived (default: sent).
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
+        # Verify ownership of the parent application
+        service.get_application(app_id, user_id=user_id)
         comm = service.add_communication(
             app_id,
             {
@@ -258,6 +273,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             contact_id: Updated contact ref.
             status: Updated status.
         """
+        require_user_id()
         service: ApplicationService = get_service()
         data: dict[str, Any] = {}
         for field, value in [
@@ -281,6 +297,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Communication ID.
         """
+        require_user_id()
         service: ApplicationService = get_service()
         subject = service.remove_communication(id)
         return f"Removed communication '{subject}'"
@@ -295,5 +312,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         Args:
             id: Application ID.
         """
+        user_id = require_user_id()
         service: ApplicationService = get_service()
-        return service.get_application_context(id)
+        return service.get_application_context(id, user_id=user_id)

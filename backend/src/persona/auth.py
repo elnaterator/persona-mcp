@@ -28,6 +28,19 @@ current_user_id_var: ContextVar[str | None] = ContextVar(
     "current_user_id", default=None
 )
 
+
+def require_user_id() -> str:
+    """Return the current user ID from the context var, or raise.
+
+    MCP tool handlers MUST call this to enforce user scoping.
+    Raises RuntimeError when no authenticated user context is set.
+    """
+    user_id = current_user_id_var.get()
+    if user_id is None:
+        raise RuntimeError("No user context set — cannot access user data")
+    return user_id
+
+
 # ---------------------------------------------------------------------------
 # JWKS in-memory cache
 # ---------------------------------------------------------------------------
