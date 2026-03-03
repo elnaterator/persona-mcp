@@ -69,9 +69,9 @@ describe('ConnectView', () => {
       }
     })
 
-    it('does not show warning banner on initial render (no key just created)', () => {
+    it('shows static API key tip on initial render', () => {
       render(<ConnectView />)
-      expect(screen.queryByText(/copy your api key now/i)).not.toBeInTheDocument()
+      expect(screen.getByText(/when you create an api key, copy it immediately/i)).toBeInTheDocument()
     })
   })
 
@@ -93,42 +93,40 @@ describe('ConnectView', () => {
     })
   })
 
-  describe('warning banner', () => {
-    it('warning banner is absent before any key creation', () => {
+  describe('APIKeys error boundary', () => {
+    it('renders fallback message when APIKeys throws (e.g. API keys disabled)', async () => {
+      // Make the mocked APIKeys throw to simulate Clerk's error
+      const clerkMock = await import('@clerk/clerk-react')
+      const originalAPIKeys = clerkMock.APIKeys
+      vi.mocked(clerkMock).APIKeys = (() => {
+        throw new Error('cannot_render_api_keys_disabled')
+      }) as typeof clerkMock.APIKeys
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
       render(<ConnectView />)
-      expect(screen.queryByText(/copy your api key now/i)).not.toBeInTheDocument()
+
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText(/api keys are not enabled/i)).toBeInTheDocument()
+      expect(screen.getByText(/clerk dashboard/i)).toBeInTheDocument()
+
+      // Restore original mock
+      vi.mocked(clerkMock).APIKeys = originalAPIKeys
+      warnSpy.mockRestore()
+      errorSpy.mockRestore()
+    })
+  })
+
+  describe('API key tip banner', () => {
+    it('static tip is always visible', () => {
+      render(<ConnectView />)
+      expect(screen.getByText(/when you create an api key, copy it immediately/i)).toBeInTheDocument()
     })
 
-    it('warning banner is dismissable — clicking close hides it', async () => {
-      // We need to trigger keyJustCreated=true; simulate via the internal state
-      // We'll test via the test prop or by triggering the internal key creation path
-      // For now, render with a keyJustCreated prop (if supported) or find the dismiss button
-      const user = userEvent.setup()
-      render(<ConnectView testKeyJustCreated={true} />)
-
-      // Banner should be visible
-      expect(screen.getByText(/copy your api key now/i)).toBeInTheDocument()
-
-      // Find and click dismiss button
-      const dismissButton =
-        screen.getByRole('button', { name: /dismiss/i }) ||
-        screen.getByRole('button', { name: /close/i }) ||
-        screen.getByLabelText(/dismiss/i)
-
-      await user.click(dismissButton)
-
-      // Banner should be gone
-      expect(screen.queryByText(/copy your api key now/i)).not.toBeInTheDocument()
-    })
-
-    it('warning banner text mentions losing the key', () => {
-      render(<ConnectView testKeyJustCreated={true} />)
-      expect(screen.getByText(/copy your api key now/i)).toBeInTheDocument()
-      // Banner should warn about losing the key
-      expect(
-        screen.getByText(/lose it.*generate a new one|generate a new one.*lose it/i) ||
-          screen.getByText(/only time you will see it/i),
-      ).toBeInTheDocument()
+    it('tip text mentions losing the key and generating a new one', () => {
+      render(<ConnectView />)
+      expect(screen.getByText(/generate a new one/i)).toBeInTheDocument()
     })
   })
 

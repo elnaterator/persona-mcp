@@ -213,8 +213,11 @@ def create_app(
     _app_service = ApplicationService(conn) if conn else None
     _acc_service = AccomplishmentService(conn) if conn else None
 
-    # Get MCP HTTP app first to access its lifespan
-    mcp_app = mcp.http_app(path="/")
+    # Get MCP HTTP app — use path="/mcp" so the Route is registered at /mcp.
+    # We add this route directly to FastAPI's router (not via app.mount)
+    # because Starlette's Mount("/mcp") regex requires a trailing slash,
+    # causing POST /mcp to fall through to StaticFiles → 405.
+    mcp_app = mcp.http_app(path="/mcp")
 
     # Create combined lifespan that wraps MCP lifespan and closes pool on shutdown
     @asynccontextmanager
@@ -258,8 +261,10 @@ def create_app(
         )
     )
 
-    # Mount MCP server at /mcp (streamable-http transport)
-    app.mount("/mcp", mcp_app)
+    # Add MCP routes directly to FastAPI's router (not via app.mount) so
+    # the /mcp route is matched before the StaticFiles catch-all.
+    for route in mcp_app.routes:
+        app.router.routes.append(route)
 
     # Mount static files for frontend (if directory exists)
     # This must come AFTER API routes and MCP mount so they take priority
