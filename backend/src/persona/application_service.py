@@ -139,14 +139,14 @@ class ApplicationService:
         if app.get("resume_version_id"):
             try:
                 resume_version = load_resume_version(
-                    self._conn, app["resume_version_id"]
+                    self._conn, app["resume_version_id"], user_id=user_id
                 )
             except ValueError:
                 pass
 
         default_resume = None
         try:
-            default_resume = load_default_resume_version(self._conn)
+            default_resume = load_default_resume_version(self._conn, user_id=user_id)
         except ValueError:
             pass
 
