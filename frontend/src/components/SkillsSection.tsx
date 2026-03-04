@@ -49,8 +49,9 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       setStatusMessage({ type: 'success', message: 'Skill added successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to add skill' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to add skill'
+      setStatusMessage({ type: 'error', message: msg })
     }
   }
 
@@ -71,8 +72,9 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       setStatusMessage({ type: 'success', message: 'Skill updated successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to update skill' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update skill'
+      setStatusMessage({ type: 'error', message: msg })
     }
   }
 
@@ -88,8 +90,9 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       setStatusMessage({ type: 'success', message: 'Skill deleted successfully' })
       setMode('view')
       if (onUpdate) onUpdate()
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to delete skill' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete skill'
+      setStatusMessage({ type: 'error', message: msg })
       setMode('view')
     }
   }
@@ -106,12 +109,39 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
         />
       )}
 
-      {mode === 'add' && (
-        <EntryForm
-          fields={skillFields}
-          onSubmit={handleAdd}
-          onCancel={() => setMode('view')}
-        />
+      {categories.length > 0 ? (
+        <div className={styles.list}>
+          {categories.map((category) => (
+            <div key={category} className={styles.category}>
+              <h3 className={styles.categoryName}>{category}</h3>
+              <div className={styles.skillTags}>
+                {groupedSkills[category].map((skill) => (
+                  <div key={skill.originalIndex} className={styles.skillTagWrapper}>
+                    <span className={styles.skillTag}>{skill.name}</span>
+                    <div className={styles.skillActions}>
+                      <button
+                        className={styles.editButton}
+                        onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
+                        aria-label="Edit"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className={styles.deleteButton}
+                        onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
+                        aria-label="Delete"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.empty}>No skills listed.</p>
       )}
 
       {typeof mode === 'object' && mode.type === 'edit' && (
@@ -123,47 +153,18 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
         />
       )}
 
-      {mode === 'view' && (
-        <>
-          {categories.length > 0 ? (
-            <div className={styles.list}>
-              {categories.map((category) => (
-                <div key={category} className={styles.category}>
-                  <h3 className={styles.categoryName}>{category}</h3>
-                  <div className={styles.skillTags}>
-                    {groupedSkills[category].map((skill) => (
-                      <div key={skill.originalIndex} className={styles.skillTagWrapper}>
-                        <span className={styles.skillTag}>{skill.name}</span>
-                        <div className={styles.skillActions}>
-                          <button
-                            className={styles.editButton}
-                            onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
-                            aria-label="Edit"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className={styles.deleteButton}
-                            onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
-                            aria-label="Delete"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.empty}>No skills listed.</p>
-          )}
+      {mode === 'add' && (
+        <EntryForm
+          fields={skillFields}
+          onSubmit={handleAdd}
+          onCancel={() => setMode('view')}
+        />
+      )}
 
-          <button className={styles.addButton} onClick={() => setMode('add')}>
-            Add Skill
-          </button>
-        </>
+      {mode === 'view' && (
+        <button className={styles.addButton} onClick={() => setMode('add')}>
+          Add Skill
+        </button>
       )}
 
       {typeof mode === 'object' && mode.type === 'delete' && (
