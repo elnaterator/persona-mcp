@@ -360,11 +360,55 @@ def migrate_v3_to_v4(conn) -> None:
     conn.commit()
 
 
+def migrate_v4_to_v5(conn) -> None:
+    """Flatten items-based skills into individual flat skill entries.
+
+    Prior to this migration, skills could be stored as:
+      {"name": "Languages", "category": "Other", "items": ["Python", "TypeScript"]}
+
+    After this migration, each skill has exactly one name and one category:
+      {"name": "Python", "category": "Languages"}
+      {"name": "TypeScript", "category": "Languages"}
+
+    Skills with no items (or empty items) are preserved with the items field stripped.
+    """
+    rows = conn.execute("SELECT id, resume_data FROM resume_version").fetchall()
+    for row in rows:
+        version_id = row["id"] if isinstance(row, dict) else row[0]
+        resume_data_str = row["resume_data"] if isinstance(row, dict) else row[1]
+        resume_data = json.loads(resume_data_str)
+
+        old_skills = resume_data.get("skills", [])
+        new_skills: list[dict] = []
+        for skill in old_skills:
+            items = skill.get("items", [])
+            if items:
+                # Each item becomes a flat skill; the old name becomes the category
+                category = skill.get("name", "Other")
+                for item in items:
+                    new_skills.append({"name": item, "category": category})
+            else:
+                # Keep as-is, strip the items field
+                new_skills.append(
+                    {"name": skill["name"], "category": skill.get("category", "Other")}
+                )
+
+        resume_data["skills"] = new_skills
+        conn.execute(
+            "UPDATE resume_version SET resume_data = %s WHERE id = %s",
+            (json.dumps(resume_data), version_id),
+        )
+
+    conn.execute("UPDATE schema_version SET version = %s", (5,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
     migrate_v2_to_v3,
     migrate_v3_to_v4,
+    migrate_v4_to_v5,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)
