@@ -150,6 +150,25 @@ class TestSkill:
         skill = Skill(name="Python", category=None)
         assert skill.category == "Other"
 
+    def test_skill_items_defaults_to_empty_list(self) -> None:
+        from persona.models import Skill
+
+        skill = Skill(name="Languages")
+        assert skill.items == []
+
+    def test_skill_with_items(self) -> None:
+        from persona.models import Skill
+
+        skill = Skill(name="Languages", items=["Python", "TypeScript", "Go"])
+        assert skill.items == ["Python", "TypeScript", "Go"]
+
+    def test_skill_items_preserved_in_serialization(self) -> None:
+        from persona.models import Skill
+
+        skill = Skill(name="Languages", items=["Python", "TypeScript"])
+        data = skill.model_dump()
+        assert data["items"] == ["Python", "TypeScript"]
+
 
 class TestResume:
     """Tests for Resume aggregate model with empty defaults."""

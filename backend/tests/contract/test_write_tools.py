@@ -122,6 +122,37 @@ class TestAddEntry:
         assert len(rust) == 1
         assert rust[0]["category"] == "Programming Languages"
 
+    def test_add_skill_with_items(self, db_conn_with_data: Connection[Any]) -> None:
+        from persona.tools.read import get_resume_section
+        from persona.tools.write import add_entry
+
+        add_entry(
+            section="skills",
+            data={"name": "Languages", "items": ["Python", "TypeScript", "Go"]},
+            conn=db_conn_with_data,  # type: ignore[arg-type]
+        )
+
+        skills = get_resume_section(section="skills", conn=db_conn_with_data)  # type: ignore[arg-type]
+        langs = [s for s in skills if s["name"] == "Languages"]
+        assert len(langs) == 1
+        assert langs[0]["items"] == ["Python", "TypeScript", "Go"]
+
+    def test_add_skill_items_default_to_empty_list(
+        self, db_conn_with_data: Connection[Any]
+    ) -> None:
+        from persona.tools.read import get_resume_section
+        from persona.tools.write import add_entry
+
+        add_entry(
+            section="skills",
+            data={"name": "Rust", "category": "Systems"},
+            conn=db_conn_with_data,  # type: ignore[arg-type]
+        )
+
+        skills = get_resume_section(section="skills", conn=db_conn_with_data)  # type: ignore[arg-type]
+        rust = [s for s in skills if s["name"] == "Rust"]
+        assert rust[0]["items"] == []
+
     def test_add_skill_default_category(
         self, db_conn_with_data: Connection[Any]
     ) -> None:

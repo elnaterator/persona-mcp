@@ -38,10 +38,11 @@ class Education(BaseModel):
 
 
 class Skill(BaseModel):
-    """A named skill with optional category."""
+    """A named skill group with optional category and constituent items."""
 
     name: str
     category: str | None = "Other"
+    items: list[str] = []
 
     @field_validator("category", mode="before")
     @classmethod
