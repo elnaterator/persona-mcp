@@ -115,6 +115,33 @@ class TestEducation:
         with pytest.raises(ValidationError):
             Education(institution="MIT")  # type: ignore[call-arg]
 
+    def test_highlights_defaults_to_empty_list(self) -> None:
+        from persona.models import Education
+
+        edu = Education(institution="MIT", degree="B.S.")
+        assert edu.highlights == []
+
+    def test_highlights_with_values(self) -> None:
+        from persona.models import Education
+
+        edu = Education(
+            institution="UC Berkeley",
+            degree="B.S. CS",
+            highlights=["Dean's List", "Thesis on X"],
+        )
+        assert edu.highlights == ["Dean's List", "Thesis on X"]
+
+    def test_highlights_preserved_in_serialization(self) -> None:
+        from persona.models import Education
+
+        edu = Education(
+            institution="MIT",
+            degree="B.S.",
+            highlights=["Dean's List", "Graduated with Honors"],
+        )
+        data = edu.model_dump()
+        assert data["highlights"] == ["Dean's List", "Graduated with Honors"]
+
 
 class TestSkill:
     """Tests for Skill model — name required, category defaults to 'Other'."""
