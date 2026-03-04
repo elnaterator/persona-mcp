@@ -35,6 +35,7 @@ class Education(BaseModel):
     start_date: str | None = None
     end_date: str | None = None
     honors: str | None = None
+    highlights: list[str] = []
 
 
 class Skill(BaseModel):

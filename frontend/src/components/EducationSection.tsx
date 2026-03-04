@@ -21,6 +21,7 @@ const educationFields: FieldConfig[] = [
   { name: 'start_date', label: 'Start Date', type: 'text', required: false },
   { name: 'end_date', label: 'End Date', type: 'text', required: false },
   { name: 'honors', label: 'Honors', type: 'text', required: false },
+  { name: 'highlights', label: 'Highlights', type: 'highlights', required: false },
 ]
 
 export default function EducationSection({ education, onUpdate, versionId }: EducationSectionProps) {
@@ -36,6 +37,7 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
         start_date: (data.start_date as string) || null,
         end_date: (data.end_date as string) || null,
         honors: (data.honors as string) || null,
+        highlights: (data.highlights as string[]) || [],
       }
 
       if (versionId !== undefined) {
@@ -62,6 +64,7 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
         start_date: (data.start_date as string) || null,
         end_date: (data.end_date as string) || null,
         honors: (data.honors as string) || null,
+        highlights: (data.highlights as string[]) || [],
       }
 
       if (versionId !== undefined) {
@@ -147,6 +150,15 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
                       <span className={styles.honors}>{entry.honors}</span>
                     )}
                   </div>
+                  {entry.highlights && entry.highlights.length > 0 && (
+                    <ul className={styles.highlights}>
+                      {entry.highlights.map((highlight, idx) => (
+                        <li key={idx} className={styles.highlight}>
+                          {highlight}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <div className={styles.entryActions}>
                     <button
                       className={styles.editButton}

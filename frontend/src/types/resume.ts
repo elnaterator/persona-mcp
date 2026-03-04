@@ -31,6 +31,7 @@ export interface Education {
   start_date: string | null
   end_date: string | null
   honors: string | null
+  highlights: string[]
 }
 
 export interface Skill {

@@ -66,6 +66,19 @@
   color: #6b7280;
 }
 
+.highlights {
+  margin: 0.5rem 0 0 1.25rem;
+  padding: 0;
+}
+
+.highlight {
+  margin-bottom: 0.25rem;
+  color: #374151;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 .empty {
   color: #9ca3af;
   font-style: italic;
