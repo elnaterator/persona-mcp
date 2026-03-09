@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import type { ResumeVersionSummary } from '../types/resume'
 import { listResumes, createResume, deleteResume, setDefaultResume } from '../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -6,11 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
 import styles from './ResumeListView.module.css'
 
-interface ResumeListViewProps {
-  onSelectResume: (id: number) => void
-}
-
-export default function ResumeListView({ onSelectResume }: ResumeListViewProps) {
+export default function ResumeListView() {
   const [resumes, setResumes] = useState<ResumeVersionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -45,8 +42,7 @@ export default function ResumeListView({ onSelectResume }: ResumeListViewProps) 
     }
   }
 
-  const handleSetDefault = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleSetDefault = async (id: number) => {
     try {
       await setDefaultResume(id)
       setStatusMessage({ type: 'success', message: 'Default resume updated' })
@@ -56,8 +52,7 @@ export default function ResumeListView({ onSelectResume }: ResumeListViewProps) 
     }
   }
 
-  const handleDeleteClick = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleDeleteClick = (id: number) => {
     setDeleteTarget(id)
   }
 
@@ -106,40 +101,35 @@ export default function ResumeListView({ onSelectResume }: ResumeListViewProps) 
       ) : (
         <ul className={styles.list}>
           {resumes.map((resume) => (
-            <li
-              key={resume.id}
-              className={styles.item}
-              onClick={() => onSelectResume(resume.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && onSelectResume(resume.id)}
-            >
-              <div className={styles.itemMain}>
-                <span className={styles.label}>{resume.label}</span>
-                {resume.is_default && (
-                  <span className={styles.defaultBadge}>Default</span>
-                )}
-              </div>
-              <div className={styles.itemMeta}>
-                <span className={styles.metaItem}>
-                  {resume.app_count} application{resume.app_count !== 1 ? 's' : ''}
-                </span>
-                <span className={styles.metaItem}>
-                  Created {formatDate(resume.created_at)}
-                </span>
-              </div>
+            <li key={resume.id} className={styles.item}>
+              <Link to={`/resumes/${resume.id}`} className={styles.itemLink}>
+                <div className={styles.itemMain}>
+                  <span className={styles.label}>{resume.label}</span>
+                  {resume.is_default && (
+                    <span className={styles.defaultBadge}>Default</span>
+                  )}
+                </div>
+                <div className={styles.itemMeta}>
+                  <span className={styles.metaItem}>
+                    {resume.app_count} application{resume.app_count !== 1 ? 's' : ''}
+                  </span>
+                  <span className={styles.metaItem}>
+                    Created {formatDate(resume.created_at)}
+                  </span>
+                </div>
+              </Link>
               <div className={styles.itemActions}>
                 {!resume.is_default && (
                   <button
                     className={styles.actionButton}
-                    onClick={(e) => handleSetDefault(resume.id, e)}
+                    onClick={() => handleSetDefault(resume.id)}
                   >
                     Set as Default
                   </button>
                 )}
                 <button
                   className={`${styles.actionButton} ${styles.deleteButton}`}
-                  onClick={(e) => handleDeleteClick(resume.id, e)}
+                  onClick={() => handleDeleteClick(resume.id)}
                   disabled={resumes.length === 1}
                   title={resumes.length === 1 ? 'Cannot delete the only version' : undefined}
                 >

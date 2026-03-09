@@ -20,6 +20,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import ConnectView from '../components/ConnectView'
 import Navigation from '../components/Navigation'
 
@@ -338,50 +339,38 @@ describe('ConnectView', () => {
 })
 
 describe('Navigation regression — FR-012', () => {
-  it('Resumes tab button still renders', () => {
-    render(<Navigation activeView="resumes" onNavigate={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /resumes/i })).toBeInTheDocument()
+  it('Resumes tab link still renders', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /resumes/i })).toBeInTheDocument()
   })
 
-  it('Applications tab button still renders', () => {
-    render(<Navigation activeView="applications" onNavigate={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /applications/i })).toBeInTheDocument()
+  it('Applications tab link still renders', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /applications/i })).toBeInTheDocument()
   })
 
-  it('Accomplishments tab button still renders', () => {
-    render(<Navigation activeView="accomplishments" onNavigate={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /accomplishments/i })).toBeInTheDocument()
+  it('Accomplishments tab link still renders', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /accomplishments/i })).toBeInTheDocument()
   })
 
-  it('Connect tab button renders after T011', () => {
-    render(<Navigation activeView="connect" onNavigate={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /connect/i })).toBeInTheDocument()
+  it('Connect tab link renders', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /connect/i })).toBeInTheDocument()
   })
 
-  it('Resumes tab button navigates to resumes view', async () => {
-    const user = userEvent.setup()
-    const onNavigate = vi.fn()
-    render(<Navigation activeView="connect" onNavigate={onNavigate} />)
-
-    await user.click(screen.getByRole('button', { name: /resumes/i }))
-    expect(onNavigate).toHaveBeenCalledWith('resumes')
+  it('Resumes tab link points to /resumes', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /resumes/i })).toHaveAttribute('href', '/resumes')
   })
 
-  it('Applications tab button navigates to applications view', async () => {
-    const user = userEvent.setup()
-    const onNavigate = vi.fn()
-    render(<Navigation activeView="connect" onNavigate={onNavigate} />)
-
-    await user.click(screen.getByRole('button', { name: /applications/i }))
-    expect(onNavigate).toHaveBeenCalledWith('applications')
+  it('Applications tab link points to /applications', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute('href', '/applications')
   })
 
-  it('Accomplishments tab button navigates to accomplishments view', async () => {
-    const user = userEvent.setup()
-    const onNavigate = vi.fn()
-    render(<Navigation activeView="connect" onNavigate={onNavigate} />)
-
-    await user.click(screen.getByRole('button', { name: /accomplishments/i }))
-    expect(onNavigate).toHaveBeenCalledWith('accomplishments')
+  it('Accomplishments tab link points to /accomplishments', () => {
+    render(<MemoryRouter><Navigation /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: /accomplishments/i })).toHaveAttribute('href', '/accomplishments')
   })
 })

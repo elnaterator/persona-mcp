@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router'
 import type { AccomplishmentSummary } from '../types/resume'
 import {
   listAccomplishments,
@@ -6,10 +7,6 @@ import {
   createAccomplishment,
 } from '../services/api'
 import styles from './AccomplishmentListView.module.css'
-
-interface Props {
-  onSelectAccomplishment: (id: number) => void
-}
 
 interface FormState {
   title: string
@@ -31,7 +28,7 @@ const EMPTY_FORM: FormState = {
   tags: '',
 }
 
-export default function AccomplishmentListView({ onSelectAccomplishment }: Props) {
+export default function AccomplishmentListView() {
   const [accomplishments, setAccomplishments] = useState<AccomplishmentSummary[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState('')
@@ -240,24 +237,22 @@ export default function AccomplishmentListView({ onSelectAccomplishment }: Props
       ) : (
         <ul className={styles.list}>
           {accomplishments.map((acc) => (
-            <li
-              key={acc.id}
-              className={styles.item}
-              onClick={() => onSelectAccomplishment(acc.id)}
-            >
-              <div className={styles.itemTitle}>{acc.title}</div>
-              {acc.accomplishment_date && (
-                <div className={styles.itemMeta}>{acc.accomplishment_date}</div>
-              )}
-              {acc.tags.length > 0 && (
-                <div className={styles.itemTags}>
-                  {acc.tags.map((tag) => (
-                    <span key={tag} className={styles.tagBadge}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+            <li key={acc.id} className={styles.item}>
+              <Link to={`/accomplishments/${acc.id}`} className={styles.itemLink}>
+                <div className={styles.itemTitle}>{acc.title}</div>
+                {acc.accomplishment_date && (
+                  <div className={styles.itemMeta}>{acc.accomplishment_date}</div>
+                )}
+                {acc.tags.length > 0 && (
+                  <div className={styles.itemTags}>
+                    {acc.tags.map((tag) => (
+                      <span key={tag} className={styles.tagBadge}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Link>
             </li>
           ))}
         </ul>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
 import type { Application } from '../types/resume'
 import { listApplications, createApplication } from '../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -27,10 +28,6 @@ const STATUS_COLORS: Record<string, string> = {
   Accepted: styles.statusAccepted,
 }
 
-interface ApplicationListViewProps {
-  onSelectApp: (id: number) => void
-}
-
 interface NewAppForm {
   company: string
   position: string
@@ -49,7 +46,8 @@ const emptyForm: NewAppForm = {
   description: '',
 }
 
-export default function ApplicationListView({ onSelectApp }: ApplicationListViewProps) {
+export default function ApplicationListView() {
+  const navigate = useNavigate()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
@@ -92,7 +90,7 @@ export default function ApplicationListView({ onSelectApp }: ApplicationListView
       setShowNewForm(false)
       setNewForm(emptyForm)
       setStatusMessage({ type: 'success', message: 'Application created' })
-      onSelectApp(created.id)
+      navigate(`/applications/${created.id}`)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to create application' })
     } finally {
@@ -234,37 +232,31 @@ export default function ApplicationListView({ onSelectApp }: ApplicationListView
       ) : (
         <ul className={styles.list}>
           {applications.map((app) => (
-            <li
-              key={app.id}
-              className={styles.item}
-              onClick={() => onSelectApp(app.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && onSelectApp(app.id)}
-            >
-              <div className={styles.itemHeader}>
-                <div className={styles.itemTitle}>
-                  <span className={styles.position}>{app.position}</span>
-                  <span className={styles.company}>{app.company}</span>
+            <li key={app.id} className={styles.item}>
+              <Link to={`/applications/${app.id}`} className={styles.itemLink}>
+                <div className={styles.itemHeader}>
+                  <div className={styles.itemTitle}>
+                    <span className={styles.position}>{app.position}</span>
+                    <span className={styles.company}>{app.company}</span>
+                  </div>
+                  <span className={`${styles.statusBadge} ${STATUS_COLORS[app.status] || ''}`}>
+                    {app.status}
+                  </span>
                 </div>
-                <span className={`${styles.statusBadge} ${STATUS_COLORS[app.status] || ''}`}>
-                  {app.status}
-                </span>
-              </div>
-              <div className={styles.itemMeta}>
-                <span className={styles.metaDate}>Updated {formatDate(app.updated_at)}</span>
-                {app.url && (
-                  <a
-                    href={app.url}
-                    className={styles.metaLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Job posting
-                  </a>
-                )}
-              </div>
+                <div className={styles.itemMeta}>
+                  <span className={styles.metaDate}>Updated {formatDate(app.updated_at)}</span>
+                </div>
+              </Link>
+              {app.url && (
+                <a
+                  href={app.url}
+                  className={styles.metaLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Job posting
+                </a>
+              )}
             </li>
           ))}
         </ul>

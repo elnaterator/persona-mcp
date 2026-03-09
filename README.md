@@ -8,7 +8,7 @@ A personal data server that helps you manage your resume and job applications, w
 - **Job Application Tracking**: Manage job applications from "Interested" to "Offer".
 - **Resume Versioning**: Maintain multiple resume versions and tailor them for specific jobs.
 - **Connect Tab**: Generate a Clerk API key and get copy-ready configuration commands for Claude Code, Cursor, GitHub Copilot, and Amazon Kiro — connect any AI coding assistant directly to your personal data via MCP.
-- **Web UI**: A clean web interface for managing your data.
+- **Web UI**: A clean web interface for managing your data. Supports deep links and bookmarks — navigate directly to any view via URL (e.g. `/resumes/3`, `/applications/5`). Page refresh always stays on the current view.
 - **REST + MCP APIs**: Access your data programmatically via a REST API or the Model Context Protocol (MCP). The `/mcp` endpoint supports dual authentication: Clerk session JWTs (browser) and Clerk API keys (AI coding assistants).
 - **Docker Support**: Run the entire application with a single command.
 
@@ -66,6 +66,23 @@ make run-local
 ```
 
 ## Usage
+
+### Web UI Routes
+
+The web interface uses client-side routing. All routes require authentication.
+
+| Route | View |
+|-------|------|
+| `/` | Redirects to `/resumes` |
+| `/resumes` | Resume versions list |
+| `/resumes/:id` | Resume detail (deep-linkable) |
+| `/applications` | Job applications list |
+| `/applications/:id` | Application detail (deep-linkable) |
+| `/accomplishments` | Accomplishments list |
+| `/accomplishments/:id` | Accomplishment detail (deep-linkable) |
+| `/connect` | MCP connection instructions |
+
+Deep links and bookmarks work from any environment. The server serves the application for all non-API paths, so page refresh always returns to the current view.
 
 ### REST API Endpoints
 

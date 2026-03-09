@@ -1,47 +1,54 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import Navigation from '../../components/Navigation'
 
+function renderNav(initialPath = '/resumes') {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Navigation />
+    </MemoryRouter>
+  )
+}
+
 describe('Navigation', () => {
-  it('renders Resumes and Applications tabs', () => {
-    render(<Navigation activeView="resumes" onNavigate={vi.fn()} />)
-
-    expect(screen.getByRole('button', { name: /resumes/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /applications/i })).toBeInTheDocument()
+  it('renders all nav items', () => {
+    renderNav()
+    expect(screen.getByRole('link', { name: /resumes/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /applications/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /accomplishments/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /connect/i })).toBeInTheDocument()
   })
 
-  it('marks resumes tab as active when activeView is resumes', () => {
-    render(<Navigation activeView="resumes" onNavigate={vi.fn()} />)
-
-    const resumesBtn = screen.getByRole('button', { name: /resumes/i })
-    expect(resumesBtn).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: /applications/i })).not.toHaveAttribute('aria-current')
+  it('links to correct paths', () => {
+    renderNav()
+    expect(screen.getByRole('link', { name: /resumes/i })).toHaveAttribute('href', '/resumes')
+    expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute('href', '/applications')
+    expect(screen.getByRole('link', { name: /accomplishments/i })).toHaveAttribute('href', '/accomplishments')
+    expect(screen.getByRole('link', { name: /connect/i })).toHaveAttribute('href', '/connect')
   })
 
-  it('marks applications tab as active when activeView is applications', () => {
-    render(<Navigation activeView="applications" onNavigate={vi.fn()} />)
-
-    const appsBtn = screen.getByRole('button', { name: /applications/i })
-    expect(appsBtn).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: /resumes/i })).not.toHaveAttribute('aria-current')
+  it('marks resumes link as active when on /resumes', () => {
+    renderNav('/resumes')
+    const resumesLink = screen.getByRole('link', { name: /resumes/i })
+    expect(resumesLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('calls onNavigate with resumes when Resumes tab is clicked', async () => {
-    const user = userEvent.setup()
-    const onNavigate = vi.fn()
-    render(<Navigation activeView="applications" onNavigate={onNavigate} />)
-
-    await user.click(screen.getByRole('button', { name: /resumes/i }))
-    expect(onNavigate).toHaveBeenCalledWith('resumes')
+  it('marks applications link as active when on /applications', () => {
+    renderNav('/applications')
+    const appsLink = screen.getByRole('link', { name: /applications/i })
+    expect(appsLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('calls onNavigate with applications when Applications tab is clicked', async () => {
-    const user = userEvent.setup()
-    const onNavigate = vi.fn()
-    render(<Navigation activeView="resumes" onNavigate={onNavigate} />)
+  it('marks accomplishments link as active when on /accomplishments/1 (prefix match)', () => {
+    renderNav('/accomplishments/1')
+    const accLink = screen.getByRole('link', { name: /accomplishments/i })
+    expect(accLink).toHaveAttribute('aria-current', 'page')
+  })
 
-    await user.click(screen.getByRole('button', { name: /applications/i }))
-    expect(onNavigate).toHaveBeenCalledWith('applications')
+  it('does not mark resumes as active when on /applications', () => {
+    renderNav('/applications')
+    const resumesLink = screen.getByRole('link', { name: /resumes/i })
+    expect(resumesLink).not.toHaveAttribute('aria-current', 'page')
   })
 })

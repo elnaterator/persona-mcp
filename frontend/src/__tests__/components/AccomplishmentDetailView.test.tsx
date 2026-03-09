@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import AccomplishmentDetailView from '../../components/AccomplishmentDetailView'
 import * as api from '../../services/api'
 import type { Accomplishment } from '../../types/resume'
@@ -20,6 +21,17 @@ const mockAccomplishment: Accomplishment = {
   updated_at: '2024-03-15T00:00:00Z',
 }
 
+function renderView(id = '1') {
+  return render(
+    <MemoryRouter initialEntries={[`/accomplishments/${id}`]}>
+      <Routes>
+        <Route path="/accomplishments/:id" element={<AccomplishmentDetailView />} />
+        <Route path="/accomplishments" element={<div data-testid="acc-list">list</div>} />
+      </Routes>
+    </MemoryRouter>
+  )
+}
+
 describe('AccomplishmentDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -27,14 +39,10 @@ describe('AccomplishmentDetailView', () => {
 
   it('renders all four STAR sections with their labels', async () => {
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
-    // All four STAR section labels must be visible
     expect(screen.getByText(/Situation/i)).toBeInTheDocument()
     expect(screen.getByText(/Task/i)).toBeInTheDocument()
     expect(screen.getByText(/Action/i)).toBeInTheDocument()
@@ -43,9 +51,7 @@ describe('AccomplishmentDetailView', () => {
 
   it('shows STAR content', async () => {
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByText('Monolith caused 4-hour deploys.')).toBeInTheDocument()
     })
@@ -58,23 +64,17 @@ describe('AccomplishmentDetailView', () => {
       situation: '',
       task: '',
     })
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
-    // Situation and Task sections are still rendered (with placeholder)
     expect(screen.getByText(/Situation/i)).toBeInTheDocument()
     expect(screen.getByText(/Task/i)).toBeInTheDocument()
   })
 
   it('shows accomplishment date and tags', async () => {
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByText(/2024-03-15/)).toBeInTheDocument()
     })
@@ -82,34 +82,24 @@ describe('AccomplishmentDetailView', () => {
     expect(screen.getByText(/technical/i)).toBeInTheDocument()
   })
 
-  it('calls onBack when back button is clicked', async () => {
-    const user = userEvent.setup()
-    const onBack = vi.fn()
+  it('renders a back link to /accomplishments', async () => {
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={onBack} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
-    await user.click(screen.getByRole('button', { name: /Back/i }))
-    expect(onBack).toHaveBeenCalled()
+    const backLink = screen.getByRole('link', { name: /^Back$/i })
+    expect(backLink).toHaveAttribute('href', '/accomplishments')
   })
 
   it('edit button switches to edit mode with pre-populated fields', async () => {
     const user = userEvent.setup()
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
     await user.click(screen.getByRole('button', { name: /Edit/i }))
-
-    // Edit form should appear with pre-populated title
     const titleInput = screen.getByDisplayValue('Led platform migration')
     expect(titleInput).toBeInTheDocument()
   })
@@ -117,17 +107,12 @@ describe('AccomplishmentDetailView', () => {
   it('cancel reverts to view mode without saving', async () => {
     const user = userEvent.setup()
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
     await user.click(screen.getByRole('button', { name: /Edit/i }))
     await user.click(screen.getByRole('button', { name: /Cancel/i }))
-
-    // Back in view mode
     expect(screen.queryByDisplayValue('Led platform migration')).not.toBeInTheDocument()
     expect(api.updateAccomplishment).not.toHaveBeenCalled()
   })
@@ -139,21 +124,15 @@ describe('AccomplishmentDetailView', () => {
       ...mockAccomplishment,
       result: 'Updated result with metrics.',
     })
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
     await user.click(screen.getByRole('button', { name: /Edit/i }))
-
     const resultField = screen.getByDisplayValue('Reduced deploy time by 80%.')
     await user.clear(resultField)
     await user.type(resultField, 'Updated result with metrics.')
-
     await user.click(screen.getByRole('button', { name: /Save/i }))
-
     await waitFor(() => {
       expect(api.updateAccomplishment).toHaveBeenCalledWith(
         1,
@@ -162,31 +141,38 @@ describe('AccomplishmentDetailView', () => {
     })
   })
 
-  it('delete button with confirmation calls deleteAccomplishment and onBack', async () => {
+  it('delete button with confirmation navigates to /accomplishments', async () => {
     const user = userEvent.setup()
-    const onBack = vi.fn()
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
     vi.mocked(api.deleteAccomplishment).mockResolvedValue({ message: 'Deleted' })
-
-    render(<AccomplishmentDetailView accomplishmentId={1} onBack={onBack} />)
-
+    renderView()
     await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
     })
-
     await user.click(screen.getByRole('button', { name: /Delete/i }))
-
-    // Confirmation should appear
     await waitFor(() => {
       expect(screen.getByText(/Are you sure/i)).toBeInTheDocument()
     })
-
-    // Confirm deletion
     await user.click(screen.getByRole('button', { name: /Confirm|Yes/i }))
-
     await waitFor(() => {
       expect(api.deleteAccomplishment).toHaveBeenCalledWith(1)
-      expect(onBack).toHaveBeenCalled()
+      expect(screen.getByTestId('acc-list')).toBeInTheDocument()
+    })
+  })
+
+  it('redirects to /accomplishments for non-numeric ID', async () => {
+    vi.mocked(api.listAccomplishments).mockResolvedValue([])
+    vi.mocked(api.listAccomplishmentTags).mockResolvedValue([])
+    render(
+      <MemoryRouter initialEntries={['/accomplishments/abc']}>
+        <Routes>
+          <Route path="/accomplishments/:id" element={<AccomplishmentDetailView />} />
+          <Route path="/accomplishments" element={<div data-testid="acc-list">list</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('acc-list')).toBeInTheDocument()
     })
   })
 })

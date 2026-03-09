@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router'
 import type { Application, ResumeVersionSummary } from '../types/resume'
 import {
   getApplication,
@@ -8,6 +9,8 @@ import {
 } from '../services/api'
 import ContactsPanel from './ContactsPanel'
 import CommunicationsPanel from './CommunicationsPanel'
+import Breadcrumb from './Breadcrumb'
+import NotFound from './NotFound'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -24,48 +27,59 @@ const ALL_STATUSES = [
   'Accepted',
 ]
 
-interface ApplicationDetailViewProps {
-  appId: number
-  onBack: () => void
-}
+export default function ApplicationDetailView() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
-export default function ApplicationDetailView({ appId, onBack }: ApplicationDetailViewProps) {
+  const numericId = id && /^\d+$/.test(id) ? Number(id) : null
+
   const [app, setApp] = useState<Application | null>(null)
   const [resumeVersions, setResumeVersions] = useState<ResumeVersionSummary[]>([])
+  const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  // Editable form state mirrors the app fields
   const [form, setForm] = useState<Partial<Application>>({})
 
+  useEffect(() => {
+    if (numericId === null) {
+      navigate('/applications', { replace: true })
+    }
+  }, [numericId, navigate])
+
   const load = useCallback(async () => {
+    if (numericId === null) return
     try {
       setLoading(true)
       const [appData, versions] = await Promise.all([
-        getApplication(appId),
+        getApplication(numericId),
         listResumes(),
       ])
       setApp(appData)
       setForm(appData)
       setResumeVersions(versions)
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to load application' })
+    } catch (err: unknown) {
+      if ((err as { status?: number })?.status === 404) {
+        setNotFound(true)
+      } else {
+        setStatusMessage({ type: 'error', message: 'Failed to load application' })
+      }
     } finally {
       setLoading(false)
     }
-  }, [appId])
+  }, [numericId])
 
   useEffect(() => {
     load()
   }, [load])
 
   const handleSave = async () => {
-    if (!form.company?.trim() || !form.position?.trim()) return
+    if (!form.company?.trim() || !form.position?.trim() || numericId === null) return
     try {
       setSaving(true)
-      const updated = await updateApplication(appId, {
+      const updated = await updateApplication(numericId, {
         company: form.company?.trim(),
         position: form.position?.trim(),
         status: form.status,
@@ -85,9 +99,10 @@ export default function ApplicationDetailView({ appId, onBack }: ApplicationDeta
   }
 
   const handleDelete = async () => {
+    if (numericId === null) return
     try {
-      await deleteApplication(appId)
-      onBack()
+      await deleteApplication(numericId)
+      navigate('/applications')
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to delete application' })
       setShowDeleteConfirm(false)
@@ -100,17 +115,26 @@ export default function ApplicationDetailView({ appId, onBack }: ApplicationDeta
       setForm((prev) => ({ ...prev, [field]: value }))
     }
 
+  if (numericId === null) return null
   if (loading) return <LoadingSpinner />
+  if (notFound) return <NotFound entityName="Application" backTo="/applications" backLabel="Back to Applications" />
   if (!app) return null
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(app)
 
   return (
     <div className={styles.container} data-testid="application-detail-view">
+      <Breadcrumb
+        items={[
+          { label: 'Applications', to: '/applications' },
+          { label: `${app.company} — ${app.position}` },
+        ]}
+      />
+
       <div className={styles.topBar}>
-        <button className={styles.backButton} onClick={onBack}>
+        <Link to="/applications" className={styles.backButton}>
           Back to list
-        </button>
+        </Link>
         <button
           className={styles.deleteButton}
           onClick={() => setShowDeleteConfirm(true)}
@@ -238,8 +262,8 @@ export default function ApplicationDetailView({ appId, onBack }: ApplicationDeta
       </div>
 
       <div className={styles.panels}>
-        <ContactsPanel appId={appId} />
-        <CommunicationsPanel appId={appId} />
+        <ContactsPanel appId={numericId} />
+        <CommunicationsPanel appId={numericId} />
       </div>
 
       {showDeleteConfirm && (

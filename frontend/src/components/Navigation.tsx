@@ -1,43 +1,25 @@
+import { NavLink } from 'react-router'
 import styles from './Navigation.module.css'
 
-type NavSection = 'resumes' | 'applications' | 'accomplishments' | 'connect'
-
-interface NavigationProps {
-  activeView: NavSection
-  onNavigate: (view: NavSection) => void
+function navClass({ isActive }: { isActive: boolean }) {
+  return `${styles.navItem}${isActive ? ` ${styles.active}` : ''}`
 }
 
-export default function Navigation({ activeView, onNavigate }: NavigationProps) {
+export default function Navigation() {
   return (
     <nav className={styles.nav} aria-label="Main navigation">
-      <button
-        className={`${styles.navItem} ${activeView === 'resumes' ? styles.active : ''}`}
-        onClick={() => onNavigate('resumes')}
-        aria-current={activeView === 'resumes' ? 'page' : undefined}
-      >
+      <NavLink to="/resumes" className={navClass} end={false}>
         Resumes
-      </button>
-      <button
-        className={`${styles.navItem} ${activeView === 'applications' ? styles.active : ''}`}
-        onClick={() => onNavigate('applications')}
-        aria-current={activeView === 'applications' ? 'page' : undefined}
-      >
+      </NavLink>
+      <NavLink to="/applications" className={navClass} end={false}>
         Applications
-      </button>
-      <button
-        className={`${styles.navItem} ${activeView === 'accomplishments' ? styles.active : ''}`}
-        onClick={() => onNavigate('accomplishments')}
-        aria-current={activeView === 'accomplishments' ? 'page' : undefined}
-      >
+      </NavLink>
+      <NavLink to="/accomplishments" className={navClass} end={false}>
         Accomplishments
-      </button>
-      <button
-        className={`${styles.navItem} ${activeView === 'connect' ? styles.active : ''}`}
-        onClick={() => onNavigate('connect')}
-        aria-current={activeView === 'connect' ? 'page' : undefined}
-      >
+      </NavLink>
+      <NavLink to="/connect" className={navClass}>
         Connect
-      </button>
+      </NavLink>
     </nav>
   )
 }
