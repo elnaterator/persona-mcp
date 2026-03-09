@@ -36,6 +36,7 @@ export default function ApplicationDetailView() {
   const [app, setApp] = useState<Application | null>(null)
   const [resumeVersions, setResumeVersions] = useState<ResumeVersionSummary[]>([])
   const [notFound, setNotFound] = useState(false)
+  const [forbidden, setForbidden] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -61,8 +62,11 @@ export default function ApplicationDetailView() {
       setForm(appData)
       setResumeVersions(versions)
     } catch (err: unknown) {
-      if ((err as { status?: number })?.status === 404) {
+      const status = (err as { status?: number })?.status
+      if (status === 404) {
         setNotFound(true)
+      } else if (status === 403) {
+        setForbidden(true)
       } else {
         setStatusMessage({ type: 'error', message: 'Failed to load application' })
       }
@@ -118,6 +122,7 @@ export default function ApplicationDetailView() {
   if (numericId === null) return null
   if (loading) return <LoadingSpinner />
   if (notFound) return <NotFound entityName="Application" backTo="/applications" backLabel="Back to Applications" />
+  if (forbidden) return <NotFound entityName="Application" backTo="/applications" backLabel="Back to Applications" heading="This application isn't yours" message="This application belongs to another account and cannot be accessed." />
   if (!app) return null
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(app)

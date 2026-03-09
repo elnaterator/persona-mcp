@@ -14,6 +14,7 @@ export default function AccomplishmentDetailView() {
 
   const [acc, setAcc] = useState<Accomplishment | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [forbidden, setForbidden] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Accomplishment>>({})
   const [editError, setEditError] = useState('')
@@ -27,14 +28,18 @@ export default function AccomplishmentDetailView() {
       return
     }
     getAccomplishment(numericId).then(setAcc).catch((err: unknown) => {
-      if ((err as { status?: number })?.status === 404) {
+      const status = (err as { status?: number })?.status
+      if (status === 404) {
         setNotFound(true)
+      } else if (status === 403) {
+        setForbidden(true)
       }
     })
   }, [numericId, navigate])
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Accomplishment" backTo="/accomplishments" backLabel="Back to Accomplishments" />
+  if (forbidden) return <NotFound entityName="Accomplishment" backTo="/accomplishments" backLabel="Back to Accomplishments" heading="This accomplishment isn't yours" message="This accomplishment belongs to another account and cannot be accessed." />
   if (!acc) {
     return <div>Loading…</div>
   }
