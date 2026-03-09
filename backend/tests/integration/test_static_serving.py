@@ -133,12 +133,16 @@ class TestStaticFileServing:
         response = client.get("/")
         assert response.status_code == 404
 
-    def test_nonexistent_static_file_returns_404(self, app_with_frontend):
-        """Test that requesting non-existent static file returns 404."""
+    def test_spa_route_serves_index_html(self, app_with_frontend):
+        """SPA fallback: unknown paths serve index.html for client-side routing."""
         client = TestClient(app_with_frontend)
-        response = client.get("/nonexistent.js")
 
-        assert response.status_code == 404
+        for path in ["/resumes", "/resumes/3", "/applications/5", "/connect"]:
+            response = client.get(path)
+            assert response.status_code == 200, f"Expected 200 for {path}"
+            ct = response.headers["content-type"]
+            assert "text/html" in ct, f"Expected HTML for {path}"
+            assert "Test Frontend" in response.text, f"Expected index.html for {path}"
 
     def test_api_routes_have_priority_over_static_files(
         self, app_with_frontend, temp_frontend_dir
