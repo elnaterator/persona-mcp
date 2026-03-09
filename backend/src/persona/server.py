@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from psycopg_pool import ConnectionPool
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 from starlette.responses import JSONResponse
@@ -39,6 +40,27 @@ from persona.tools.application_tools import register_application_tools
 from persona.tools.resume_tools import register_resume_tools
 
 logger = logging.getLogger("persona")
+
+
+class SPAStaticFiles(StaticFiles):
+    """StaticFiles subclass that falls back to index.html for unknown paths.
+
+    Enables client-side routing (React Router) to handle routes like
+    /resumes/3 when accessed directly or on page refresh, instead of
+    returning a 404 from the server.
+
+    API routes and MCP routes are registered before this mount and take
+    priority, so /api/*, /health, and /mcp/* are never intercepted.
+    """
+
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404:
+                return await super().get_response("index.html", scope)
+            raise
+
 
 mcp = FastMCP("persona")
 
@@ -272,7 +294,7 @@ def create_app(
     if frontend_dir is not None:
         app.mount(
             "/",
-            StaticFiles(directory=str(frontend_dir), html=True),
+            SPAStaticFiles(directory=str(frontend_dir), html=True),
             name="frontend",
         )
 
