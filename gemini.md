@@ -93,6 +93,8 @@ specs/                    # Feature specifications
 - Remote state in S3 + DynamoDB (bootstrapped manually); app uses Neon PostgreSQL (connection config via SSM) (010-aws-infra)
 - Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, `clerk-backend-api ≥1.0.0` (new — Python SDK for dual auth), `@clerk/clerk-react` v5+ (existing), `python-jose[cryptography]` (existing — retained for REST API JWT path) (011-mcp-instructions)
 - PostgreSQL 16+ (no schema changes required) (011-mcp-instructions)
+- TypeScript 5.6 / React 18 + React Router v7 (new), `@clerk/clerk-react` v5 (existing) (012-client-side-routing)
+- N/A (no storage changes) (012-client-side-routing)
 
 ### Backend
 - Python 3.11+ with type hints and Pydantic validation

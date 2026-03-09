@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import AccomplishmentListView from '../../components/AccomplishmentListView'
 import * as api from '../../services/api'
 import type { AccomplishmentSummary } from '../../types/resume'
@@ -26,6 +27,14 @@ const mockSummaries: AccomplishmentSummary[] = [
   },
 ]
 
+function renderView() {
+  return render(
+    <MemoryRouter>
+      <AccomplishmentListView />
+    </MemoryRouter>
+  )
+}
+
 describe('AccomplishmentListView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -34,9 +43,7 @@ describe('AccomplishmentListView', () => {
   it('renders accomplishments after loading', async () => {
     vi.mocked(api.listAccomplishments).mockResolvedValue(mockSummaries)
     vi.mocked(api.listAccomplishmentTags).mockResolvedValue(['leadership', 'technical'])
-
-    render(<AccomplishmentListView onSelectAccomplishment={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByText('Led platform migration')).toBeInTheDocument()
     })
@@ -46,28 +53,35 @@ describe('AccomplishmentListView', () => {
   it('shows empty state when no accomplishments', async () => {
     vi.mocked(api.listAccomplishments).mockResolvedValue([])
     vi.mocked(api.listAccomplishmentTags).mockResolvedValue([])
-
-    render(<AccomplishmentListView onSelectAccomplishment={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.queryByText('Led platform migration')).not.toBeInTheDocument()
     })
+  })
+
+  it('renders each accomplishment as a link to its detail page', async () => {
+    vi.mocked(api.listAccomplishments).mockResolvedValue(mockSummaries)
+    vi.mocked(api.listAccomplishmentTags).mockResolvedValue(['leadership', 'technical'])
+    renderView()
+    await waitFor(() => {
+      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
+    })
+    const links = screen.getAllByRole('link')
+    const accLinks = links.filter((l) => l.getAttribute('href')?.startsWith('/accomplishments/'))
+    expect(accLinks.length).toBe(2)
+    expect(accLinks[0]).toHaveAttribute('href', '/accomplishments/1')
+    expect(accLinks[1]).toHaveAttribute('href', '/accomplishments/2')
   })
 
   it('has New Accomplishment button that reveals create form', async () => {
     const user = userEvent.setup()
     vi.mocked(api.listAccomplishments).mockResolvedValue([])
     vi.mocked(api.listAccomplishmentTags).mockResolvedValue([])
-
-    render(<AccomplishmentListView onSelectAccomplishment={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /New Accomplishment/i })).toBeInTheDocument()
     })
-
     await user.click(screen.getByRole('button', { name: /New Accomplishment/i }))
-
-    // Form should appear
     expect(screen.getByLabelText(/Title/i)).toBeInTheDocument()
   })
 
@@ -75,14 +89,11 @@ describe('AccomplishmentListView', () => {
     const user = userEvent.setup()
     vi.mocked(api.listAccomplishments).mockResolvedValue([])
     vi.mocked(api.listAccomplishmentTags).mockResolvedValue([])
-
-    render(<AccomplishmentListView onSelectAccomplishment={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /New Accomplishment/i })).toBeInTheDocument()
     })
     await user.click(screen.getByRole('button', { name: /New Accomplishment/i }))
-
     expect(screen.getByLabelText(/Title/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Situation/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Task/i)).toBeInTheDocument()
@@ -94,17 +105,13 @@ describe('AccomplishmentListView', () => {
     const user = userEvent.setup()
     vi.mocked(api.listAccomplishments).mockResolvedValue([])
     vi.mocked(api.listAccomplishmentTags).mockResolvedValue([])
-
-    render(<AccomplishmentListView onSelectAccomplishment={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /New Accomplishment/i })).toBeInTheDocument()
     })
     await user.click(screen.getByRole('button', { name: /New Accomplishment/i }))
-
     const saveButton = screen.getByRole('button', { name: /Save/i })
     await user.click(saveButton)
-
     expect(screen.getByText(/[Tt]itle.*required|required.*[Tt]itle/i)).toBeInTheDocument()
   })
 
@@ -124,38 +131,17 @@ describe('AccomplishmentListView', () => {
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
     })
-
-    render(<AccomplishmentListView onSelectAccomplishment={vi.fn()} />)
-
+    renderView()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /New Accomplishment/i })).toBeInTheDocument()
     })
     await user.click(screen.getByRole('button', { name: /New Accomplishment/i }))
-
     await user.type(screen.getByLabelText(/Title/i), 'New acc')
     await user.click(screen.getByRole('button', { name: /Save/i }))
-
     await waitFor(() => {
       expect(api.createAccomplishment).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'New acc' })
       )
     })
-  })
-
-  it('calls onSelectAccomplishment when a list item is clicked', async () => {
-    const user = userEvent.setup()
-    const onSelect = vi.fn()
-    vi.mocked(api.listAccomplishments).mockResolvedValue(mockSummaries)
-    vi.mocked(api.listAccomplishmentTags).mockResolvedValue(['leadership'])
-
-    render(<AccomplishmentListView onSelectAccomplishment={onSelect} />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Led platform migration')).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByText('Led platform migration'))
-
-    expect(onSelect).toHaveBeenCalledWith(1)
   })
 })

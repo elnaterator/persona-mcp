@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
+import { useParams, useNavigate, Link } from 'react-router'
 import type { Accomplishment } from '../types/resume'
 import { getAccomplishment, updateAccomplishment, deleteAccomplishment } from '../services/api'
+import Breadcrumb from './Breadcrumb'
+import NotFound from './NotFound'
 import styles from './AccomplishmentDetailView.module.css'
 
-interface Props {
-  accomplishmentId: number
-  onBack: () => void
-}
+export default function AccomplishmentDetailView() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
-export default function AccomplishmentDetailView({ accomplishmentId, onBack }: Props) {
+  const numericId = id && /^\d+$/.test(id) ? Number(id) : null
+
   const [acc, setAcc] = useState<Accomplishment | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Accomplishment>>({})
   const [editError, setEditError] = useState('')
@@ -18,9 +22,19 @@ export default function AccomplishmentDetailView({ accomplishmentId, onBack }: P
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    getAccomplishment(accomplishmentId).then(setAcc)
-  }, [accomplishmentId])
+    if (numericId === null) {
+      navigate('/accomplishments', { replace: true })
+      return
+    }
+    getAccomplishment(numericId).then(setAcc).catch((err: unknown) => {
+      if ((err as { status?: number })?.status === 404) {
+        setNotFound(true)
+      }
+    })
+  }, [numericId, navigate])
 
+  if (numericId === null) return null
+  if (notFound) return <NotFound entityName="Accomplishment" backTo="/accomplishments" backLabel="Back to Accomplishments" />
   if (!acc) {
     return <div>Loading…</div>
   }
@@ -51,7 +65,7 @@ export default function AccomplishmentDetailView({ accomplishmentId, onBack }: P
     setSaving(true)
     setEditError('')
     try {
-      const updated = await updateAccomplishment(accomplishmentId, {
+      const updated = await updateAccomplishment(numericId, {
         ...editForm,
         accomplishment_date: editForm.accomplishment_date || null,
         tags: editForm.tags as string[],
@@ -68,8 +82,8 @@ export default function AccomplishmentDetailView({ accomplishmentId, onBack }: P
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      await deleteAccomplishment(accomplishmentId)
-      onBack()
+      await deleteAccomplishment(numericId)
+      navigate('/accomplishments')
     } catch {
       setDeleting(false)
       setConfirmDelete(false)
@@ -164,10 +178,17 @@ export default function AccomplishmentDetailView({ accomplishmentId, onBack }: P
 
   return (
     <div className={styles.container}>
+      <Breadcrumb
+        items={[
+          { label: 'Accomplishments', to: '/accomplishments' },
+          { label: acc.title },
+        ]}
+      />
+
       <div className={styles.topBar}>
-        <button className={styles.backButton} onClick={onBack}>
+        <Link to="/accomplishments" className={styles.backButton}>
           Back
-        </button>
+        </Link>
         <h2 className={styles.topBarTitle}>{acc.title}</h2>
         <div className={styles.topBarActions}>
           <button className={styles.editButton} onClick={startEdit}>

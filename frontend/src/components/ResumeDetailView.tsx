@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router'
 import type { ResumeVersion } from '../types/resume'
 import { getResumeVersion, updateResumeLabel } from '../services/api'
 import ContactSection from './ContactSection'
@@ -6,43 +7,57 @@ import SummarySection from './SummarySection'
 import ExperienceSection from './ExperienceSection'
 import EducationSection from './EducationSection'
 import SkillsSection from './SkillsSection'
+import Breadcrumb from './Breadcrumb'
+import NotFound from './NotFound'
 import { LoadingSpinner } from './LoadingSpinner'
 import { StatusMessage } from './StatusMessage'
 import styles from './ResumeDetailView.module.css'
 
-interface ResumeDetailViewProps {
-  versionId: number
-  onBack: () => void
-}
+export default function ResumeDetailView() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
-export default function ResumeDetailView({ versionId, onBack }: ResumeDetailViewProps) {
+  const numericId = id && /^\d+$/.test(id) ? Number(id) : null
+
   const [version, setVersion] = useState<ResumeVersion | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelInput, setLabelInput] = useState('')
 
+  useEffect(() => {
+    if (numericId === null) {
+      navigate('/resumes', { replace: true })
+    }
+  }, [numericId, navigate])
+
   const load = useCallback(async () => {
+    if (numericId === null) return
     try {
       setLoading(true)
-      const data = await getResumeVersion(versionId)
+      const data = await getResumeVersion(numericId)
       setVersion(data)
       setLabelInput(data.label)
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to load resume version' })
+    } catch (err: unknown) {
+      if ((err as { status?: number })?.status === 404) {
+        setNotFound(true)
+      } else {
+        setStatusMessage({ type: 'error', message: 'Failed to load resume version' })
+      }
     } finally {
       setLoading(false)
     }
-  }, [versionId])
+  }, [numericId])
 
   useEffect(() => {
     load()
   }, [load])
 
   const handleLabelSave = async () => {
-    if (!labelInput.trim()) return
+    if (!labelInput.trim() || numericId === null) return
     try {
-      const updated = await updateResumeLabel(versionId, labelInput.trim())
+      const updated = await updateResumeLabel(numericId, labelInput.trim())
       setVersion((prev) => prev ? { ...prev, label: updated.label } : prev)
       setEditingLabel(false)
     } catch {
@@ -50,17 +65,26 @@ export default function ResumeDetailView({ versionId, onBack }: ResumeDetailView
     }
   }
 
+  if (numericId === null) return null
   if (loading) return <LoadingSpinner />
+  if (notFound) return <NotFound entityName="Resume" backTo="/resumes" backLabel="Back to Resumes" />
   if (!version) return null
 
   const resume = version.resume_data
 
   return (
     <div className={styles.container} data-testid="resume-detail-view">
+      <Breadcrumb
+        items={[
+          { label: 'Resumes', to: '/resumes' },
+          { label: version.label },
+        ]}
+      />
+
       <div className={styles.topBar}>
-        <button className={styles.backButton} onClick={onBack}>
+        <Link to="/resumes" className={styles.backButton}>
           Back to list
-        </button>
+        </Link>
         {version.is_default && (
           <span className={styles.defaultBadge}>Default</span>
         )}
@@ -108,27 +132,27 @@ export default function ResumeDetailView({ versionId, onBack }: ResumeDetailView
         <ContactSection
           contact={resume.contact}
           onUpdate={load}
-          versionId={versionId}
+          versionId={numericId}
         />
         <SummarySection
           summary={resume.summary}
           onUpdate={load}
-          versionId={versionId}
+          versionId={numericId}
         />
         <ExperienceSection
           experience={resume.experience}
           onUpdate={load}
-          versionId={versionId}
+          versionId={numericId}
         />
         <EducationSection
           education={resume.education}
           onUpdate={load}
-          versionId={versionId}
+          versionId={numericId}
         />
         <SkillsSection
           skills={resume.skills}
           onUpdate={load}
-          versionId={versionId}
+          versionId={numericId}
         />
       </div>
     </div>
