@@ -21,6 +21,7 @@ export default function ResumeDetailView() {
 
   const [version, setVersion] = useState<ResumeVersion | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [forbidden, setForbidden] = useState(false)
   const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [editingLabel, setEditingLabel] = useState(false)
@@ -40,8 +41,11 @@ export default function ResumeDetailView() {
       setVersion(data)
       setLabelInput(data.label)
     } catch (err: unknown) {
-      if ((err as { status?: number })?.status === 404) {
+      const status = (err as { status?: number })?.status
+      if (status === 404) {
         setNotFound(true)
+      } else if (status === 403) {
+        setForbidden(true)
       } else {
         setStatusMessage({ type: 'error', message: 'Failed to load resume version' })
       }
@@ -68,6 +72,7 @@ export default function ResumeDetailView() {
   if (numericId === null) return null
   if (loading) return <LoadingSpinner />
   if (notFound) return <NotFound entityName="Resume" backTo="/resumes" backLabel="Back to Resumes" />
+  if (forbidden) return <NotFound entityName="Resume" backTo="/resumes" backLabel="Back to Resumes" heading="This resume isn't yours" message="This resume belongs to another account and cannot be accessed." />
   if (!version) return null
 
   const resume = version.resume_data
