@@ -136,7 +136,7 @@ LOG_FILE="$CURR_DIR/.claude/logs/job_${TIMESTAMP}.log"
 # build command
 # use explicit login shell invocation to ensure environment and authentication are loaded
 # use full path to claude to avoid PATH issues with at jobs
-BASE_COMMAND="claude --dangerously-skip-permissions -p '$PROMPT'"
+BASE_COMMAND="claude --dangerously-skip-permissions --model sonnet -p '$PROMPT'"
 # wrap entire command in zsh -l invocation for at, with proper escaping
 FULL_COMMAND="zsh -l -c \"$BASE_COMMAND\" >> '$LOG_FILE' 2>&1"
 
