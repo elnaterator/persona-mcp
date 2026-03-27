@@ -5,6 +5,8 @@ import ApplicationListView from './components/ApplicationListView'
 import ApplicationDetailView from './components/ApplicationDetailView'
 import AccomplishmentListView from './components/AccomplishmentListView'
 import AccomplishmentDetailView from './components/AccomplishmentDetailView'
+import NoteListView from './components/NoteListView'
+import NoteDetailView from './components/NoteDetailView'
 import ConnectView from './components/ConnectView'
 
 export default function AppRoutes() {
@@ -17,6 +19,8 @@ export default function AppRoutes() {
       <Route path="/applications/:id" element={<ApplicationDetailView />} />
       <Route path="/accomplishments" element={<AccomplishmentListView />} />
       <Route path="/accomplishments/:id" element={<AccomplishmentDetailView />} />
+      <Route path="/notes" element={<NoteListView />} />
+      <Route path="/notes/:id" element={<NoteDetailView />} />
       <Route path="/connect" element={<ConnectView />} />
       <Route path="*" element={<Navigate to="/resumes" replace />} />
     </Routes>

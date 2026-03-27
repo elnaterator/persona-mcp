@@ -1,0 +1,301 @@
+openapi: 3.0.3
+info:
+  title: Persona — Notes API
+  version: "1.0"
+  description: REST endpoints for managing personal context notes with tagging and search.
+
+tags:
+  - name: notes
+    description: CRUD operations for personal notes
+
+paths:
+
+  /api/notes:
+    get:
+      summary: List notes
+      description: >
+        Returns a list of NoteSummary objects (content omitted for performance).
+        Results are ordered by updated_at DESC (most recently modified first).
+        Supports keyword search (q) and tag filtering (tag).
+      tags: [notes]
+      parameters:
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to notes whose tags array contains this exact tag value (case-insensitive, lowercased before matching).
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Case-insensitive substring search across title and content.
+            Multiple words are split by whitespace; all must match (AND logic).
+      responses:
+        "200":
+          description: List of note summaries (may be empty).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NoteSummary'
+              example:
+                - id: 1
+                  title: "Python async patterns"
+                  tags: ["python", "async"]
+                  created_at: "2026-03-26T10:00:00"
+                  updated_at: "2026-03-26T14:30:00"
+
+    post:
+      summary: Create a note
+      tags: [notes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreate'
+            example:
+              title: "Python async patterns"
+              content: "Key learnings from building async services with asyncio and FastAPI."
+              tags: ["python", "async"]
+      responses:
+        "201":
+          description: Note created. Returns the full record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        "422":
+          description: Validation error (e.g. missing title, title too long, content too long).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+              example:
+                detail: "Title is required and must not be blank"
+
+  /api/notes/tags:
+    get:
+      summary: List all unique note tags
+      description: >
+        Returns a sorted, deduplicated list of all tag strings across all
+        notes for the authenticated user. Used by the UI for tag autocomplete.
+        IMPORTANT: This route must be registered before /api/notes/{id}
+        to prevent FastAPI matching "tags" as an integer path parameter.
+      tags: [notes]
+      responses:
+        "200":
+          description: Sorted unique tag list (may be empty).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example: ["async", "leadership", "python"]
+
+  /api/notes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Note ID.
+
+    get:
+      summary: Get a single note
+      tags: [notes]
+      responses:
+        "200":
+          description: Full note record including content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        "403":
+          description: Access denied (note belongs to another user).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        "404":
+          description: Note not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+    patch:
+      summary: Update a note (partial)
+      description: >
+        Updates only the fields provided in the request body. Omitted fields
+        retain their existing values. To clear content, pass an empty string.
+        To replace tags, pass the full new array.
+      tags: [notes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteUpdate'
+            example:
+              content: "Updated learnings from async service patterns."
+              tags: ["python", "async", "fastapi"]
+      responses:
+        "200":
+          description: Updated note record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        "404":
+          description: Note not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        "422":
+          description: Validation error (e.g. title set to blank, title too long).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+    delete:
+      summary: Delete a note
+      tags: [notes]
+      responses:
+        "200":
+          description: Note deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+              example:
+                message: "Deleted note 'Python async patterns'"
+        "403":
+          description: Access denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        "404":
+          description: Note not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+
+components:
+  schemas:
+
+    Note:
+      type: object
+      required: [id, title, content, tags, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          description: Unique identifier (auto-assigned).
+        title:
+          type: string
+          maxLength: 255
+          description: Short title for the note (required).
+        content:
+          type: string
+          maxLength: 10000
+          description: Note body text. Empty string if not yet filled.
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          description: User-defined categorization tags (lowercased, trimmed).
+        created_at:
+          type: string
+          format: date-time
+          description: UTC datetime of record creation (system-managed).
+        updated_at:
+          type: string
+          format: date-time
+          description: UTC datetime of last modification (system-managed).
+
+    NoteSummary:
+      type: object
+      description: Compact view for list endpoints (content omitted).
+      required: [id, title, tags, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    NoteCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content:
+          type: string
+          maxLength: 10000
+          default: ""
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          default: []
+
+    NoteUpdate:
+      type: object
+      description: All fields are optional. Only provided fields are updated.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content:
+          type: string
+          maxLength: 10000
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+
+    SuccessMessage:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ErrorDetail:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string

@@ -34,9 +34,11 @@ from persona.config import (
 )
 from persona.database import init_pool, upsert_user
 from persona.db import DBConnection
+from persona.note_service import NoteService
 from persona.resume_service import ResumeService
 from persona.tools.accomplishment_tools import register_accomplishment_tools
 from persona.tools.application_tools import register_application_tools
+from persona.tools.note_tools import register_note_tools
 from persona.tools.resume_tools import register_resume_tools
 
 logger = logging.getLogger("persona")
@@ -71,6 +73,7 @@ _conn: DBConnection | None = None
 _service: ResumeService | None = None
 _app_service: ApplicationService | None = None
 _acc_service: AccomplishmentService | None = None
+_note_service: NoteService | None = None
 
 
 def _get_resume_service() -> ResumeService:
@@ -88,6 +91,11 @@ def _get_acc_service() -> AccomplishmentService:
     return _acc_service
 
 
+def _get_note_service() -> NoteService:
+    assert _note_service is not None
+    return _note_service
+
+
 def get_db() -> Generator[DBConnection, None, None]:
     """FastAPI dependency: yields a per-request PostgreSQL connection from the pool."""
     assert _pool is not None, "Database pool not initialized"
@@ -99,6 +107,7 @@ def get_db() -> Generator[DBConnection, None, None]:
 register_resume_tools(mcp, _get_resume_service)
 register_application_tools(mcp, _get_app_service)
 register_accomplishment_tools(mcp, _get_acc_service)
+register_note_tools(mcp, _get_note_service)
 
 
 # --- UserContextMiddleware ---
@@ -213,7 +222,7 @@ def create_app(
         conn: Optional pre-built DBConnection (for testing / MCP globals).
             If service and conn are None, initializes pool from environment config.
     """
-    global _pool, _raw_conn, _conn, _service, _app_service, _acc_service
+    global _pool, _raw_conn, _conn, _service, _app_service, _acc_service, _note_service
 
     # Track production mode before service is overwritten below.
     # Auth is only wired in production (no pre-built service injected).
@@ -234,6 +243,7 @@ def create_app(
     _service = service
     _app_service = ApplicationService(conn) if conn else None
     _acc_service = AccomplishmentService(conn) if conn else None
+    _note_service = NoteService(conn) if conn else None
 
     # Get MCP HTTP app — use path="/mcp" so the Route is registered at /mcp.
     # We add this route directly to FastAPI's router (not via app.mount)
@@ -279,6 +289,7 @@ def create_app(
             service,
             app_service=_app_service,
             acc_service=_acc_service,
+            note_service=_note_service,
             get_current_user=get_user,
         )
     )
@@ -312,7 +323,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.stdio:
-        global _pool, _raw_conn, _conn, _service, _app_service, _acc_service
+        global _pool, _raw_conn, _conn, _service
+        global _app_service, _acc_service, _note_service
         logger = configure_logging()
         _pool = init_pool(resolve_db_url(), resolve_pool_min(), resolve_pool_max())
         raw = _pool.getconn()
@@ -322,6 +334,7 @@ def main() -> None:
         _service = ResumeService(_conn)
         _app_service = ApplicationService(_conn)
         _acc_service = AccomplishmentService(_conn)
+        _note_service = NoteService(_conn)
         logger.info("Persona MCP server starting (stdio, PostgreSQL pool initialized)")
         try:
             mcp.run(transport="stdio")

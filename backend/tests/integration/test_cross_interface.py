@@ -338,3 +338,79 @@ class TestAccomplishmentCrossInterface:
         svc2 = AccomplishmentService(db_conn)  # type: ignore[arg-type]
         recovered = svc2.get_accomplishment(acc_id)
         assert recovered["title"] == "Durability test"
+
+
+# ── Note Cross-Interface Tests ─────────────────────────────────────────────────
+
+
+class TestNoteCrossInterface:
+    """T052 — Cross-interface tests: NoteService ↔ REST API + durability."""
+
+    @pytest.fixture
+    def full_app(self, db_conn_with_data: Any) -> tuple[Any, Any, TestClient]:
+        """Create full app (all services) with test database and HTTP test client."""
+        service = ResumeService(db_conn_with_data)
+        app = create_app(service=service, conn=db_conn_with_data)
+        client = TestClient(app)
+        return app, service, client
+
+    def test_create_via_service_visible_via_rest(
+        self, full_app: tuple[Any, Any, TestClient]
+    ) -> None:
+        """Note created via NoteService visible via REST API."""
+        _app, _service, client = full_app
+        note_svc = persona.server._note_service
+        assert note_svc is not None
+
+        created = note_svc.create_note(
+            {
+                "title": "Cross-interface note",
+                "content": "Test content",
+                "tags": ["test"],
+            }
+        )
+
+        resp = client.get(f"/api/notes/{created['id']}")
+        assert resp.status_code == 200
+        assert resp.json()["title"] == "Cross-interface note"
+        assert resp.json()["content"] == "Test content"
+
+    def test_create_via_rest_visible_via_service(
+        self, full_app: tuple[Any, Any, TestClient]
+    ) -> None:
+        """Note created via REST API visible via NoteService."""
+        _app, _service, client = full_app
+        note_svc = persona.server._note_service
+        assert note_svc is not None
+
+        resp = client.post(
+            "/api/notes",
+            json={"title": "REST note", "content": "From REST", "tags": ["api"]},
+        )
+        assert resp.status_code == 201
+        note_id = resp.json()["id"]
+
+        note = note_svc.get_note(note_id)
+        assert note["title"] == "REST note"
+        assert note["content"] == "From REST"
+
+    def test_global_note_service_shared(
+        self, full_app: tuple[Any, Any, TestClient]
+    ) -> None:
+        """Verify global _note_service used by MCP is the same instance."""
+        _app, _service, client = full_app
+        assert persona.server._note_service is not None
+
+    def test_durability_across_service_instances(
+        self, db_conn: Connection[Any]
+    ) -> None:
+        """Note readable via second service on same connection."""
+        from persona.note_service import NoteService
+
+        svc1 = NoteService(db_conn)  # type: ignore[arg-type]
+        created = svc1.create_note({"title": "Durability note"})
+        note_id = created["id"]
+
+        svc2 = NoteService(db_conn)  # type: ignore[arg-type]
+        recovered = svc2.get_note(note_id)
+        assert recovered["title"] == "Durability note"

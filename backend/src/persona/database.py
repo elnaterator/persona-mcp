@@ -825,6 +825,165 @@ def load_accomplishment_tags(
     return sorted(all_tags)
 
 
+# --- Note operations ---
+
+
+def _row_to_note(row: Any) -> dict[str, Any]:
+    """Full note with content."""
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "title": row["title"],
+        "content": row["content"],
+        "tags": json.loads(row["tags"]),
+        "created_at": _dt(row["created_at"]),
+        "updated_at": _dt(row["updated_at"]),
+    }
+
+
+def _row_to_note_summary(row: Any) -> dict[str, Any]:
+    """Summary for list view (content omitted)."""
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "tags": json.loads(row["tags"]),
+        "created_at": _dt(row["created_at"]),
+        "updated_at": _dt(row["updated_at"]),
+    }
+
+
+def create_note(
+    conn: DBConnection,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Insert a new note row and return it."""
+    effective_uid = user_id or "legacy"
+    row = conn.execute(
+        "INSERT INTO note "
+        "(user_id, title, content, tags) "
+        "VALUES (%s, %s, %s, %s) RETURNING id",
+        (
+            effective_uid,
+            data["title"],
+            data.get("content", ""),
+            json.dumps(data.get("tags", [])),
+        ),
+    ).fetchone()
+    return load_note(conn, row["id"])
+
+
+def load_note(
+    conn: DBConnection,
+    note_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Load a single note by ID. Raises ValueError if not found."""
+    row = conn.execute("SELECT * FROM note WHERE id = %s", (note_id,)).fetchone()
+    if row is None:
+        raise ValueError(f"Note {note_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(f"Note {note_id} belongs to a different user")
+    return _row_to_note(row)
+
+
+def load_notes(
+    conn: DBConnection,
+    tag: str | None = None,
+    q: str | None = None,
+    user_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """List notes as summaries ordered by updated_at DESC."""
+    query = "SELECT id, title, tags, created_at, updated_at FROM note"
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if user_id is not None:
+        conditions.append("user_id = %s")
+        params.append(user_id)
+    if tag:
+        conditions.append("tags ILIKE %s")
+        params.append(f'%"{tag}"%')
+    if q:
+        words = q.strip().split()
+        for word in words:
+            pattern = f"%{word}%"
+            conditions.append("(title ILIKE %s OR content ILIKE %s)")
+            params.extend([pattern, pattern])
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY updated_at DESC"
+
+    rows = conn.execute(query, params).fetchall()
+    return [_row_to_note_summary(row) for row in rows]
+
+
+def update_note(
+    conn: DBConnection,
+    note_id: int,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Patch a note with provided fields. Raises ValueError if not found."""
+    load_note(conn, note_id, user_id=user_id)
+
+    updatable = ("title", "content")
+    sets: list[str] = []
+    params: list[Any] = []
+
+    for field in updatable:
+        if field in data:
+            sets.append(f"{field} = %s")
+            params.append(data[field])
+
+    if "tags" in data:
+        sets.append("tags = %s")
+        params.append(json.dumps(data["tags"]))
+
+    if not sets:
+        return load_note(conn, note_id)
+
+    sets.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(note_id)
+
+    conn.execute(
+        f"UPDATE note SET {', '.join(sets)} WHERE id = %s",
+        params,
+    )
+    return load_note(conn, note_id)
+
+
+def delete_note(
+    conn: DBConnection,
+    note_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Delete a note. Returns the deleted row. ValueError if not found."""
+    note = load_note(conn, note_id, user_id=user_id)
+    conn.execute("DELETE FROM note WHERE id = %s", (note_id,))
+    return note
+
+
+def load_note_tags(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[str]:
+    """Return a sorted unique list of all tags across all notes."""
+    if user_id is not None:
+        rows = conn.execute(
+            "SELECT tags FROM note WHERE user_id = %s", (user_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT tags FROM note").fetchall()
+    all_tags: set[str] = set()
+    for row in rows:
+        tags = json.loads(row["tags"])
+        all_tags.update(tags)
+    return sorted(all_tags)
+
+
 def delete_communication(conn: DBConnection, comm_id: int) -> str:
     """Delete a communication. Returns its subject."""
     row = conn.execute(

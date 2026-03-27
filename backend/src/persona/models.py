@@ -174,6 +174,27 @@ class AccomplishmentSummary(BaseModel):
     updated_at: str = ""
 
 
+class Note(BaseModel):
+    """A personal context note."""
+
+    id: int
+    title: str
+    content: str = ""
+    tags: list[str] = []
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class NoteSummary(BaseModel):
+    """Note summary for list views (content omitted)."""
+
+    id: int
+    title: str
+    tags: list[str] = []
+    created_at: str = ""
+    updated_at: str = ""
+
+
 class Communication(BaseModel):
     """A communication entry for a job application."""
 

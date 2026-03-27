@@ -17,6 +17,9 @@ export default function Navigation() {
       <NavLink to="/accomplishments" className={navClass} end={false}>
         Accomplishments
       </NavLink>
+      <NavLink to="/notes" className={navClass} end={false}>
+        Notes
+      </NavLink>
       <NavLink to="/connect" className={navClass}>
         Connect
       </NavLink>
