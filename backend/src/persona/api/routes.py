@@ -9,6 +9,7 @@ from persona.accomplishment_service import AccomplishmentService
 from persona.application_service import ApplicationService
 from persona.auth import UserContext
 from persona.models import Resume
+from persona.note_service import NoteService
 from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
 
 
@@ -32,6 +33,7 @@ def create_router(
     service: ResumeService,
     app_service: ApplicationService | None = None,
     acc_service: AccomplishmentService | None = None,
+    note_service: NoteService | None = None,
     get_current_user: Callable | None = None,
 ) -> APIRouter:
     """Create an APIRouter with all endpoints.
@@ -706,6 +708,85 @@ def create_router(
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
             return {"message": f"Deleted accomplishment '{acc['title']}'"}
+
+    # ==========================================================
+    # Note Routes
+    # ==========================================================
+
+    if note_service is not None:
+
+        @api.get("/api/notes")
+        def list_notes(
+            tag: str | None = None,
+            q: str | None = None,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[dict[str, Any]]:
+            uid = current_user.id if current_user is not None else None
+            return note_service.list_notes(tag=tag, q=q, user_id=uid)
+
+        @api.post("/api/notes", status_code=201)
+        def create_note(
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return note_service.create_note(data, user_id=uid)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
+
+        # NOTE: /tags MUST be registered BEFORE /{note_id} to prevent FastAPI
+        # matching the literal string "tags" as an integer path parameter.
+        @api.get("/api/notes/tags")
+        def list_note_tags(
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[str]:
+            uid = current_user.id if current_user is not None else None
+            return note_service.list_tags(user_id=uid)
+
+        @api.get("/api/notes/{note_id}")
+        def get_note(
+            note_id: int,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return note_service.get_note(note_id, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @api.patch("/api/notes/{note_id}")
+        def update_note(
+            note_id: int,
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return note_service.update_note(note_id, data, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                detail = str(e)
+                if "not found" in detail:
+                    raise HTTPException(status_code=404, detail=detail)
+                raise HTTPException(status_code=422, detail=detail)
+
+        @api.delete("/api/notes/{note_id}")
+        def delete_note(
+            note_id: int,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, str]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                note = note_service.delete_note(note_id, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+            return {"message": f"Deleted note '{note['title']}'"}
 
     # ==========================================================
     # Webhook Routes (no auth — verified via Svix signature)

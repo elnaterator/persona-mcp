@@ -126,6 +126,23 @@ export interface AccomplishmentSummary {
   updated_at: string
 }
 
+export interface Note {
+  id: number
+  title: string
+  content: string
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface NoteSummary {
+  id: number
+  title: string
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
 export interface Communication {
   id: number
   app_id: number

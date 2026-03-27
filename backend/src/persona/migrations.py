@@ -403,12 +403,36 @@ def migrate_v4_to_v5(conn) -> None:
     conn.commit()
 
 
+def migrate_v5_to_v6(conn) -> None:
+    """Add note table for personal context notes."""
+    conn.execute(
+        """
+        CREATE TABLE note (
+            id          SERIAL PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            title       TEXT NOT NULL,
+            content     TEXT NOT NULL DEFAULT '',
+            tags        TEXT NOT NULL DEFAULT '[]',
+            created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_note_user FOREIGN KEY (user_id)
+                REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute("CREATE INDEX idx_note_user ON note(user_id)")
+    conn.execute("CREATE INDEX idx_note_updated ON note(updated_at DESC)")
+    conn.execute("UPDATE schema_version SET version = %s", (6,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
     migrate_v2_to_v3,
     migrate_v3_to_v4,
     migrate_v4_to_v5,
+    migrate_v5_to_v6,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)
