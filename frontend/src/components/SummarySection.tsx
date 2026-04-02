@@ -40,7 +40,7 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
   if (!onUpdate) {
     return (
       <section className={styles.container} data-testid="summary-section">
-        <h2 className={styles.heading}>Professional Summary</h2>
+        <h2 className={styles.sectionLabel}>Summary</h2>
         {summary ? (
           <p className={styles.text}>{summary}</p>
         ) : (
@@ -50,8 +50,12 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
     );
   }
 
+  const placeholder = !summary ? (
+    <p className={styles.placeholder}>Click the pencil icon to add a summary</p>
+  ) : undefined;
+
   return (
-    <EditableSection title="Professional Summary" onSave={handleSave}>
+    <EditableSection title="Summary" onSave={handleSave} placeholderContent={placeholder}>
       {({ isEditing }) => (
         <div data-testid="summary-section">
           {isEditing ? (
@@ -69,10 +73,8 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
             </div>
           ) : (
             <>
-              {summary ? (
+              {summary && (
                 <p className={styles.text}>{summary}</p>
-              ) : (
-                <p className={styles.empty}>No summary available.</p>
               )}
             </>
           )}

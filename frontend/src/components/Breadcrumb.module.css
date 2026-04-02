@@ -5,7 +5,7 @@
   gap: 0.25rem;
   margin-bottom: 1rem;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .segment {
@@ -15,21 +15,22 @@
 }
 
 .separator {
-  color: #9ca3af;
+  color: var(--text-muted);
   margin: 0 0.125rem;
 }
 
 .link {
-  color: #2563eb;
+  color: var(--accent-green);
   text-decoration: none;
   font-weight: 500;
 }
 
 .link:hover {
   text-decoration: underline;
+  color: var(--accent-green-dim);
 }
 
 .current {
-  color: #374151;
+  color: var(--text-secondary);
   font-weight: 500;
 }

@@ -1,19 +1,13 @@
 /**
- * ConnectView — Connect tab content component (011-mcp-instructions)
+ * ConnectView — Connect tab content component (014-ux-overhaul)
  *
- * Renders:
- * 1. Clerk <APIKeys /> component for key lifecycle (generate / revoke)
- * 2. Warning banner after key creation (shown once, dismissable)
- * 3. Paste-input field so users can substitute their key into config snippets
- * 4. Tabbed config snippet blocks for all 4 supported AI coding assistants (T018)
+ * Single-column layout with progressive step flow:
+ *   Step 1: Generate API key (Clerk <APIKeys />)
+ *   Step 2: Paste key to populate config snippets
+ *   Step 3: Select assistant and copy config
  *
- * T016 verification: The Clerk <APIKeys /> component includes a built-in
- * confirmation step before key revocation (standard Clerk UX pattern — all
- * destructive actions in Clerk's prebuilt components require explicit
- * confirmation). APIKeysProps exposes no `confirmRevoke` prop, meaning
- * revocation confirmation is handled entirely within the component's own UI.
- * Therefore, no additional `confirmingRegeneration` boolean state is required
- * in this component.
+ * Config snippets are de-emphasized (opacity 0.4) until a key is pasted.
+ * Warning banner collapsed into a small inline hint next to the paste input.
  */
 
 import { Component, useState } from 'react'
@@ -153,9 +147,8 @@ export default function ConnectView() {
   const [apiKey, setApiKey] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(ASSISTANTS[0].id)
-  const [bannerDismissed, setBannerDismissed] = useState(false)
 
-  const displayKey = apiKey.trim() || KEY_PLACEHOLDER
+  const displayKey = apiKey.trim() !== '' ? apiKey.trim() : KEY_PLACEHOLDER
 
   const handleCopy = async (assistantId: string, text: string) => {
     try {
@@ -172,94 +165,106 @@ export default function ConnectView() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.heading}>Connect an AI Coding Assistant</h2>
-      <p className={styles.subheading}>
-        Generate an API key, paste it below to populate config commands, then follow the
-        setup instructions for your assistant.
-      </p>
+      {/* Hero */}
+      <div className={styles.hero}>
+        <h2 className={styles.heroHeading}>
+          Connect your AI assistant
+        </h2>
+        <p className={styles.heroSubtext}>
+          Give your AI coding assistant access to your career data via MCP.
+        </p>
+      </div>
 
-      {/* Dismissable tip — reminds users to copy new keys */}
-      {!bannerDismissed && (
-        <div className={styles.warningBanner} role="note">
-          <span className={styles.warningIcon} aria-hidden="true">
-            ⚠️
+      {/* Step 1: Generate API key */}
+      <div className={styles.step}>
+        <span className={styles.stepNumber}>01</span>
+        <h3 className={styles.stepTitle}>Generate an API key</h3>
+        <p className={styles.stepHint}>
+          Create a key below — copy it immediately, you will only see it once.
+        </p>
+        <APIKeysErrorBoundary>
+          <APIKeys
+            appearance={{
+              variables: {
+                colorBackground: '#1e1e1e',
+                colorForeground: '#e0e0e0',
+                colorInput: '#111111',
+                colorInputForeground: '#e0e0e0',
+                colorMutedForeground: '#888888',
+                colorNeutral: '#aaaaaa',
+                colorPrimary: '#52b788',
+                colorDanger: '#ff4444',
+                fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace",
+                borderRadius: '0px',
+              },
+              elements: {
+                tableHead: { color: '#555555' },
+                tableCell: { color: '#e0e0e0' },
+                menuButton: { color: '#aaaaaa' },
+                menuItem: { color: '#e0e0e0', backgroundColor: '#1e1e1e' },
+                selectButton: { backgroundColor: '#111111', color: '#e0e0e0' },
+                selectOption: { backgroundColor: '#1e1e1e', color: '#e0e0e0' },
+              },
+            }}
+          />
+        </APIKeysErrorBoundary>
+      </div>
+
+      {/* Step 2: Paste key */}
+      <div className={styles.step}>
+        <span className={styles.stepNumber}>02</span>
+        <h3 className={styles.stepTitle}>Paste your key</h3>
+        <div className={styles.pasteInputWrapper}>
+          <input
+            id="paste-api-key"
+            type="text"
+            className={styles.pasteInput}
+            placeholder="Paste your API key here (ak_...)"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            aria-label="Paste API key"
+            spellCheck={false}
+            autoComplete="off"
+          />
+          <span className={styles.pasteInputHint}>
+            Stored only in this browser tab — never sent to our servers.
           </span>
-          <p className={styles.warningText}>
-            When you create an API key, copy it immediately — you will only see it in full
-            once. If you lose it, you will need to generate a new one.
-          </p>
-          <button
-            className={styles.warningDismiss}
-            onClick={() => setBannerDismissed(true)}
-            aria-label="Dismiss warning"
-          >
-            &times;
-          </button>
         </div>
-      )}
+      </div>
 
-      <div className={styles.layout}>
-        {/* Left: API key management */}
-        <div className={styles.apiKeySection}>
-          <h3 className={styles.sectionTitle}>Your API Key</h3>
-          <APIKeysErrorBoundary>
-            <APIKeys />
-          </APIKeysErrorBoundary>
+      {/* Step 3: Config snippets */}
+      <div className={styles.step}>
+        <span className={styles.stepNumber}>03</span>
+        <h3 className={styles.stepTitle}>Add to your assistant</h3>
 
-          {/* Paste-input field */}
-          <div className={styles.pasteInputWrapper}>
-            <label htmlFor="paste-api-key" className={styles.pasteLabel}>
-              Paste your API key to populate config commands
-            </label>
-            <input
-              id="paste-api-key"
-              type="text"
-              className={styles.pasteInput}
-              placeholder="Paste your API key here (ak_...)"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              aria-label="Paste API key"
-              spellCheck={false}
-              autoComplete="off"
-            />
-            <span className={styles.pasteInputHint}>
-              Your key is only stored locally in this browser tab — never sent to our
-              servers.
-            </span>
-          </div>
+        <div className={styles.tabList} role="tablist" aria-label="AI coding assistants">
+          {ASSISTANTS.map((assistant) => (
+            <button
+              key={assistant.id}
+              role="tab"
+              aria-selected={activeTab === assistant.id}
+              className={`${styles.tab} ${activeTab === assistant.id ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab(assistant.id)}
+            >
+              {assistant.name}
+            </button>
+          ))}
         </div>
 
-        {/* Right: Config snippets with tab navigation */}
-        <div className={styles.snippetsSection}>
-          <h3 className={styles.sectionTitle}>Config Commands</h3>
-          <div className={styles.tabList} role="tablist" aria-label="AI coding assistants">
-            {ASSISTANTS.map((assistant) => (
-              <button
-                key={assistant.id}
-                role="tab"
-                aria-selected={activeTab === assistant.id}
-                className={`${styles.tab} ${activeTab === assistant.id ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab(assistant.id)}
-              >
-                {assistant.name}
-              </button>
-            ))}
-          </div>
-          <div className={styles.tabPanel} role="tabpanel">
-            {activeAssistant.filePath && (
-              <span className={styles.assistantFilePath}>{activeAssistant.filePath}</span>
-            )}
-            <p className={styles.assistantDescription}>{activeAssistant.description}</p>
-            <div className={styles.snippetWrapper}>
-              <pre className={styles.codeBlock}>{activeSnippet}</pre>
-              <button
-                className={`${styles.copyButton} ${copiedId === activeAssistant.id ? styles.copyButtonCopied : ''}`}
-                aria-label={`Copy ${activeAssistant.name} config`}
-                onClick={() => handleCopy(activeAssistant.id, activeSnippet)}
-              >
-                {copiedId === activeAssistant.id ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
+        <div className={styles.tabPanel} role="tabpanel">
+          {activeAssistant.filePath && (
+            <span className={styles.assistantFilePath}>{activeAssistant.filePath}</span>
+          )}
+          <p className={styles.assistantDescription}>{activeAssistant.description}</p>
+          <div className={styles.snippetWrapper}>
+            <pre className={styles.codeBlock}>{activeSnippet}</pre>
+            <button
+              className={`${styles.copyButton} ${copiedId === activeAssistant.id ? styles.copyButtonCopied : ''}`}
+              aria-label={`Copy ${activeAssistant.name} config`}
+              onClick={() => handleCopy(activeAssistant.id, activeSnippet)}
+            >
+              {copiedId === activeAssistant.id ? 'Copied!' : 'Copy'}
+            </button>
           </div>
         </div>
       </div>

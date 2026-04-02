@@ -99,7 +99,7 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
 
   return (
     <section className={styles.container} data-testid="skills-section">
-      <h2 className={styles.heading}>Skills</h2>
+      <h2 className={styles.sectionLabel}>Skills</h2>
 
       {statusMessage && (
         <StatusMessage
@@ -112,36 +112,37 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       {categories.length > 0 ? (
         <div className={styles.list}>
           {categories.map((category) => (
-            <div key={category} className={styles.category}>
-              <h3 className={styles.categoryName}>{category}</h3>
-              <div className={styles.skillTags}>
-                {groupedSkills[category].map((skill) => (
-                  <div key={skill.originalIndex} className={styles.skillTagWrapper}>
-                    <span className={styles.skillTag}>{skill.name}</span>
-                    <div className={styles.skillActions}>
-                      <button
-                        className={styles.editButton}
-                        onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
-                        aria-label="Edit"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className={styles.deleteButton}
-                        onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
-                        aria-label="Delete"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+            <div key={category} className={styles.skillGroup}>
+              <span className={styles.categoryLabel}>{category}: </span>
+              <span className={styles.skillNames}>
+                {groupedSkills[category].map((skill, i) => (
+                  <span key={skill.originalIndex} className={styles.skillItem}>
+                    {skill.name}
+                    {i < groupedSkills[category].length - 1 && (
+                      <span className={styles.separator}>, </span>
+                    )}
+                    <button
+                      className={styles.editButton}
+                      onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
+                      aria-label="Edit"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={styles.deleteButton}
+                      onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
+                      aria-label="Delete"
+                    >
+                      Delete
+                    </button>
+                  </span>
                 ))}
-              </div>
+              </span>
             </div>
           ))}
         </div>
       ) : (
-        <p className={styles.empty}>No skills listed.</p>
+        <p className={styles.placeholder}>Click "Add Skill" to add skills</p>
       )}
 
       {typeof mode === 'object' && mode.type === 'edit' && (

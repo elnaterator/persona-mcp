@@ -5,6 +5,7 @@ import { listResumes, createResume, deleteResume, setDefaultResume } from '../se
 import { LoadingSpinner } from './LoadingSpinner'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
+import { InlineCreateForm } from './InlineCreateForm'
 import styles from './ResumeListView.module.css'
 
 export default function ResumeListView() {
@@ -12,6 +13,7 @@ export default function ResumeListView() {
   const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -29,17 +31,11 @@ export default function ResumeListView() {
     load()
   }, [load])
 
-  const handleCreate = async () => {
-    const label = window.prompt('Enter a label for the new resume version:')
-    if (!label || !label.trim()) return
-
-    try {
-      await createResume(label.trim())
-      setStatusMessage({ type: 'success', message: 'Resume version created' })
-      await load()
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to create resume version' })
-    }
+  const handleCreateConfirm = async (label: string) => {
+    await createResume(label)
+    setStatusMessage({ type: 'success', message: 'Resume version created' })
+    setCreating(false)
+    await load()
   }
 
   const handleSetDefault = async (id: number) => {
@@ -83,7 +79,7 @@ export default function ResumeListView() {
     <div className={styles.container} data-testid="resume-list-view">
       <div className={styles.header}>
         <h2 className={styles.heading}>Resume Versions</h2>
-        <button className={styles.newButton} onClick={handleCreate}>
+        <button className={styles.newButton} onClick={() => setCreating(true)}>
           New Version
         </button>
       </div>
@@ -93,6 +89,15 @@ export default function ResumeListView() {
           type={statusMessage.type}
           message={statusMessage.message}
           onDismiss={() => setStatusMessage(null)}
+        />
+      )}
+
+      {creating && (
+        <InlineCreateForm
+          onConfirm={handleCreateConfirm}
+          onCancel={() => setCreating(false)}
+          placeholder="e.g. Senior Engineer, Remote-focused..."
+          confirmLabel="Create"
         />
       )}
 

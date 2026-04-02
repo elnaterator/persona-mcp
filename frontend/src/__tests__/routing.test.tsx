@@ -9,6 +9,7 @@ vi.mock('@clerk/clerk-react', () => ({
   useAuth: () => ({ getToken: vi.fn().mockResolvedValue('token') }),
   SignedIn: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SignedOut: () => null,
+  APIKeys: () => <div data-testid="api-keys-component">APIKeys</div>,
 }))
 
 // Minimal mock data
@@ -34,25 +35,25 @@ describe('Route: root redirect', () => {
     vi.mocked(api.listResumes).mockResolvedValue(mockResumes)
   })
 
-  it('redirects / to /resumes', async () => {
+  it('redirects / to /connect', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <AppRoutes />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByTestId('resume-list-view')).toBeInTheDocument()
+      expect(screen.getByTestId('api-keys-component')).toBeInTheDocument()
     })
   })
 
-  it('redirects unknown routes to /resumes', async () => {
+  it('redirects unknown routes to /connect', async () => {
     render(
       <MemoryRouter initialEntries={['/unknown-route']}>
         <AppRoutes />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByTestId('resume-list-view')).toBeInTheDocument()
+      expect(screen.getByTestId('api-keys-component')).toBeInTheDocument()
     })
   })
 })

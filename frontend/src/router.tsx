@@ -12,7 +12,7 @@ import ConnectView from './components/ConnectView'
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/resumes" replace />} />
+      <Route path="/" element={<Navigate to="/connect" replace />} />
       <Route path="/resumes" element={<ResumeListView />} />
       <Route path="/resumes/:id" element={<ResumeDetailView />} />
       <Route path="/applications" element={<ApplicationListView />} />
@@ -22,7 +22,7 @@ export default function AppRoutes() {
       <Route path="/notes" element={<NoteListView />} />
       <Route path="/notes/:id" element={<NoteDetailView />} />
       <Route path="/connect" element={<ConnectView />} />
-      <Route path="*" element={<Navigate to="/resumes" replace />} />
+      <Route path="*" element={<Navigate to="/connect" replace />} />
     </Routes>
   )
 }

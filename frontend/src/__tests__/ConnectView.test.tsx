@@ -72,7 +72,7 @@ describe('ConnectView', () => {
 
     it('shows static API key tip on initial render', () => {
       render(<ConnectView />)
-      expect(screen.getByText(/when you create an api key, copy it immediately/i)).toBeInTheDocument()
+      expect(screen.getByText(/copy it immediately, you will only see it once/i)).toBeInTheDocument()
     })
   })
 
@@ -122,24 +122,12 @@ describe('ConnectView', () => {
   describe('API key tip banner', () => {
     it('tip is visible on initial render', () => {
       render(<ConnectView />)
-      expect(screen.getByText(/when you create an api key, copy it immediately/i)).toBeInTheDocument()
+      expect(screen.getByText(/copy it immediately, you will only see it once/i)).toBeInTheDocument()
     })
 
-    it('tip text mentions losing the key and generating a new one', () => {
+    it('tip text mentions copying the key immediately', () => {
       render(<ConnectView />)
-      expect(screen.getByText(/generate a new one/i)).toBeInTheDocument()
-    })
-
-    it('tip is dismissable via close button', async () => {
-      const user = userEvent.setup()
-      render(<ConnectView />)
-
-      expect(screen.getByText(/when you create an api key, copy it immediately/i)).toBeInTheDocument()
-
-      const dismissBtn = screen.getByRole('button', { name: /dismiss warning/i })
-      await user.click(dismissBtn)
-
-      expect(screen.queryByText(/when you create an api key, copy it immediately/i)).not.toBeInTheDocument()
+      expect(screen.getByText(/copy it immediately/i)).toBeInTheDocument()
     })
   })
 

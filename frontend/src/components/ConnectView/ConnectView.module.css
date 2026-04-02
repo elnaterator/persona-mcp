@@ -1,172 +1,131 @@
 .container {
-  max-width: 56rem;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-}
-
-.heading {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 0.5rem;
-}
-
-.subheading {
-  font-size: 0.9375rem;
-  color: #6b7280;
-  margin: 0 0 2rem;
-}
-
-/* Warning banner — amber, visually prominent */
-.warningBanner {
+  padding: 1rem 0;
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  background-color: #fffbeb;
-  border: 1px solid #f59e0b;
-  border-radius: 0.5rem;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.warningIcon {
-  font-size: 1.25rem;
-  line-height: 1.5rem;
-  flex-shrink: 0;
+/* Hero section */
+.hero {
+  padding: 1.5rem 1.5rem 1.25rem;
 }
 
-.warningText {
-  flex: 1;
+.heroHeading {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.heroSubtext {
   font-size: 0.9375rem;
-  font-weight: 600;
-  color: #92400e;
+  color: var(--text-secondary);
+  margin: 0;
   line-height: 1.5;
 }
 
-.warningDismiss {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #92400e;
-  font-size: 1.125rem;
-  line-height: 1;
-  padding: 0.125rem;
-  border-radius: 0.25rem;
-  flex-shrink: 0;
-  opacity: 0.75;
-}
-
-.warningDismiss:hover {
-  opacity: 1;
-  background-color: rgba(245, 158, 11, 0.15);
-}
-
-/* Two-column layout: API key management | Config snippets */
-.layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  align-items: start;
-}
-
-@media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Left column: API key section */
-.apiKeySection {
+/* Step sections */
+.step {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  transition: opacity 0.2s;
 }
 
-.sectionTitle {
+.step:nth-child(2) { background-color: #1e1e1e; }
+.step:nth-child(3) { background-color: #232323; }
+.step:nth-child(4) { background-color: #272727; }
+
+.stepActive {
+}
+
+.stepDimmed {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.stepNumber {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.stepTitle {
   font-size: 1rem;
   font-weight: 600;
-  color: #374151;
-  margin: 0 0 0.5rem;
+  color: var(--text-primary);
+  margin: 0;
 }
 
-/* Paste input field */
+.stepHint {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Paste input */
 .pasteInputWrapper {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
 }
 
-.pasteLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
 .pasteInput {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
+  border-radius: var(--radius);
   font-size: 0.875rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #111827;
-  background-color: #ffffff;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background-color: var(--bg-input);
   box-sizing: border-box;
-  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .pasteInput:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
 }
 
 .pasteInputHint {
   font-size: 0.8125rem;
-  color: #9ca3af;
-}
-
-/* Right column: config snippets */
-.snippetsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  color: var(--text-muted);
 }
 
 /* Tab navigation bar */
 .tabList {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 1rem;
   overflow-x: auto;
 }
 
 .tab {
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #6b7280;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s, border-color 0.15s;
-  margin-bottom: -1px;
-  border-radius: 0;
+  transition: color 0.15s, background-color 0.15s;
+  border-radius: var(--radius);
 }
 
 .tab:hover {
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .tabActive {
-  color: #1d4ed8;
-  border-bottom-color: #1d4ed8;
+  background-color: var(--bg-hover);
+  color: var(--accent-green);
 }
 
-/* Active tab content panel */
+/* Tab content panel */
 .tabPanel {
   display: flex;
   flex-direction: column;
@@ -175,15 +134,15 @@
 
 .assistantDescription {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem;
   line-height: 1.5;
 }
 
 .assistantFilePath {
   font-size: 0.8125rem;
-  color: #6b7280;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .snippetWrapper {
@@ -191,11 +150,11 @@
 }
 
 .codeBlock {
-  background-color: #1e293b;
-  color: #e2e8f0;
-  border-radius: 0.5rem;
+  background-color: #1a1a1a;
+  color: var(--text-primary);
+  border-radius: var(--radius);
   padding: 0.875rem 1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.5;
   overflow-x: auto;
@@ -207,52 +166,48 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e2e8f0;
-  border-radius: 0.375rem;
+  background: none;
+  color: var(--text-secondary);
+  border-radius: var(--radius);
   padding: 0.25rem 0.625rem;
   font-size: 0.75rem;
+  font-family: var(--font-mono);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
 .copyButton:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--bg-active);
+  color: var(--accent-green);
 }
 
 .copyButtonCopied {
-  color: #86efac;
-  border-color: rgba(134, 239, 172, 0.4);
+  color: var(--accent-green);
 }
 
-/* Error state */
+/* Error states */
 .errorMessage {
   font-size: 0.875rem;
-  color: #dc2626;
-  background-color: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 0.375rem;
+  color: var(--status-error);
+  background-color: rgba(255, 68, 68, 0.08);
+  border-radius: var(--radius);
   padding: 0.625rem 0.875rem;
   margin-top: 0.5rem;
 }
 
-/* API keys disabled / error boundary fallback */
 .apiKeysDisabled {
   font-size: 0.875rem;
-  color: #92400e;
-  background-color: #fffbeb;
-  border: 1px solid #f59e0b;
-  border-radius: 0.375rem;
+  color: var(--status-warning);
+  background-color: rgba(255, 170, 0, 0.08);
+  border-radius: var(--radius);
   padding: 0.875rem 1rem;
   line-height: 1.5;
 }
 
 .apiKeysDisabled a {
-  color: #b45309;
-  text-decoration: underline;
+  color: var(--accent-green);
 }
 
 .apiKeysDisabled a:hover {
-  color: #92400e;
+  color: var(--accent-green-dim);
 }
