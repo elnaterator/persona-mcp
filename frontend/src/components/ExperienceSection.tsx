@@ -97,7 +97,7 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
 
   return (
     <section className={styles.container} data-testid="experience-section">
-      <h2 className={styles.heading}>Work Experience</h2>
+      <h2 className={styles.sectionLabel}>Experience</h2>
 
       {statusMessage && (
         <StatusMessage
@@ -130,19 +130,19 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
             <div className={styles.list}>
               {experience.map((entry, index) => (
                 <div key={index} className={styles.entry}>
-                  <div className={styles.header}>
-                    <h3 className={styles.title}>{entry.title}</h3>
-                    <span className={styles.company}>{entry.company}</span>
-                  </div>
-                  <div className={styles.metadata}>
-                    {(entry.start_date || entry.end_date) && (
-                      <span className={styles.dates}>
-                        {entry.start_date || 'N/A'} – {entry.end_date || 'Present'}
-                      </span>
-                    )}
-                    {entry.location && (
-                      <span className={styles.location}>{entry.location}</span>
-                    )}
+                  <div className={styles.entryHeader}>
+                    <span className={styles.entryTitle}>{entry.title}</span>
+                    <span className={styles.entryMeta}>
+                      {entry.company}
+                      {(entry.start_date || entry.end_date) && (
+                        <span className={styles.entryDates}>
+                          {' · '}{entry.start_date || 'N/A'} – {entry.end_date || 'Present'}
+                        </span>
+                      )}
+                      {entry.location && (
+                        <span className={styles.entryLocation}>{' · '}{entry.location}</span>
+                      )}
+                    </span>
                   </div>
                   {entry.highlights && entry.highlights.length > 0 && (
                     <ul className={styles.highlights}>
@@ -171,7 +171,7 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
               ))}
             </div>
           ) : (
-            <p className={styles.empty}>No work experience listed.</p>
+            <p className={styles.placeholder}>Click "Add Experience" to add work history</p>
           )}
 
           <button className={styles.addButton} onClick={() => setMode('add')}>

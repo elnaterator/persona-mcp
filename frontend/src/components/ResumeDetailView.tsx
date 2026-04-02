@@ -133,7 +133,7 @@ export default function ResumeDetailView() {
         />
       )}
 
-      <div className={styles.sections}>
+      <div className={styles.document}>
         <ContactSection
           contact={resume.contact}
           onUpdate={load}

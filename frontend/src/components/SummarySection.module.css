@@ -2,25 +2,36 @@
   margin-bottom: 2rem;
 }
 
-.heading {
-  font-size: 1.5rem;
+.sectionLabel {
+  font-size: 0.75rem;
   font-weight: 600;
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #e5e7eb;
-  padding-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 0.375rem;
+  margin: 0 0 1rem 0;
 }
 
 .text {
-  color: #374151;
+  color: var(--text-primary);
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  margin: 0;
 }
 
 .empty {
-  color: #9ca3af;
+  color: var(--text-muted);
   font-style: italic;
+}
+
+.placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 
 .formField {
@@ -31,11 +42,12 @@
 
 .textarea {
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
   font-size: 1rem;
-  font-family: inherit;
-  color: #111827;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
   line-height: 1.5;
   resize: vertical;
   min-height: 120px;
@@ -44,21 +56,19 @@
 
 .textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-green);
 }
 
 .textareaError {
-  border-color: #ef4444;
+  border-color: var(--status-error);
 }
 
 .textareaError:focus {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  border-color: var(--status-error);
 }
 
 .errorText {
   font-size: 0.875rem;
-  color: #ef4444;
+  color: var(--status-error);
   margin-top: 0.25rem;
 }

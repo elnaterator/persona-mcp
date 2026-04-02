@@ -9,7 +9,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: white;
+  background-color: var(--bg-surface);
   padding: 0.5rem 0;
 }
 
@@ -25,21 +25,17 @@
 
 .retryButton {
   padding: 0.75rem 1.5rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  background: none;
+  color: var(--accent-green);
   font-size: 1rem;
+  font-family: var(--font-mono);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: color 0.2s;
 }
 
-.retryButton:hover {
-  background-color: #0056b3;
-}
-
+.retryButton:hover,
 .retryButton:active {
-  background-color: #004085;
+  color: var(--accent-green-dim);
 }
 
 @media (max-width: 768px) {

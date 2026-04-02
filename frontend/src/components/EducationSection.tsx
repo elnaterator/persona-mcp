@@ -100,7 +100,7 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
 
   return (
     <section className={styles.container} data-testid="education-section">
-      <h2 className={styles.heading}>Education</h2>
+      <h2 className={styles.sectionLabel}>Education</h2>
 
       {statusMessage && (
         <StatusMessage
@@ -133,22 +133,21 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
             <div className={styles.list}>
               {education.map((entry, index) => (
                 <div key={index} className={styles.entry}>
-                  <div className={styles.header}>
-                    <h3 className={styles.institution}>{entry.institution}</h3>
-                    <span className={styles.degree}>{entry.degree}</span>
-                  </div>
-                  {entry.field && (
-                    <p className={styles.field}>Field: {entry.field}</p>
-                  )}
-                  <div className={styles.metadata}>
-                    {(entry.start_date || entry.end_date) && (
-                      <span className={styles.dates}>
-                        {entry.start_date || 'N/A'} – {entry.end_date || 'N/A'}
-                      </span>
-                    )}
-                    {entry.honors && (
-                      <span className={styles.honors}>{entry.honors}</span>
-                    )}
+                  <div className={styles.entryHeader}>
+                    <span className={styles.entryDegree}>
+                      {entry.degree}{entry.field ? `, ${entry.field}` : ''}
+                    </span>
+                    <span className={styles.entryMeta}>
+                      {entry.institution}
+                      {(entry.start_date || entry.end_date) && (
+                        <span className={styles.entryDates}>
+                          {' · '}{entry.start_date || 'N/A'} – {entry.end_date || 'N/A'}
+                        </span>
+                      )}
+                      {entry.honors && (
+                        <span className={styles.entryHonors}>{' · '}{entry.honors}</span>
+                      )}
+                    </span>
                   </div>
                   {entry.highlights && entry.highlights.length > 0 && (
                     <ul className={styles.highlights}>
@@ -177,7 +176,7 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
               ))}
             </div>
           ) : (
-            <p className={styles.empty}>No education listed.</p>
+            <p className={styles.placeholder}>Click "Add Education" to add education history</p>
           )}
 
           <button className={styles.addButton} onClick={() => setMode('add')}>

@@ -10,6 +10,42 @@ interface ContactSectionProps {
   versionId?: number;
 }
 
+function ContactReadView({ contact }: { contact: ContactInfo }) {
+  const details: string[] = [];
+  if (contact.email) details.push(contact.email);
+  if (contact.phone) details.push(contact.phone);
+  if (contact.location) details.push(contact.location);
+
+  const links: { label: string; href: string }[] = [];
+  if (contact.linkedin) links.push({ label: 'LinkedIn', href: contact.linkedin });
+  if (contact.website) links.push({ label: 'Website', href: contact.website });
+  if (contact.github) links.push({ label: 'GitHub', href: contact.github });
+
+  return (
+    <div className={styles.readView}>
+      {contact.name && <h1 className={styles.nameHeading}>{contact.name}</h1>}
+      {(details.length > 0 || links.length > 0) && (
+        <div className={styles.contactRow}>
+          {details.map((d, i) => (
+            <span key={i} className={styles.contactItem}>{d}</span>
+          ))}
+          {links.map((l, i) => (
+            <a
+              key={i}
+              href={l.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${styles.contactItem} ${styles.contactLink}`}
+            >
+              {l.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ContactSection({ contact, onUpdate, versionId }: ContactSectionProps) {
   const [formData, setFormData] = useState<ContactInfo>(contact);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -64,68 +100,8 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
 
   if (!onUpdate) {
     return (
-      <section className={styles.container} data-testid="contact-section">
-        <h2 className={styles.heading}>Contact Information</h2>
-        <div className={styles.content}>
-          {contact.name && (
-            <div className={styles.field}>
-              <span className={styles.label}>Name:</span>
-              <span className={styles.value}>{contact.name}</span>
-            </div>
-          )}
-          {contact.email && (
-            <div className={styles.field}>
-              <span className={styles.label}>Email:</span>
-              <span className={styles.value}>{contact.email}</span>
-            </div>
-          )}
-          {contact.phone && (
-            <div className={styles.field}>
-              <span className={styles.label}>Phone:</span>
-              <span className={styles.value}>{contact.phone}</span>
-            </div>
-          )}
-          {contact.location && (
-            <div className={styles.field}>
-              <span className={styles.label}>Location:</span>
-              <span className={styles.value}>{contact.location}</span>
-            </div>
-          )}
-          {(contact.linkedin || contact.website || contact.github) && (
-            <div className={styles.links}>
-              {contact.linkedin && (
-                <a
-                  href={contact.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  LinkedIn
-                </a>
-              )}
-              {contact.website && (
-                <a
-                  href={contact.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  Website
-                </a>
-              )}
-              {contact.github && (
-                <a
-                  href={contact.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  GitHub
-                </a>
-              )}
-            </div>
-          )}
-        </div>
+      <section data-testid="contact-section">
+        <ContactReadView contact={contact} />
       </section>
     );
   }
@@ -133,7 +109,7 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
   return (
     <EditableSection title="Contact Information" onSave={handleSave}>
       {({ isEditing }) => (
-        <div className={styles.content} data-testid="contact-section">
+        <div data-testid="contact-section">
           {isEditing ? (
             <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
               <div className={styles.formField}>
@@ -234,66 +210,7 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
               </div>
             </form>
           ) : (
-            <>
-              {contact.name && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Name:</span>
-                  <span className={styles.value}>{contact.name}</span>
-                </div>
-              )}
-              {contact.email && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Email:</span>
-                  <span className={styles.value}>{contact.email}</span>
-                </div>
-              )}
-              {contact.phone && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Phone:</span>
-                  <span className={styles.value}>{contact.phone}</span>
-                </div>
-              )}
-              {contact.location && (
-                <div className={styles.field}>
-                  <span className={styles.label}>Location:</span>
-                  <span className={styles.value}>{contact.location}</span>
-                </div>
-              )}
-              {(contact.linkedin || contact.website || contact.github) && (
-                <div className={styles.links}>
-                  {contact.linkedin && (
-                    <a
-                      href={contact.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.link}
-                    >
-                      LinkedIn
-                    </a>
-                  )}
-                  {contact.website && (
-                    <a
-                      href={contact.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.link}
-                    >
-                      Website
-                    </a>
-                  )}
-                  {contact.github && (
-                    <a
-                      href={contact.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.link}
-                    >
-                      GitHub
-                    </a>
-                  )}
-                </div>
-              )}
-            </>
+            <ContactReadView contact={contact} />
           )}
         </div>
       )}

@@ -97,6 +97,8 @@ specs/                    # Feature specifications
 - N/A (no storage changes) (012-client-side-routing)
 - Python 3.11+ (backend), TypeScript 5.x (frontend) + FastMCP >=2.3.0, FastAPI >=0.100.0, React 18, Vite 6 (all existing — no new deps) (013-personal-context-section)
 - PostgreSQL 16+, schema v5 → v6 migration (013-personal-context-section)
+- TypeScript 5.x / React 18 + React Router v7, Vite 6, CSS Modules, `@clerk/clerk-react` v5, `lucide-react` (new — icon library) (014-ux-overhaul)
+- N/A — no storage changes (014-ux-overhaul)
 
 ### Backend
 - Python 3.11+ with type hints and Pydantic validation

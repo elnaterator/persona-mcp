@@ -2,20 +2,20 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f9fafb;
+  background-color: var(--bg-primary);
 }
 
 .header {
   padding: 1.25rem 2rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  box-shadow: none;
 }
 
 .logo {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -41,13 +41,13 @@
 .headline {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   line-height: 1.15;
 }
 
 .subheadline {
   font-size: 1.125rem;
-  color: #4b5563;
+  color: var(--text-secondary);
   line-height: 1.65;
 }
 
@@ -56,20 +56,21 @@
   padding: 0.875rem 2.25rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #ffffff;
-  background-color: #2563eb;
+  color: var(--bg-primary);
+  background-color: var(--accent-green);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
   cursor: pointer;
+  font-family: var(--font-mono);
   transition: background-color 0.15s ease;
 }
 
 .ctaButton:hover {
-  background-color: #1d4ed8;
+  background-color: var(--accent-green-dim);
 }
 
 .ctaButton:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--accent-green);
   outline-offset: 2px;
 }
 
@@ -83,14 +84,13 @@
 }
 
 .feature {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
   padding: 1.75rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
 }
 
 .featureIcon {
@@ -102,12 +102,12 @@
 .feature h3 {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .feature p {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   line-height: 1.55;
 }
 

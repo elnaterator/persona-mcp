@@ -33,7 +33,7 @@ describe('EditableSection', () => {
 
     render(<TestComponent />);
 
-    // Click edit button
+    // Click edit button (pencil icon, opacity-0 but still in DOM)
     const editButton = screen.getByRole('button', { name: /edit test section/i });
     await user.click(editButton);
 
@@ -102,5 +102,71 @@ describe('EditableSection', () => {
     await waitFor(() => {
       expect(screen.getByText('View Mode')).toBeInTheDocument();
     });
+  });
+
+  it('edit icon is in DOM at rest (not visible, but accessible)', () => {
+    render(
+      <EditableSection title="Test Section" onSave={vi.fn()}>
+        {() => <div>Content</div>}
+      </EditableSection>
+    );
+    // Edit button (pencil icon) should be in the DOM even before hover
+    expect(screen.getByRole('button', { name: /edit test section/i })).toBeInTheDocument();
+  });
+
+  it('clicking edit icon activates editing state', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableSection title="My Section" onSave={vi.fn()}>
+        {({ isEditing }) => (isEditing ? <div>Edit Mode</div> : <div>View Mode</div>)}
+      </EditableSection>
+    );
+
+    expect(screen.getByText('View Mode')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /edit my section/i }));
+    expect(screen.getByText('Edit Mode')).toBeInTheDocument();
+  });
+
+  it('cancel button returns to view state', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableSection title="My Section" onSave={vi.fn()}>
+        {({ isEditing }) => (isEditing ? <div>Edit Mode</div> : <div>View Mode</div>)}
+      </EditableSection>
+    );
+
+    await user.click(screen.getByRole('button', { name: /edit my section/i }));
+    expect(screen.getByText('Edit Mode')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /cancel editing my section/i }));
+    expect(screen.getByText('View Mode')).toBeInTheDocument();
+  });
+
+  it('edit icon is NOT present while in editing state', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableSection title="My Section" onSave={vi.fn()}>
+        {({ isEditing }) => (isEditing ? <div>Edit Mode</div> : <div>View Mode</div>)}
+      </EditableSection>
+    );
+
+    await user.click(screen.getByRole('button', { name: /edit my section/i }));
+    // In editing state, the pencil icon button should not be rendered
+    expect(screen.queryByRole('button', { name: /edit my section/i })).not.toBeInTheDocument();
+    // Save and Cancel should be present
+    expect(screen.getByRole('button', { name: /save my section/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel editing my section/i })).toBeInTheDocument();
+  });
+
+  it('shows header with title when editing', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableSection title="My Section" onSave={vi.fn()}>
+        {() => <div>Content</div>}
+      </EditableSection>
+    );
+
+    await user.click(screen.getByRole('button', { name: /edit my section/i }));
+    expect(screen.getByText('My Section')).toBeInTheDocument();
   });
 });
