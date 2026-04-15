@@ -2,62 +2,50 @@
 
 AWS_REGION ?= us-west-2
 
-help:
-	@echo "Root Makefile targets:"
-	@echo "  setup      - Install all managed dependencies (Python + Node)"
-	@echo "  build      - Build frontend then backend"
-	@echo "  run        - Start via Docker Compose"
-	@echo "  run-local  - Build frontend then run backend locally"
-	@echo "  lint       - Lint both frontend and backend"
-	@echo "  test       - Test both frontend and backend"
-	@echo "  check      - Run lint + test for both + terraform fmt check + checkov scan"
-	@echo "  format     - Format both frontend and backend"
-	@echo "  tf-lint    - Check Terraform formatting (infra/)"
-	@echo "  tf-check   - tf-lint + Checkov security scan (infra/)"
-	@echo "  deploy     - Build image, push to ECR, terraform apply (requires ENV=dev|prod)"
+help: ## Show this help message
+	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | \
+	  awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-setup:
+setup: ## Install all managed dependencies (Python + Node)
 	cd backend && uv sync
 	cd frontend && npm ci
 
-build:
+build: ## Build frontend then backend
 	$(MAKE) -C frontend build
 	$(MAKE) -C backend build
 
-run:
+run: ## Start via Docker Compose
 	docker compose up --build
 
-run-local:
+run-local: ## Build frontend then run backend locally
 	$(MAKE) -C frontend build
 	$(MAKE) -C backend run
 
-lint:
+lint: ## Lint both frontend and backend
 	$(MAKE) -C frontend lint
 	$(MAKE) -C backend lint
 
-test:
+test: ## Test both frontend and backend
 	$(MAKE) -C frontend test
 	$(MAKE) -C backend test
 
-check:
+check: ## Run lint + test for both + terraform fmt check + checkov scan
 	$(MAKE) -C frontend check
 	$(MAKE) -C backend check
 	$(MAKE) tf-check
 
-format:
+format: ## Format both frontend and backend
 	$(MAKE) -C frontend format
 	$(MAKE) -C backend format
 
-tf-lint:
+tf-lint: ## Check Terraform formatting (infra/)
 	terraform fmt -check -recursive infra/
 
-tf-check:
+tf-check: ## Run tf-lint + Checkov security scan (infra/)
 	$(MAKE) tf-lint
 	uvx checkov -d infra/ --quiet --compact
 
-# Deploy to AWS: build Docker image, push to ECR, and apply Terraform.
-# Usage: make deploy ENV=dev   or   make deploy ENV=prod
-deploy:
+deploy: ## Build image, push to ECR, and apply Terraform (requires ENV=dev|prod)
 ifndef ENV
 	$(error ENV is required. Usage: make deploy ENV=dev)
 endif
@@ -65,8 +53,16 @@ endif
 	  { echo "Error: ENV must be 'dev' or 'prod', got '$(ENV)'"; exit 1; }
 	@echo "==> [1/5] terraform init (infra/$(ENV))"
 	terraform -chdir=infra/$(ENV) init -input=false
-	@echo "==> [2/5] ensure ECR repository exists"
-	terraform -chdir=infra/$(ENV) apply -target=module.lambda.aws_ecr_repository.app -auto-approve
+	@echo "==> [2/5] ensure ECR repository and SSM parameters exist"
+	terraform -chdir=infra/$(ENV) apply \
+	  -target=module.lambda.aws_ecr_repository.app \
+	  -target=aws_ssm_parameter.database_url \
+	  -target=aws_ssm_parameter.clerk_publishable_key \
+	  -target=aws_ssm_parameter.clerk_jwks_url \
+	  -target=aws_ssm_parameter.clerk_issuer \
+	  -target=aws_ssm_parameter.clerk_webhook_secret \
+	  -target=aws_ssm_parameter.clerk_secret_key \
+	  -auto-approve
 	@echo "==> [3/5] build and push Docker image to ECR"
 	@set -e; \
 	  ECR_URL=$$(terraform -chdir=infra/$(ENV) output -raw ecr_repository_url); \
