@@ -1,10 +1,10 @@
 # personal-mcp
 
-Persona MCP Server — a Python MCP server for resume/personal data, installable via `uvx`.
+Persona MCP Server — Python MCP server for resume/personal data, installable via `uvx`.
 
 ## Constitution
 
-All project principles, technology constraints, packaging rules, development workflow, and governance are defined in [`.specify/memory/constitution.md`](.specify/memory/constitution.md). That document is authoritative — read it before making changes.
+All project principles, technology constraints, packaging rules, dev workflow, governance defined in [`.specify/memory/constitution.md`](.specify/memory/constitution.md). Authoritative — read before changes.
 
 ## Quick Reference
 
@@ -92,7 +92,7 @@ specs/                    # Feature specifications
 - HCL (Terraform 1.7+) + `hashicorp/aws` provider ~5.x, `hashicorp/terraform` 1.7+ (010-aws-infra)
 - Remote state in S3 + DynamoDB (bootstrapped manually); app uses Neon PostgreSQL (connection config via SSM) (010-aws-infra)
 - Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, `clerk-backend-api ≥1.0.0` (new — Python SDK for dual auth), `@clerk/clerk-react` v5+ (existing), `python-jose[cryptography]` (existing — retained for REST API JWT path) (011-mcp-instructions)
-- PostgreSQL 16+ (no schema changes required) (011-mcp-instructions)
+- PostgreSQL 16+ (no schema changes) (011-mcp-instructions)
 - TypeScript 5.6 / React 18 + React Router v7 (new), `@clerk/clerk-react` v5 (existing) (012-client-side-routing)
 - N/A (no storage changes) (012-client-side-routing)
 - Python 3.11+ (backend), TypeScript 5.x (frontend) + FastMCP >=2.3.0, FastAPI >=0.100.0, React 18, Vite 6 (all existing — no new deps) (013-personal-context-section)
@@ -101,23 +101,23 @@ specs/                    # Feature specifications
 - N/A — no storage changes (014-ux-overhaul)
 
 ### Backend
-- Python 3.11+ with type hints and Pydantic validation
+- Python 3.11+ with type hints + Pydantic validation
 - FastMCP >=2.3.0 for MCP server (streamable-http + stdio)
 - FastAPI >=0.100.0 for REST API + static file serving
 - uvicorn >=0.20.0 for ASGI HTTP server
 - SQLite via stdlib `sqlite3` with `DBConnection` protocol (Schema v3)
-- `uv` for dependency management and packaging
+- `uv` for dependency management + packaging
 - pytest for testing (unit, contract, integration)
-- ruff for linting and formatting
+- ruff for linting + formatting
 - pyright for type checking
-- python-jose, svix (Authentication logic)
+- python-jose, svix (auth logic)
 
 ### Frontend
-- React 18 with TypeScript 5.x
-- Vite 6 for build tooling and dev server
+- React 18 + TypeScript 5.x
+- Vite 6 for build + dev server
 - Clerk (Auth SDK)
-- Vitest 2 with React Testing Library for component tests
-- ESLint 9 with typescript-eslint for linting
+- Vitest 2 + React Testing Library for component tests
+- ESLint 9 + typescript-eslint for linting
 - CSS Modules for component styling
 
 ### Infrastructure
