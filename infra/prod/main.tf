@@ -30,6 +30,7 @@ module "lambda" {
     CLERK_JWKS_URL       = data.aws_ssm_parameter.clerk_jwks_url.value
     CLERK_ISSUER         = data.aws_ssm_parameter.clerk_issuer.value
     CLERK_WEBHOOK_SECRET = data.aws_ssm_parameter.clerk_webhook_secret.value
+    CLERK_SECRET_KEY     = data.aws_ssm_parameter.clerk_secret_key.value
   }
 
   tags = {
@@ -169,4 +170,10 @@ data "aws_ssm_parameter" "clerk_webhook_secret" {
   name            = aws_ssm_parameter.clerk_webhook_secret.name
   with_decryption = true
   depends_on      = [aws_ssm_parameter.clerk_webhook_secret]
+}
+
+data "aws_ssm_parameter" "clerk_secret_key" {
+  name            = aws_ssm_parameter.clerk_secret_key.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.clerk_secret_key]
 }
