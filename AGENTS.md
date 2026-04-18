@@ -1,0 +1,128 @@
+# personal-mcp
+
+Persona MCP Server — Python MCP server for resume/personal data, installable via `uvx`.
+
+## Constitution
+
+All project principles, technology constraints, packaging rules, dev workflow, governance defined in [`.specify/memory/constitution.md`](.specify/memory/constitution.md). Authoritative — read before changes.
+
+## Quick Reference
+
+```bash
+# Root commands (orchestrates both frontend and backend)
+make check      # lint + typecheck + test (both frontend and backend)
+make build      # build frontend then backend
+make run        # docker compose up --build
+make run-local  # build frontend, then run backend locally
+make test       # test both frontend and backend
+make lint       # lint both frontend and backend
+make format     # auto-format both frontend and backend
+
+# Backend-specific (from backend/ directory)
+cd backend
+make check      # lint + typecheck + test
+make test       # uv run pytest
+make lint       # ruff check + format check
+make run        # uv run persona (HTTP server)
+make format     # auto-format with ruff
+
+# Frontend-specific (from frontend/ directory)
+cd frontend
+make check      # lint + test
+make build      # npm run build (Vite production build)
+make run        # npm run dev (Vite dev server with HMR)
+make lint       # npm run lint (ESLint)
+make test       # npm run test (Vitest)
+```
+
+## Project Layout
+
+```
+frontend/                 # React SPA
+  src/
+    components/           # React components (view + edit modes)
+    services/             # API client (fetch wrapper)
+    types/                # TypeScript type definitions
+    __tests__/            # Vitest component tests
+    App.tsx               # Root component
+    main.tsx              # Entry point
+    index.css             # Global styles
+  public/                 # Static assets
+  dist/                   # Build output (served by backend)
+  index.html              # HTML template
+  package.json            # Node.js dependencies
+  tsconfig.json           # TypeScript config
+  vite.config.ts          # Vite build + proxy config
+  eslint.config.js        # ESLint config
+  Makefile                # Frontend build targets
+backend/                  # Python FastAPI + MCP server
+  src/persona/            # Python package (renamed from backend)
+    server.py             # FastAPI + MCP server entrypoint
+    models.py             # Pydantic data models
+    config.py             # Configuration
+    database.py           # SQLite operations
+    db.py                 # DBConnection protocol
+    resume_service.py     # Shared business logic
+    api/                  # REST API routes
+      routes.py           # FastAPI route handlers
+    tools/                # MCP tool handlers (read.py, write.py)
+  tests/
+    unit/                 # Unit tests
+    contract/             # MCP + REST API contract tests
+    integration/          # Integration tests (incl. cross-interface, static serving)
+  pyproject.toml          # Python package config
+  uv.lock                 # Locked dependencies
+  Makefile                # Backend build targets
+Makefile                  # Root orchestrator
+Dockerfile                # Multi-stage Docker build (Node.js + Python)
+docker-compose.yml        # Docker Compose configuration
+specs/                    # Feature specifications
+.specify/                 # Spec-kit configuration
+.github/                  # GitHub Actions CI
+```
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
+
+## Active Technologies
+- Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, `@clerk/clerk-react` v5+, `python-jose[cryptography]`, `svix` (008-authentication)
+- SQLite (schema v3 → v4); `users` table added as FK anchor for `resume_version`, `application`, `accomplishment` (008-authentication)
+- Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, psycopg[binary] ≥3.1, psycopg-pool ≥3.1, testcontainers[postgres] ≥4.0 (dev) (009-postgres)
+- PostgreSQL 16+ (009-postgres)
+- HCL (Terraform 1.7+) + `hashicorp/aws` provider ~5.x, `hashicorp/terraform` 1.7+ (010-aws-infra)
+- Remote state in S3 + DynamoDB (bootstrapped manually); app uses Neon PostgreSQL (connection config via SSM) (010-aws-infra)
+- Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, `clerk-backend-api ≥1.0.0` (new — Python SDK for dual auth), `@clerk/clerk-react` v5+ (existing), `python-jose[cryptography]` (existing — retained for REST API JWT path) (011-mcp-instructions)
+- PostgreSQL 16+ (no schema changes) (011-mcp-instructions)
+- TypeScript 5.6 / React 18 + React Router v7 (new), `@clerk/clerk-react` v5 (existing) (012-client-side-routing)
+- N/A (no storage changes) (012-client-side-routing)
+- Python 3.11+ (backend), TypeScript 5.x (frontend) + FastMCP >=2.3.0, FastAPI >=0.100.0, React 18, Vite 6 (all existing — no new deps) (013-personal-context-section)
+- PostgreSQL 16+, schema v5 → v6 migration (013-personal-context-section)
+- TypeScript 5.x / React 18 + React Router v7, Vite 6, CSS Modules, `@clerk/clerk-react` v5, `lucide-react` (new — icon library) (014-ux-overhaul)
+- N/A — no storage changes (014-ux-overhaul)
+
+### Backend
+- Python 3.11+ with type hints + Pydantic validation
+- FastMCP >=2.3.0 for MCP server (streamable-http + stdio)
+- FastAPI >=0.100.0 for REST API + static file serving
+- uvicorn >=0.20.0 for ASGI HTTP server
+- SQLite via stdlib `sqlite3` with `DBConnection` protocol (Schema v3)
+- `uv` for dependency management + packaging
+- pytest for testing (unit, contract, integration)
+- ruff for linting + formatting
+- pyright for type checking
+- python-jose, svix (auth logic)
+
+### Frontend
+- React 18 + TypeScript 5.x
+- Vite 6 for build + dev server
+- Clerk (Auth SDK)
+- Vitest 2 + React Testing Library for component tests
+- ESLint 9 + typescript-eslint for linting
+- CSS Modules for component styling
+
+### Infrastructure
+- Docker + Docker Compose for containerized deployment (multi-stage build)
+- GNU Make for build orchestration (root + per-directory Makefiles)
+
+## Recent Changes
+- feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action

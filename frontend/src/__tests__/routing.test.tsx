@@ -7,9 +7,9 @@ import * as api from '../services/api'
 vi.mock('../services/api')
 vi.mock('@clerk/clerk-react', () => ({
   useAuth: () => ({ getToken: vi.fn().mockResolvedValue('token') }),
+  useUser: () => ({ user: { firstName: 'Test' } }),
   SignedIn: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SignedOut: () => null,
-  APIKeys: () => <div data-testid="api-keys-component">APIKeys</div>,
 }))
 
 // Minimal mock data
@@ -29,31 +29,33 @@ const mockResume = {
   },
 }
 
-describe('Route: root redirect', () => {
+describe('Route: /', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.listResumes).mockResolvedValue(mockResumes)
+    vi.mocked(api.listApplications).mockResolvedValue([])
+    vi.mocked(api.listNotes).mockResolvedValue([])
   })
 
-  it('redirects / to /connect', async () => {
+  it('renders HomeView at /', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <AppRoutes />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByTestId('api-keys-component')).toBeInTheDocument()
+      expect(screen.getByText(/hey, test/i)).toBeInTheDocument()
     })
   })
 
-  it('redirects unknown routes to /connect', async () => {
+  it('redirects unknown routes to /', async () => {
     render(
       <MemoryRouter initialEntries={['/unknown-route']}>
         <AppRoutes />
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByTestId('api-keys-component')).toBeInTheDocument()
+      expect(screen.getByText(/hey, test/i)).toBeInTheDocument()
     })
   })
 })

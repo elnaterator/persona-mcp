@@ -14,19 +14,19 @@ function renderNav(initialPath = '/resumes') {
 describe('Navigation', () => {
   it('renders all nav items', () => {
     renderNav()
+    expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /resumes/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /applications/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /accomplishments/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /connect/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /notes/i })).toBeInTheDocument()
   })
 
   it('links to correct paths', () => {
     renderNav()
+    expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: /resumes/i })).toHaveAttribute('href', '/resumes')
     expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute('href', '/applications')
     expect(screen.getByRole('link', { name: /accomplishments/i })).toHaveAttribute('href', '/accomplishments')
-    expect(screen.getByRole('link', { name: /connect/i })).toHaveAttribute('href', '/connect')
     expect(screen.getByRole('link', { name: /notes/i })).toHaveAttribute('href', '/notes')
   })
 
@@ -52,12 +52,6 @@ describe('Navigation', () => {
     renderNav('/applications')
     const resumesLink = screen.getByRole('link', { name: /resumes/i })
     expect(resumesLink).not.toHaveAttribute('aria-current', 'page')
-  })
-
-  it('Connect NavLink has connectItem class', () => {
-    renderNav()
-    const connectLink = screen.getByRole('link', { name: /connect/i })
-    expect(connectLink.className).toMatch(/connectItem/)
   })
 
   it('renders icons in all 5 nav items', () => {

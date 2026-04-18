@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router'
+import HomeView from './components/HomeView'
 import ResumeListView from './components/ResumeListView'
 import ResumeDetailView from './components/ResumeDetailView'
 import ApplicationListView from './components/ApplicationListView'
@@ -7,12 +8,11 @@ import AccomplishmentListView from './components/AccomplishmentListView'
 import AccomplishmentDetailView from './components/AccomplishmentDetailView'
 import NoteListView from './components/NoteListView'
 import NoteDetailView from './components/NoteDetailView'
-import ConnectView from './components/ConnectView'
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/connect" replace />} />
+      <Route path="/" element={<HomeView />} />
       <Route path="/resumes" element={<ResumeListView />} />
       <Route path="/resumes/:id" element={<ResumeDetailView />} />
       <Route path="/applications" element={<ApplicationListView />} />
@@ -21,8 +21,7 @@ export default function AppRoutes() {
       <Route path="/accomplishments/:id" element={<AccomplishmentDetailView />} />
       <Route path="/notes" element={<NoteListView />} />
       <Route path="/notes/:id" element={<NoteDetailView />} />
-      <Route path="/connect" element={<ConnectView />} />
-      <Route path="*" element={<Navigate to="/connect" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

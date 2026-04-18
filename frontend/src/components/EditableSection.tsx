@@ -1,5 +1,5 @@
-import { ReactNode, useRef, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { ReactNode, useState } from 'react';
+import { Pencil, Check, X } from 'lucide-react';
 import { StatusMessage } from './StatusMessage';
 import styles from './EditableSection.module.css';
 
@@ -14,16 +14,13 @@ interface EditableSectionProps {
 
 export function EditableSection({ children, onSave, title, placeholderContent }: EditableSectionProps) {
   const [editState, setEditState] = useState<EditState>('viewing');
-  const [hovering, setHovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const touchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleEdit = () => {
     setEditState('editing');
     setError(null);
     setSuccess(null);
-    setHovering(false);
   };
 
   const handleCancel = () => {
@@ -47,26 +44,12 @@ export function EditableSection({ children, onSave, title, placeholderContent }:
     }
   };
 
-  const handleMouseEnter = () => setHovering(true);
-  const handleMouseLeave = () => setHovering(false);
-
-  const handleTouchStart = () => {
-    setHovering(true);
-    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
-    touchTimeoutRef.current = setTimeout(() => setHovering(false), 3000);
-  };
-
   return (
-    <div
-      className={styles.container}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-    >
+    <div className={styles.container}>
       {editState === 'viewing' && (
         <button
           onClick={handleEdit}
-          className={`${styles.editIcon}${hovering ? ` ${styles.editIconVisible}` : ''}`}
+          className={styles.editIcon}
           aria-label={`Edit ${title}`}
         >
           <Pencil size={14} />
@@ -74,31 +57,28 @@ export function EditableSection({ children, onSave, title, placeholderContent }:
       )}
 
       {(editState === 'editing' || editState === 'saving') && (
-        <div className={styles.header}>
-          <h2 className={styles.title}>{title}</h2>
-          <div className={styles.actions}>
-            {editState === 'editing' && (
-              <>
-                <button
-                  onClick={handleSave}
-                  className={`${styles.button} ${styles.primary}`}
-                  aria-label={`Save ${title}`}
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className={styles.button}
-                  aria-label={`Cancel editing ${title}`}
-                >
-                  Cancel
-                </button>
-              </>
-            )}
-            {editState === 'saving' && (
-              <span className={styles.saving}>Saving...</span>
-            )}
-          </div>
+        <div className={styles.editActions}>
+          {editState === 'editing' && (
+            <>
+              <button
+                onClick={handleSave}
+                className={`${styles.actionButton} ${styles.saveIcon}`}
+                aria-label={`Save ${title}`}
+              >
+                <Check size={14} />
+              </button>
+              <button
+                onClick={handleCancel}
+                className={`${styles.actionButton} ${styles.cancelIcon}`}
+                aria-label={`Cancel editing ${title}`}
+              >
+                <X size={14} />
+              </button>
+            </>
+          )}
+          {editState === 'saving' && (
+            <span className={styles.saving}>Saving...</span>
+          )}
         </div>
       )}
 

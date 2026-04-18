@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import type { Education } from '../types/resume'
 import { EntryForm, type FieldConfig } from './EntryForm'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -15,12 +16,12 @@ interface EducationSectionProps {
 type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
 
 const educationFields: FieldConfig[] = [
-  { name: 'institution', label: 'Institution', type: 'text', required: true },
-  { name: 'degree', label: 'Degree', type: 'text', required: true },
-  { name: 'field', label: 'Field of Study', type: 'text', required: false },
-  { name: 'start_date', label: 'Start Date', type: 'text', required: false },
-  { name: 'end_date', label: 'End Date', type: 'text', required: false },
-  { name: 'honors', label: 'Honors', type: 'text', required: false },
+  { name: 'degree', label: 'Degree', type: 'text', required: true, group: 'title', placeholder: 'Degree' },
+  { name: 'field', label: 'Field of Study', type: 'text', required: false, group: 'title', placeholder: 'Field of Study' },
+  { name: 'institution', label: 'Institution', type: 'text', required: true, group: 'meta', placeholder: 'Institution' },
+  { name: 'start_date', label: 'Start Date', type: 'text', required: false, group: 'meta', placeholder: 'Start Date' },
+  { name: 'end_date', label: 'End Date', type: 'text', required: false, group: 'meta', placeholder: 'End Date' },
+  { name: 'honors', label: 'Honors', type: 'text', required: false, group: 'meta', placeholder: 'Honors' },
   { name: 'highlights', label: 'Highlights', type: 'highlights', required: false },
 ]
 
@@ -110,30 +111,21 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
         />
       )}
 
-      {mode === 'add' && (
-        <EntryForm
-          fields={educationFields}
-          onSubmit={handleAdd}
-          onCancel={() => setMode('view')}
-        />
-      )}
-
-      {typeof mode === 'object' && mode.type === 'edit' && (
-        <EntryForm
-          fields={educationFields}
-          initialData={education[mode.index] as unknown as Record<string, string | string[]>}
-          onSubmit={handleEdit}
-          onCancel={() => setMode('view')}
-        />
-      )}
-
-      {mode === 'view' && (
-        <>
-          {education.length > 0 ? (
-            <div className={styles.list}>
-              {education.map((entry, index) => (
-                <div key={index} className={styles.entry}>
-                  <div className={styles.entryHeader}>
+      {education.length > 0 ? (
+        <div className={styles.list}>
+          {education.map((entry, index) => (
+            typeof mode === 'object' && mode.type === 'edit' && mode.index === index ? (
+              <EntryForm
+                key={index}
+                fields={educationFields}
+                initialData={entry as unknown as Record<string, string | string[]>}
+                onSubmit={handleEdit}
+                onCancel={() => setMode('view')}
+              />
+            ) : (
+              <div key={index} className={styles.entry}>
+                <div className={styles.entryHeader}>
+                  <div className={styles.entryInfo}>
                     <span className={styles.entryDegree}>
                       {entry.degree}{entry.field ? `, ${entry.field}` : ''}
                     </span>
@@ -149,40 +141,52 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
                       )}
                     </span>
                   </div>
-                  {entry.highlights && entry.highlights.length > 0 && (
-                    <ul className={styles.highlights}>
-                      {entry.highlights.map((highlight, idx) => (
-                        <li key={idx} className={styles.highlight}>
-                          {highlight}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                   <div className={styles.entryActions}>
                     <button
                       className={styles.editButton}
                       onClick={() => setMode({ type: 'edit', index })}
+                      aria-label="Edit education"
                     >
-                      Edit
+                      <Pencil size={13} />
                     </button>
                     <button
                       className={styles.deleteButton}
                       onClick={() => setMode({ type: 'delete', index })}
+                      aria-label="Delete education"
                     >
-                      Delete
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.placeholder}>Click "Add Education" to add education history</p>
-          )}
+                {entry.highlights && entry.highlights.length > 0 && (
+                  <ul className={styles.highlights}>
+                    {entry.highlights.map((highlight, idx) => (
+                      <li key={idx} className={styles.highlight}>
+                        {highlight}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          ))}
+        </div>
+      ) : (
+        mode !== 'add' && <p className={styles.placeholder}>Click "Add Education" to add education history</p>
+      )}
 
-          <button className={styles.addButton} onClick={() => setMode('add')}>
-            Add Education
-          </button>
-        </>
+      {mode === 'add' && (
+        <EntryForm
+          fields={educationFields}
+          onSubmit={handleAdd}
+          onCancel={() => setMode('view')}
+        />
+      )}
+
+      {mode === 'view' && (
+        <button className={styles.addButton} onClick={() => setMode('add')}>
+          Add Education
+        </button>
       )}
 
       {typeof mode === 'object' && mode.type === 'delete' && (

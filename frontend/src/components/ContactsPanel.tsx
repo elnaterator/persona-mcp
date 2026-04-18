@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { ApplicationContact } from '../types/resume'
 import { listContacts, addContact, updateAppContact, removeContact } from '../services/api'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -127,12 +128,14 @@ export default function ContactsPanel({ appId }: ContactsPanelProps) {
     <div className={styles.container}>
       <div className={styles.panelHeader}>
         <h3 className={styles.panelTitle}>Contacts</h3>
-        <button
-          className={styles.addBtn}
-          onClick={() => { setShowAddForm((v) => !v); setEditTarget(null) }}
-        >
-          {showAddForm ? 'Cancel' : 'Add Contact'}
-        </button>
+        {!showAddForm && (
+          <button
+            className={styles.addBtn}
+            onClick={() => { setShowAddForm(true); setEditTarget(null) }}
+          >
+            Add Contact
+          </button>
+        )}
       </div>
 
       {statusMessage && (
@@ -145,15 +148,15 @@ export default function ContactsPanel({ appId }: ContactsPanelProps) {
 
       {showAddForm && (
         <form className={styles.form} onSubmit={handleAdd}>
-          <ContactFormFields form={form} onChange={(f) => setForm(f)} />
-          <div className={styles.formActions}>
-            <button type="submit" className={styles.saveBtn} disabled={submitting || !form.name.trim()}>
-              {submitting ? 'Saving...' : 'Add'}
+          <div className={styles.formHeader}>
+            <button type="submit" className={styles.saveIconBtn} disabled={submitting || !form.name.trim()} aria-label="Save">
+              <Check size={14} />
             </button>
-            <button type="button" className={styles.cancelBtn} onClick={() => { setShowAddForm(false); setForm(emptyForm) }}>
-              Cancel
+            <button type="button" className={styles.cancelIconBtn} onClick={() => { setShowAddForm(false); setForm(emptyForm) }} aria-label="Cancel">
+              <X size={14} />
             </button>
           </div>
+          <ContactFormFields form={form} onChange={(f) => setForm(f)} />
         </form>
       )}
 
@@ -165,15 +168,15 @@ export default function ContactsPanel({ appId }: ContactsPanelProps) {
             <li key={contact.id} className={styles.contactItem}>
               {editTarget?.id === contact.id ? (
                 <form className={styles.form} onSubmit={handleEditSave}>
-                  <ContactFormFields form={form} onChange={(f) => setForm(f)} />
-                  <div className={styles.formActions}>
-                    <button type="submit" className={styles.saveBtn} disabled={submitting || !form.name.trim()}>
-                      {submitting ? 'Saving...' : 'Save'}
+                  <div className={styles.formHeader}>
+                    <button type="submit" className={styles.saveIconBtn} disabled={submitting || !form.name.trim()} aria-label="Save">
+                      <Check size={14} />
                     </button>
-                    <button type="button" className={styles.cancelBtn} onClick={cancelEdit}>
-                      Cancel
+                    <button type="button" className={styles.cancelIconBtn} onClick={cancelEdit} aria-label="Cancel">
+                      <X size={14} />
                     </button>
                   </div>
+                  <ContactFormFields form={form} onChange={(f) => setForm(f)} />
                 </form>
               ) : (
                 <>
@@ -185,8 +188,8 @@ export default function ContactsPanel({ appId }: ContactsPanelProps) {
                     {contact.notes && <p className={styles.contactNotes}>{contact.notes}</p>}
                   </div>
                   <div className={styles.contactActions}>
-                    <button className={styles.editBtn} onClick={() => startEdit(contact)}>Edit</button>
-                    <button className={styles.deleteBtn} onClick={() => setDeleteTarget(contact.id)}>Delete</button>
+                    <button className={styles.editBtn} onClick={() => startEdit(contact)} aria-label="Edit contact"><Pencil size={13} /></button>
+                    <button className={styles.deleteBtn} onClick={() => setDeleteTarget(contact.id)} aria-label="Delete contact"><Trash2 size={13} /></button>
                   </div>
                 </>
               )}

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
+import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Accomplishment } from '../types/resume'
 import { getAccomplishment, updateAccomplishment, deleteAccomplishment } from '../services/api'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
+import { ConfirmDialog } from './ConfirmDialog'
+import { StatusMessage } from './StatusMessage'
+import { SectionCard } from './SectionCard'
+import { MarkdownContent } from './MarkdownContent'
 import styles from './AccomplishmentDetailView.module.css'
 
 export default function AccomplishmentDetailView() {
@@ -20,7 +25,8 @@ export default function AccomplishmentDetailView() {
   const [editError, setEditError] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [, setDeleting] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
     if (numericId === null) {
@@ -77,6 +83,7 @@ export default function AccomplishmentDetailView() {
       })
       setAcc(updated)
       setEditing(false)
+      setStatusMessage({ type: 'success', message: 'Saved' })
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
     } finally {
@@ -92,6 +99,7 @@ export default function AccomplishmentDetailView() {
     } catch {
       setDeleting(false)
       setConfirmDelete(false)
+      setStatusMessage({ type: 'error', message: 'Failed to delete accomplishment' })
     }
   }
 
@@ -101,85 +109,6 @@ export default function AccomplishmentDetailView() {
     { key: 'action', label: 'Action', placeholder: 'What steps did you take to address the situation?' },
     { key: 'result', label: 'Result', placeholder: 'What was the outcome or impact? Include metrics where possible.' },
   ]
-
-  if (editing) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.topBar}>
-          <h2 className={styles.cardHeading}>Edit Accomplishment</h2>
-        </div>
-
-        <div className={styles.card}>
-          {editError && <p className={styles.formError}>{editError}</p>}
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="edit-title">Title *</label>
-            <input
-              id="edit-title"
-              className={styles.input}
-              type="text"
-              value={editForm.title ?? ''}
-              onChange={(e) => handleEditFieldChange('title', e.target.value)}
-            />
-          </div>
-
-          {STAR_FIELDS.map(({ key, label, placeholder }) => (
-            <div key={key} className={styles.formField}>
-              <label className={styles.formLabel} htmlFor={`edit-${key}`}>{label}</label>
-              <textarea
-                id={`edit-${key}`}
-                className={styles.textarea}
-                value={(editForm[key] as string) ?? ''}
-                onChange={(e) => handleEditFieldChange(key, e.target.value)}
-                placeholder={placeholder}
-                rows={4}
-              />
-            </div>
-          ))}
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="edit-date">Accomplishment Date</label>
-            <input
-              id="edit-date"
-              className={styles.input}
-              type="date"
-              value={(editForm.accomplishment_date as string) ?? ''}
-              onChange={(e) => handleEditFieldChange('accomplishment_date', e.target.value)}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="edit-tags">Tags</label>
-            <input
-              id="edit-tags"
-              className={styles.input}
-              type="text"
-              value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : ''}
-              onChange={(e) =>
-                handleEditFieldChange(
-                  'tags',
-                  e.target.value
-                    .split(',')
-                    .map((t) => t.trim())
-                    .filter(Boolean)
-                )
-              }
-              placeholder="e.g. leadership, technical (comma-separated)"
-            />
-          </div>
-
-          <div className={styles.formActions}>
-            <button className={styles.saveButton} onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button className={styles.cancelButton} onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className={styles.container}>
@@ -191,65 +120,132 @@ export default function AccomplishmentDetailView() {
       />
 
       <div className={styles.topBar}>
-        <Link to="/accomplishments" className={styles.backButton}>
-          Back
-        </Link>
-        <h2 className={styles.topBarTitle}>{acc.title}</h2>
+        <Link to="/accomplishments" className={styles.backButton}>Back</Link>
+        {editing ? (
+          <input
+            className={styles.titleInput}
+            type="text"
+            value={editForm.title ?? ''}
+            onChange={(e) => handleEditFieldChange('title', e.target.value)}
+            autoFocus
+          />
+        ) : (
+          <h2 className={styles.topBarTitle}>{acc.title}</h2>
+        )}
         <div className={styles.topBarActions}>
-          <button className={styles.editButton} onClick={startEdit}>
-            Edit
-          </button>
-          <button className={styles.deleteButton} onClick={() => setConfirmDelete(true)}>
-            Delete
-          </button>
+          {editing ? (
+            <>
+              <button
+                className={styles.saveIconButton}
+                onClick={handleSave}
+                disabled={saving}
+                aria-label="Save accomplishment"
+              >
+                <Check size={14} />
+              </button>
+              <button
+                className={styles.cancelIconButton}
+                onClick={() => setEditing(false)}
+                aria-label="Cancel editing"
+              >
+                <X size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button className={styles.editButton} onClick={startEdit} aria-label="Edit accomplishment">
+                <Pencil size={14} />
+              </button>
+              <button className={styles.deleteButton} onClick={() => setConfirmDelete(true)} aria-label="Delete accomplishment">
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {(acc.accomplishment_date || acc.tags.length > 0) && (
-        <div className={styles.meta}>
-          {acc.accomplishment_date && <span>{acc.accomplishment_date}</span>}
-          {acc.tags.length > 0 && (
-            <div className={styles.tagList}>
-              {acc.tags.map((tag) => (
-                <span key={tag} className={styles.tagBadge}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+      {editError && <p className={styles.formError}>{editError}</p>}
+
+      {statusMessage && (
+        <StatusMessage
+          type={statusMessage.type}
+          message={statusMessage.message}
+          onDismiss={() => setStatusMessage(null)}
+        />
+      )}
+
+      {editing ? (
+        <div className={styles.metaEdit}>
+          <div className={styles.metaField}>
+            <label className={styles.metaLabel} htmlFor="edit-date">Date</label>
+            <input
+              id="edit-date"
+              className={styles.metaInput}
+              type="date"
+              value={(editForm.accomplishment_date as string) ?? ''}
+              onChange={(e) => handleEditFieldChange('accomplishment_date', e.target.value)}
+            />
+          </div>
+          <div className={styles.metaField}>
+            <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
+            <input
+              id="edit-tags"
+              className={styles.metaInput}
+              type="text"
+              value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : ''}
+              onChange={(e) =>
+                handleEditFieldChange(
+                  'tags',
+                  e.target.value.split(',').map((t) => t.trim()).filter(Boolean)
+                )
+              }
+              placeholder="tag1, tag2"
+            />
+          </div>
         </div>
+      ) : (
+        (acc.accomplishment_date || acc.tags.length > 0) && (
+          <div className={styles.meta}>
+            {acc.accomplishment_date && <span>{acc.accomplishment_date}</span>}
+            {acc.tags.length > 0 && (
+              <div className={styles.tagList}>
+                {acc.tags.map((tag) => (
+                  <span key={tag} className={styles.tagBadge}>{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       <div className={styles.starSections}>
         {STAR_FIELDS.map(({ key, label, placeholder }) => (
-          <div key={key} className={styles.starSection}>
-            <h3>{label}</h3>
-            {acc[key] ? (
-              <p>{acc[key] as string}</p>
+          <SectionCard key={key} label={label}>
+            {editing ? (
+              <textarea
+                className={styles.sectionTextarea}
+                value={(editForm[key] as string) ?? ''}
+                onChange={(e) => handleEditFieldChange(key, e.target.value)}
+                placeholder={placeholder}
+                rows={4}
+              />
             ) : (
-              <p className={styles.placeholderText}>{placeholder}</p>
+              acc[key] ? (
+                <MarkdownContent>{acc[key] as string}</MarkdownContent>
+              ) : (
+                <p className={styles.placeholderText}>{placeholder}</p>
+              )
             )}
-          </div>
+          </SectionCard>
         ))}
       </div>
 
       {confirmDelete && (
-        <div className={styles.confirmDialog}>
-          <p>Are you sure you want to delete this accomplishment?</p>
-          <button
-            className={styles.confirmButton}
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            {deleting ? 'Deleting…' : 'Confirm'}
-          </button>
-          <button
-            className={styles.cancelConfirmButton}
-            onClick={() => setConfirmDelete(false)}
-          >
-            Cancel
-          </button>
-        </div>
+        <ConfirmDialog
+          message="Delete this accomplishment? This cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   )

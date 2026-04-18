@@ -112,101 +112,90 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
         <div data-testid="contact-section">
           {isEditing ? (
             <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
+              {/* Row 1: Name — mirrors the large heading */}
               <div className={styles.formField}>
-                <label htmlFor="name" className={styles.formLabel}>
-                  Name
-                </label>
+                <label htmlFor="name" className={styles.formLabel}>Name</label>
                 <input
                   type="text"
                   id="name"
                   value={formData.name || ''}
                   onChange={(e) => handleFieldChange('name', e.target.value)}
-                  className={styles.input}
+                  className={`${styles.input} ${styles.inputName}`}
                 />
               </div>
 
-              <div className={styles.formField}>
-                <label htmlFor="email" className={styles.formLabel}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={formData.email || ''}
-                  onChange={(e) => handleFieldChange('email', e.target.value)}
-                  className={`${styles.input} ${validationErrors.email ? styles.inputError : ''}`}
-                />
-                {validationErrors.email && (
-                  <span className={styles.errorText}>{validationErrors.email}</span>
-                )}
+              {/* Row 2: Email · Phone · Location — mirrors the contact detail row */}
+              <div className={styles.formRow}>
+                <div className={styles.formField}>
+                  <label htmlFor="email" className={styles.formLabel}>Email</label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={formData.email || ''}
+                    onChange={(e) => handleFieldChange('email', e.target.value)}
+                    className={`${styles.input} ${validationErrors.email ? styles.inputError : ''}`}
+                  />
+                  {validationErrors.email && (
+                    <span className={styles.errorText}>{validationErrors.email}</span>
+                  )}
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="phone" className={styles.formLabel}>Phone</label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    value={formData.phone || ''}
+                    onChange={(e) => handleFieldChange('phone', e.target.value)}
+                    className={styles.input}
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="location" className={styles.formLabel}>Location</label>
+                  <input
+                    type="text"
+                    id="location"
+                    value={formData.location || ''}
+                    onChange={(e) => handleFieldChange('location', e.target.value)}
+                    className={styles.input}
+                  />
+                </div>
               </div>
 
-              <div className={styles.formField}>
-                <label htmlFor="phone" className={styles.formLabel}>
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  value={formData.phone || ''}
-                  onChange={(e) => handleFieldChange('phone', e.target.value)}
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.formField}>
-                <label htmlFor="location" className={styles.formLabel}>
-                  Location
-                </label>
-                <input
-                  type="text"
-                  id="location"
-                  value={formData.location || ''}
-                  onChange={(e) => handleFieldChange('location', e.target.value)}
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.formField}>
-                <label htmlFor="linkedin" className={styles.formLabel}>
-                  LinkedIn
-                </label>
-                <input
-                  type="url"
-                  id="linkedin"
-                  value={formData.linkedin || ''}
-                  onChange={(e) => handleFieldChange('linkedin', e.target.value)}
-                  className={styles.input}
-                  placeholder="https://linkedin.com/in/username"
-                />
-              </div>
-
-              <div className={styles.formField}>
-                <label htmlFor="website" className={styles.formLabel}>
-                  Website
-                </label>
-                <input
-                  type="url"
-                  id="website"
-                  value={formData.website || ''}
-                  onChange={(e) => handleFieldChange('website', e.target.value)}
-                  className={styles.input}
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              <div className={styles.formField}>
-                <label htmlFor="github" className={styles.formLabel}>
-                  GitHub
-                </label>
-                <input
-                  type="url"
-                  id="github"
-                  value={formData.github || ''}
-                  onChange={(e) => handleFieldChange('github', e.target.value)}
-                  className={styles.input}
-                  placeholder="https://github.com/username"
-                />
+              {/* Row 3: LinkedIn · Website · GitHub — mirrors the links row */}
+              <div className={styles.formRow}>
+                <div className={styles.formField}>
+                  <label htmlFor="linkedin" className={styles.formLabel}>LinkedIn</label>
+                  <input
+                    type="url"
+                    id="linkedin"
+                    value={formData.linkedin || ''}
+                    onChange={(e) => handleFieldChange('linkedin', e.target.value)}
+                    className={styles.input}
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="website" className={styles.formLabel}>Website</label>
+                  <input
+                    type="url"
+                    id="website"
+                    value={formData.website || ''}
+                    onChange={(e) => handleFieldChange('website', e.target.value)}
+                    className={styles.input}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className={styles.formField}>
+                  <label htmlFor="github" className={styles.formLabel}>GitHub</label>
+                  <input
+                    type="url"
+                    id="github"
+                    value={formData.github || ''}
+                    onChange={(e) => handleFieldChange('github', e.target.value)}
+                    className={styles.input}
+                    placeholder="https://github.com/username"
+                  />
+                </div>
               </div>
             </form>
           ) : (

@@ -35,20 +35,6 @@
   background-color: var(--bg-hover);
 }
 
-/* Connect tab — always accented to signal primary destination */
-.connectItem {
-  color: var(--accent-green-dim);
-}
-
-.connectItem:hover {
-  color: var(--accent-green);
-  background-color: var(--bg-hover);
-}
-
-.connectItem.active {
-  color: var(--accent-green);
-  background-color: var(--bg-hover);
-}
 
 @media (max-width: 640px) {
   .nav {

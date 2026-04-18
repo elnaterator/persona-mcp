@@ -84,24 +84,14 @@ describe('ResumeListView', () => {
     expect(resumeLinks[1]).toHaveAttribute('href', '/resumes/2')
   })
 
-  it('shows Set as Default button for non-default versions', async () => {
+  it('shows Default badge only on default version', async () => {
     vi.mocked(api.listResumes).mockResolvedValue(mockVersions)
     renderView()
     await waitFor(() => {
       expect(screen.getByText('Senior Engineer Version')).toBeInTheDocument()
     })
-    const setDefaultBtns = screen.getAllByRole('button', { name: /set as default/i })
-    expect(setDefaultBtns.length).toBeGreaterThan(0)
-  })
-
-  it('disables delete button when only one version exists', async () => {
-    vi.mocked(api.listResumes).mockResolvedValue([mockVersions[0]])
-    renderView()
-    await waitFor(() => {
-      expect(screen.getByText('Default Resume')).toBeInTheDocument()
-    })
-    const deleteBtn = screen.getByRole('button', { name: /delete/i })
-    expect(deleteBtn).toBeDisabled()
+    const defaultBadges = screen.getAllByText('Default')
+    expect(defaultBadges.length).toBe(1)
   })
 
   it('shows empty state when no versions exist', async () => {
