@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import type { ResumeVersionSummary } from '../types/resume'
-import { listResumes, createResume, deleteResume, setDefaultResume } from '../services/api'
+import { listResumes, createResume } from '../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
-import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
 import { InlineCreateForm } from './InlineCreateForm'
 import styles from './ResumeListView.module.css'
@@ -12,7 +11,6 @@ export default function ResumeListView() {
   const [resumes, setResumes] = useState<ResumeVersionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
@@ -36,33 +34,6 @@ export default function ResumeListView() {
     setStatusMessage({ type: 'success', message: 'Resume version created' })
     setCreating(false)
     await load()
-  }
-
-  const handleSetDefault = async (id: number) => {
-    try {
-      await setDefaultResume(id)
-      setStatusMessage({ type: 'success', message: 'Default resume updated' })
-      await load()
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to set default resume' })
-    }
-  }
-
-  const handleDeleteClick = (id: number) => {
-    setDeleteTarget(id)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (deleteTarget === null) return
-    try {
-      await deleteResume(deleteTarget)
-      setStatusMessage({ type: 'success', message: 'Resume version deleted' })
-      setDeleteTarget(null)
-      await load()
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to delete resume version' })
-      setDeleteTarget(null)
-    }
   }
 
   const formatDate = (iso: string) => {
@@ -105,7 +76,7 @@ export default function ResumeListView() {
         <p className={styles.empty}>No resume versions found.</p>
       ) : (
         <ul className={styles.list}>
-          {resumes.map((resume) => (
+          {[...resumes].sort((a, b) => (b.is_default ? 1 : 0) - (a.is_default ? 1 : 0)).map((resume) => (
             <li key={resume.id} className={styles.item}>
               <Link to={`/resumes/${resume.id}`} className={styles.itemLink}>
                 <div className={styles.itemMain}>
@@ -123,36 +94,11 @@ export default function ResumeListView() {
                   </span>
                 </div>
               </Link>
-              <div className={styles.itemActions}>
-                {!resume.is_default && (
-                  <button
-                    className={styles.actionButton}
-                    onClick={() => handleSetDefault(resume.id)}
-                  >
-                    Set as Default
-                  </button>
-                )}
-                <button
-                  className={`${styles.actionButton} ${styles.deleteButton}`}
-                  onClick={() => handleDeleteClick(resume.id)}
-                  disabled={resumes.length === 1}
-                  title={resumes.length === 1 ? 'Cannot delete the only version' : undefined}
-                >
-                  Delete
-                </button>
-              </div>
             </li>
           ))}
         </ul>
       )}
 
-      {deleteTarget !== null && (
-        <ConfirmDialog
-          message="Are you sure you want to delete this resume version? This cannot be undone."
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import type { Skill } from '../types/resume'
 import { EntryForm, type FieldConfig } from './EntryForm'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -113,31 +114,30 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
         <div className={styles.list}>
           {categories.map((category) => (
             <div key={category} className={styles.skillGroup}>
-              <span className={styles.categoryLabel}>{category}: </span>
-              <span className={styles.skillNames}>
-                {groupedSkills[category].map((skill, i) => (
-                  <span key={skill.originalIndex} className={styles.skillItem}>
-                    {skill.name}
-                    {i < groupedSkills[category].length - 1 && (
-                      <span className={styles.separator}>, </span>
-                    )}
-                    <button
-                      className={styles.editButton}
-                      onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
-                      aria-label="Edit"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className={styles.deleteButton}
-                      onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
-                      aria-label="Delete"
-                    >
-                      Delete
-                    </button>
-                  </span>
+              <span className={styles.categoryLabel}>{category}</span>
+              <div className={styles.skillItems}>
+                {groupedSkills[category].map((skill) => (
+                  <div key={skill.originalIndex} className={styles.skillItem}>
+                    <span className={styles.skillName}>{skill.name}</span>
+                    <div className={styles.skillActions}>
+                      <button
+                        className={styles.editButton}
+                        onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
+                        aria-label="Edit skill"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        className={styles.deleteButton}
+                        onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
+                        aria-label="Delete skill"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </span>
+              </div>
             </div>
           ))}
         </div>

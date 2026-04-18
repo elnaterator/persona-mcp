@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { EditableSection } from './EditableSection';
 import { updateSummary, updateVersionSummary } from '../services/api';
+import { MarkdownContent } from './MarkdownContent';
 import styles from './SummarySection.module.css';
 
 interface SummarySectionProps {
@@ -12,6 +13,23 @@ interface SummarySectionProps {
 export default function SummarySection({ summary, onUpdate, versionId }: SummarySectionProps) {
   const [formData, setFormData] = useState<string>(summary);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResize = (el: HTMLTextAreaElement | null) => {
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  };
+
+  const callbackRef = (el: HTMLTextAreaElement | null) => {
+    (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
+    autoResize(el);
+  };
+
+  useEffect(() => {
+    autoResize(textareaRef.current);
+  }, [formData]);
 
   const handleSave = async () => {
     if (!formData.trim()) {
@@ -42,7 +60,7 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
       <section className={styles.container} data-testid="summary-section">
         <h2 className={styles.sectionLabel}>Summary</h2>
         {summary ? (
-          <p className={styles.text}>{summary}</p>
+          <MarkdownContent>{summary}</MarkdownContent>
         ) : (
           <p className={styles.empty}>No summary available.</p>
         )}
@@ -58,13 +76,14 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
     <EditableSection title="Summary" onSave={handleSave} placeholderContent={placeholder}>
       {({ isEditing }) => (
         <div data-testid="summary-section">
+          <h2 className={styles.sectionLabel}>Summary</h2>
           {isEditing ? (
             <div className={styles.formField}>
               <textarea
+                ref={callbackRef}
                 value={formData}
                 onChange={(e) => handleChange(e.target.value)}
                 className={`${styles.textarea} ${validationError ? styles.textareaError : ''}`}
-                rows={6}
                 placeholder="Enter your professional summary..."
               />
               {validationError && (
@@ -74,7 +93,7 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
           ) : (
             <>
               {summary && (
-                <p className={styles.text}>{summary}</p>
+                <MarkdownContent>{summary}</MarkdownContent>
               )}
             </>
           )}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import type { WorkExperience } from '../types/resume'
 import { EntryForm, type FieldConfig } from './EntryForm'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -15,11 +16,11 @@ interface ExperienceSectionProps {
 type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
 
 const experienceFields: FieldConfig[] = [
-  { name: 'title', label: 'Title', type: 'text', required: true },
-  { name: 'company', label: 'Company', type: 'text', required: true },
-  { name: 'start_date', label: 'Start Date', type: 'text', required: false },
-  { name: 'end_date', label: 'End Date', type: 'text', required: false },
-  { name: 'location', label: 'Location', type: 'text', required: false },
+  { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Title' },
+  { name: 'company', label: 'Company', type: 'text', required: true, group: 'meta', placeholder: 'Company' },
+  { name: 'start_date', label: 'Start Date', type: 'text', required: false, group: 'meta', placeholder: 'Start Date' },
+  { name: 'end_date', label: 'End Date', type: 'text', required: false, group: 'meta', placeholder: 'End Date' },
+  { name: 'location', label: 'Location', type: 'text', required: false, group: 'meta', placeholder: 'Location' },
   { name: 'highlights', label: 'Highlights', type: 'highlights', required: false },
 ]
 
@@ -107,30 +108,21 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
         />
       )}
 
-      {mode === 'add' && (
-        <EntryForm
-          fields={experienceFields}
-          onSubmit={handleAdd}
-          onCancel={() => setMode('view')}
-        />
-      )}
-
-      {typeof mode === 'object' && mode.type === 'edit' && (
-        <EntryForm
-          fields={experienceFields}
-          initialData={experience[mode.index] as unknown as Record<string, string | string[]>}
-          onSubmit={handleEdit}
-          onCancel={() => setMode('view')}
-        />
-      )}
-
-      {mode === 'view' && (
-        <>
-          {experience.length > 0 ? (
-            <div className={styles.list}>
-              {experience.map((entry, index) => (
-                <div key={index} className={styles.entry}>
-                  <div className={styles.entryHeader}>
+      {experience.length > 0 ? (
+        <div className={styles.list}>
+          {experience.map((entry, index) => (
+            typeof mode === 'object' && mode.type === 'edit' && mode.index === index ? (
+              <EntryForm
+                key={index}
+                fields={experienceFields}
+                initialData={entry as unknown as Record<string, string | string[]>}
+                onSubmit={handleEdit}
+                onCancel={() => setMode('view')}
+              />
+            ) : (
+              <div key={index} className={styles.entry}>
+                <div className={styles.entryHeader}>
+                  <div className={styles.entryInfo}>
                     <span className={styles.entryTitle}>{entry.title}</span>
                     <span className={styles.entryMeta}>
                       {entry.company}
@@ -144,40 +136,52 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
                       )}
                     </span>
                   </div>
-                  {entry.highlights && entry.highlights.length > 0 && (
-                    <ul className={styles.highlights}>
-                      {entry.highlights.map((highlight, idx) => (
-                        <li key={idx} className={styles.highlight}>
-                          {highlight}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                   <div className={styles.entryActions}>
                     <button
                       className={styles.editButton}
                       onClick={() => setMode({ type: 'edit', index })}
+                      aria-label="Edit experience"
                     >
-                      Edit
+                      <Pencil size={13} />
                     </button>
                     <button
                       className={styles.deleteButton}
                       onClick={() => setMode({ type: 'delete', index })}
+                      aria-label="Delete experience"
                     >
-                      Delete
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.placeholder}>Click "Add Experience" to add work history</p>
-          )}
+                {entry.highlights && entry.highlights.length > 0 && (
+                  <ul className={styles.highlights}>
+                    {entry.highlights.map((highlight, idx) => (
+                      <li key={idx} className={styles.highlight}>
+                        {highlight}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          ))}
+        </div>
+      ) : (
+        mode !== 'add' && <p className={styles.placeholder}>Click "Add Experience" to add work history</p>
+      )}
 
-          <button className={styles.addButton} onClick={() => setMode('add')}>
-            Add Experience
-          </button>
-        </>
+      {mode === 'add' && (
+        <EntryForm
+          fields={experienceFields}
+          onSubmit={handleAdd}
+          onCancel={() => setMode('view')}
+        />
+      )}
+
+      {mode === 'view' && (
+        <button className={styles.addButton} onClick={() => setMode('add')}>
+          Add Experience
+        </button>
       )}
 
       {typeof mode === 'object' && mode.type === 'delete' && (

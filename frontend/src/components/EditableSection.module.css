@@ -1,84 +1,65 @@
 .container {
   position: relative;
-  margin-bottom: 2rem;
+  background-color: var(--bg-hover);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
 }
 
 .editIcon {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.15s;
-  color: var(--accent-green);
+  color: var(--text-secondary);
   cursor: pointer;
-  background: none;
+  background-color: var(--bg-surface);
   border: none;
-  padding: 0.25rem;
+  border-radius: var(--radius);
+  padding: 0.3rem 0.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1;
+  transition: background-color 0.15s, color 0.15s;
 }
 
-.container:hover .editIcon,
-.editIconVisible {
-  opacity: 1;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.button {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius);
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.button:hover {
-  background: var(--bg-surface);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.primary {
-  background: none;
+.editIcon:hover {
+  background-color: var(--bg-active);
   color: var(--accent-green);
-  border-color: transparent;
 }
 
-.primary:hover {
-  background: none;
-  border-color: transparent;
-  color: var(--accent-green-dim);
+.editActions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  z-index: 1;
+}
+
+.actionButton {
+  color: var(--text-secondary);
+  cursor: pointer;
+  background-color: var(--bg-surface);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.3rem 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.actionButton:hover {
+  background-color: var(--bg-active);
+}
+
+.saveIcon:hover {
+  color: var(--accent-green);
+}
+
+.cancelIcon:hover {
+  color: var(--status-error);
 }
 
 .saving {

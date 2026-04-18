@@ -1,4 +1,5 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useRef, useEffect } from 'react'
+import { Check, X, Trash2 } from 'lucide-react'
 import styles from './EntryForm.module.css'
 
 export interface FieldConfig {
@@ -6,6 +7,8 @@ export interface FieldConfig {
   label: string
   type: 'text' | 'textarea' | 'highlights'
   required: boolean
+  group?: string
+  placeholder?: string
 }
 
 interface EntryFormProps {
@@ -13,6 +16,34 @@ interface EntryFormProps {
   initialData?: Record<string, string | string[]>
   onSubmit: (data: Record<string, string | string[]>) => void
   onCancel: () => void
+}
+
+function AutoResizeTextarea({ value, onChange, placeholder, className }: {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  className?: string
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  const resize = (el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
+  useEffect(() => { resize(ref.current) }, [value])
+
+  return (
+    <textarea
+      ref={(el) => { (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; resize(el) }}
+      className={className}
+      placeholder={placeholder}
+      value={value}
+      rows={1}
+      onChange={(e) => { onChange(e.target.value) }}
+    />
+  )
 }
 
 export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: EntryFormProps) {
@@ -100,12 +131,68 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
     onSubmit(formData)
   }
 
+  const renderTextField = (field: FieldConfig, inGroup = false) => (
+    <div key={field.name} className={`${styles.fieldGroup} ${inGroup ? styles.fieldGroupInline : ''}`}>
+      <label htmlFor={field.name} className={styles.label}>
+        {field.label}
+        {field.required && <span className={styles.required}>*</span>}
+      </label>
+      <input
+        type="text"
+        id={field.name}
+        className={styles.input}
+        value={formData[field.name] as string}
+        placeholder={inGroup ? field.placeholder ?? field.label : field.placeholder}
+        onChange={(e) => handleInputChange(field.name, e.target.value)}
+      />
+      {errors[field.name] && (
+        <span className={styles.error}>{errors[field.name]}</span>
+      )}
+    </div>
+  )
+
+  // Build rows: consecutive fields with the same group key go into one flex row
+  const rows: (FieldConfig | FieldConfig[])[] = []
+  let i = 0
+  while (i < fields.length) {
+    const field = fields[i]
+    if (field.group) {
+      const group: FieldConfig[] = [field]
+      i++
+      while (i < fields.length && fields[i].group === field.group) {
+        group.push(fields[i])
+        i++
+      }
+      rows.push(group)
+    } else {
+      rows.push(field)
+      i++
+    }
+  }
+
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
-      {fields.map((field) => {
+      <div className={styles.formHeader}>
+        <button type="submit" className={styles.saveIconButton} aria-label="Save">
+          <Check size={14} />
+        </button>
+        <button type="button" className={styles.cancelIconButton} onClick={onCancel} aria-label="Cancel">
+          <X size={14} />
+        </button>
+      </div>
+      {rows.map((row) => {
+        if (Array.isArray(row)) {
+          return (
+            <div key={row.map((f) => f.name).join('-')} className={styles.fieldRow}>
+              {row.map((field) => renderTextField(field, true))}
+            </div>
+          )
+        }
+
+        const field = row
+
         if (field.type === 'highlights') {
           const highlights = (formData[field.name] as string[]) || []
-
           return (
             <div key={field.name} className={styles.fieldGroup}>
               <label className={styles.label}>
@@ -115,12 +202,11 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
               <div className={styles.highlightsList}>
                 {highlights.map((highlight, index) => (
                   <div key={index} className={styles.highlightItem}>
-                    <input
-                      type="text"
-                      className={styles.input}
+                    <AutoResizeTextarea
+                      className={styles.highlightTextarea}
                       placeholder="Highlight"
                       value={highlight}
-                      onChange={(e) => handleHighlightsChange(index, e.target.value)}
+                      onChange={(value) => handleHighlightsChange(index, value)}
                     />
                     <button
                       type="button"
@@ -128,7 +214,7 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
                       onClick={() => removeHighlight(index)}
                       aria-label="Remove"
                     >
-                      Remove
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 ))}
@@ -167,34 +253,8 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
           )
         }
 
-        return (
-          <div key={field.name} className={styles.fieldGroup}>
-            <label htmlFor={field.name} className={styles.label}>
-              {field.label}
-              {field.required && <span className={styles.required}>*</span>}
-            </label>
-            <input
-              type="text"
-              id={field.name}
-              className={styles.input}
-              value={formData[field.name] as string}
-              onChange={(e) => handleInputChange(field.name, e.target.value)}
-            />
-            {errors[field.name] && (
-              <span className={styles.error}>{errors[field.name]}</span>
-            )}
-          </div>
-        )
+        return renderTextField(field)
       })}
-
-      <div className={styles.actions}>
-        <button type="button" className={styles.cancelButton} onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className={styles.saveButton}>
-          Save
-        </button>
-      </div>
     </form>
   )
 }

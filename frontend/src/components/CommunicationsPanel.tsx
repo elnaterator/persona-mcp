@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Communication } from '../types/resume'
 import {
   listCommunications,
@@ -155,12 +156,14 @@ export default function CommunicationsPanel({ appId }: CommunicationsPanelProps)
     <div className={styles.container}>
       <div className={styles.panelHeader}>
         <h3 className={styles.panelTitle}>Communications</h3>
-        <button
-          className={styles.addBtn}
-          onClick={() => { setShowAddForm((v) => !v); setEditTarget(null) }}
-        >
-          {showAddForm ? 'Cancel' : 'Add Communication'}
-        </button>
+        {!showAddForm && (
+          <button
+            className={styles.addBtn}
+            onClick={() => { setShowAddForm(true); setEditTarget(null) }}
+          >
+            Add Communication
+          </button>
+        )}
       </div>
 
       {statusMessage && (
@@ -173,19 +176,20 @@ export default function CommunicationsPanel({ appId }: CommunicationsPanelProps)
 
       {showAddForm && (
         <form className={styles.form} onSubmit={handleAdd}>
-          <CommFormFields form={form} onChange={(f) => setForm(f)} />
-          <div className={styles.formActions}>
-            <button type="submit" className={styles.saveBtn} disabled={submitting}>
-              {submitting ? 'Saving...' : 'Add'}
+          <div className={styles.formHeader}>
+            <button type="submit" className={styles.saveIconBtn} disabled={submitting} aria-label="Save">
+              <Check size={14} />
             </button>
             <button
               type="button"
-              className={styles.cancelBtn}
+              className={styles.cancelIconBtn}
               onClick={() => { setShowAddForm(false); setForm(emptyForm) }}
+              aria-label="Cancel"
             >
-              Cancel
+              <X size={14} />
             </button>
           </div>
+          <CommFormFields form={form} onChange={(f) => setForm(f)} />
         </form>
       )}
 
@@ -197,19 +201,20 @@ export default function CommunicationsPanel({ appId }: CommunicationsPanelProps)
             <li key={comm.id} className={styles.timelineItem}>
               {editTarget?.id === comm.id ? (
                 <form className={styles.form} onSubmit={handleEditSave}>
-                  <CommFormFields form={form} onChange={(f) => setForm(f)} />
-                  <div className={styles.formActions}>
-                    <button type="submit" className={styles.saveBtn} disabled={submitting}>
-                      {submitting ? 'Saving...' : 'Save'}
+                  <div className={styles.formHeader}>
+                    <button type="submit" className={styles.saveIconBtn} disabled={submitting} aria-label="Save">
+                      <Check size={14} />
                     </button>
                     <button
                       type="button"
-                      className={styles.cancelBtn}
+                      className={styles.cancelIconBtn}
                       onClick={() => { setEditTarget(null); setForm(emptyForm) }}
+                      aria-label="Cancel"
                     >
-                      Cancel
+                      <X size={14} />
                     </button>
                   </div>
+                  <CommFormFields form={form} onChange={(f) => setForm(f)} />
                 </form>
               ) : (
                 <>
@@ -223,8 +228,8 @@ export default function CommunicationsPanel({ appId }: CommunicationsPanelProps)
                       </span>
                     </div>
                     <div className={styles.commActions}>
-                      <button className={styles.editBtn} onClick={() => startEdit(comm)}>Edit</button>
-                      <button className={styles.deleteBtn} onClick={() => setDeleteTarget(comm.id)}>Delete</button>
+                      <button className={styles.editBtn} onClick={() => startEdit(comm)} aria-label="Edit communication"><Pencil size={13} /></button>
+                      <button className={styles.deleteBtn} onClick={() => setDeleteTarget(comm.id)} aria-label="Delete communication"><Trash2 size={13} /></button>
                     </div>
                   </div>
                   {comm.subject && <p className={styles.commSubject}>{comm.subject}</p>}
