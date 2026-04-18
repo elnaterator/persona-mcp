@@ -26,7 +26,7 @@ export default function NoteDetailView() {
   const [saving, setSaving] = useState(false)
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {

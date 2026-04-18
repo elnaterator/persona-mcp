@@ -129,7 +129,7 @@ describe('NoteDetailView', () => {
     })
     await user.click(screen.getByRole('button', { name: /Delete/i }))
     await waitFor(() => {
-      expect(screen.getByText(/Are you sure/i)).toBeInTheDocument()
+      expect(screen.getByText(/Delete this note/i)).toBeInTheDocument()
     })
     await user.click(screen.getByRole('button', { name: /Confirm|Yes/i }))
     await waitFor(() => {

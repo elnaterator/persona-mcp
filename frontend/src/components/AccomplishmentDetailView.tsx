@@ -25,7 +25,7 @@ export default function AccomplishmentDetailView() {
   const [editError, setEditError] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {

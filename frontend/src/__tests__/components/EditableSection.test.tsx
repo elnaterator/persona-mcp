@@ -158,7 +158,7 @@ describe('EditableSection', () => {
     expect(screen.getByRole('button', { name: /cancel editing my section/i })).toBeInTheDocument();
   });
 
-  it('shows header with title when editing', async () => {
+  it('shows save and cancel buttons when editing', async () => {
     const user = userEvent.setup();
     render(
       <EditableSection title="My Section" onSave={vi.fn()}>
@@ -167,6 +167,7 @@ describe('EditableSection', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /edit my section/i }));
-    expect(screen.getByText('My Section')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save my section/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel editing my section/i })).toBeInTheDocument();
   });
 });

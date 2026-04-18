@@ -29,7 +29,7 @@ export default function ResumeDetailView() {
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelInput, setLabelInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [, setDeleting] = useState(false)
 
   useEffect(() => {
     if (numericId === null) {
