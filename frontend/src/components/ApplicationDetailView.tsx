@@ -17,6 +17,7 @@ import { StatusMessage } from './StatusMessage'
 import { LoadingSpinner } from './LoadingSpinner'
 import { SectionCard } from './SectionCard'
 import { MarkdownContent } from './MarkdownContent'
+import { AutoResizeTextarea } from './AutoResizeTextarea'
 import styles from './ApplicationDetailView.module.css'
 
 const ALL_STATUSES = [
@@ -136,6 +137,12 @@ export default function ApplicationDetailView() {
     (field: keyof Application) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       setSectionForm((prev) => ({ ...prev, [field]: e.target.value }))
+    }
+
+  const setFieldValue =
+    (field: keyof Application) =>
+    (value: string) => {
+      setSectionForm((prev) => ({ ...prev, [field]: value }))
     }
 
   const handleDelete = async () => {
@@ -354,11 +361,10 @@ export default function ApplicationDetailView() {
       >
         {editingSection === 'description' ? (
           <div className={styles.sectionForm}>
-            <textarea
+            <AutoResizeTextarea
               className={styles.textarea}
               value={sectionForm.description ?? ''}
-              onChange={setField('description')}
-              rows={6}
+              onChange={setFieldValue('description')}
               placeholder="Job description, requirements…"
             />
           </div>
@@ -389,11 +395,10 @@ export default function ApplicationDetailView() {
       >
         {editingSection === 'notes' ? (
           <div className={styles.sectionForm}>
-            <textarea
+            <AutoResizeTextarea
               className={styles.textarea}
               value={sectionForm.notes ?? ''}
-              onChange={setField('notes')}
-              rows={4}
+              onChange={setFieldValue('notes')}
               placeholder="Personal notes…"
             />
           </div>

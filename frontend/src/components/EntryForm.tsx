@@ -1,5 +1,6 @@
-import { useState, FormEvent, useRef, useEffect } from 'react'
+import { useState, FormEvent } from 'react'
 import { Check, X, Trash2 } from 'lucide-react'
+import { AutoResizeTextarea } from './AutoResizeTextarea'
 import styles from './EntryForm.module.css'
 
 export interface FieldConfig {
@@ -18,33 +19,6 @@ interface EntryFormProps {
   onCancel: () => void
 }
 
-function AutoResizeTextarea({ value, onChange, placeholder, className }: {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  className?: string
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null)
-
-  const resize = (el: HTMLTextAreaElement | null) => {
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }
-
-  useEffect(() => { resize(ref.current) }, [value])
-
-  return (
-    <textarea
-      ref={(el) => { (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; resize(el) }}
-      className={className}
-      placeholder={placeholder}
-      value={value}
-      rows={1}
-      onChange={(e) => { onChange(e.target.value) }}
-    />
-  )
-}
 
 export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: EntryFormProps) {
   const [formData, setFormData] = useState<Record<string, string | string[]>>(() => {
@@ -238,13 +212,12 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
                 {field.label}
                 {field.required && <span className={styles.required}>*</span>}
               </label>
-              <textarea
+              <AutoResizeTextarea
                 id={field.name}
                 className={styles.textarea}
                 value={formData[field.name] as string}
-                onChange={(e) => handleInputChange(field.name, e.target.value)}
-                rows={10}
-                maxLength={5000}
+                onChange={(value) => handleInputChange(field.name, value)}
+                placeholder={field.placeholder}
               />
               {errors[field.name] && (
                 <span className={styles.error}>{errors[field.name]}</span>

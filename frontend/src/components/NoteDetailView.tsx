@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Note } from '../types/resume'
@@ -9,6 +9,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
 import { SectionCard } from './SectionCard'
 import { MarkdownContent } from './MarkdownContent'
+import { AutoResizeTextarea } from './AutoResizeTextarea'
 import styles from './NoteDetailView.module.css'
 
 export default function NoteDetailView() {
@@ -24,7 +25,6 @@ export default function NoteDetailView() {
   const [editForm, setEditForm] = useState<Partial<Note>>({})
   const [editError, setEditError] = useState('')
   const [saving, setSaving] = useState(false)
-  const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -44,12 +44,6 @@ export default function NoteDetailView() {
     })
   }, [numericId, navigate])
 
-  useEffect(() => {
-    const el = contentTextareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [editForm.content, editing])
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Note" backTo="/notes" backLabel="Back to Notes" />
@@ -207,11 +201,10 @@ export default function NoteDetailView() {
 
       <SectionCard>
         {editing ? (
-          <textarea
-            ref={contentTextareaRef}
+          <AutoResizeTextarea
             className={styles.contentTextarea}
             value={editForm.content ?? ''}
-            onChange={(e) => handleEditFieldChange('content', e.target.value)}
+            onChange={(value) => handleEditFieldChange('content', value)}
             placeholder="Write your note here..."
           />
         ) : (
