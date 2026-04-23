@@ -9,6 +9,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
 import { SectionCard } from './SectionCard'
 import { MarkdownContent } from './MarkdownContent'
+import { AutoResizeTextarea } from './AutoResizeTextarea'
 import styles from './AccomplishmentDetailView.module.css'
 
 export default function AccomplishmentDetailView() {
@@ -222,12 +223,11 @@ export default function AccomplishmentDetailView() {
         {STAR_FIELDS.map(({ key, label, placeholder }) => (
           <SectionCard key={key} label={label}>
             {editing ? (
-              <textarea
+              <AutoResizeTextarea
                 className={styles.sectionTextarea}
                 value={(editForm[key] as string) ?? ''}
-                onChange={(e) => handleEditFieldChange(key, e.target.value)}
+                onChange={(value) => handleEditFieldChange(key, value)}
                 placeholder={placeholder}
-                rows={4}
               />
             ) : (
               acc[key] ? (

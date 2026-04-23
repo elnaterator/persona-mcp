@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { EditableSection } from './EditableSection';
 import { updateSummary, updateVersionSummary } from '../services/api';
 import { MarkdownContent } from './MarkdownContent';
+import { AutoResizeTextarea } from './AutoResizeTextarea';
 import styles from './SummarySection.module.css';
 
 interface SummarySectionProps {
@@ -13,23 +14,6 @@ interface SummarySectionProps {
 export default function SummarySection({ summary, onUpdate, versionId }: SummarySectionProps) {
   const [formData, setFormData] = useState<string>(summary);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const autoResize = (el: HTMLTextAreaElement | null) => {
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-  };
-
-  const callbackRef = (el: HTMLTextAreaElement | null) => {
-    (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
-    autoResize(el);
-  };
-
-  useEffect(() => {
-    autoResize(textareaRef.current);
-  }, [formData]);
 
   const handleSave = async () => {
     if (!formData.trim()) {
@@ -79,10 +63,9 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
           <h2 className={styles.sectionLabel}>Summary</h2>
           {isEditing ? (
             <div className={styles.formField}>
-              <textarea
-                ref={callbackRef}
+              <AutoResizeTextarea
                 value={formData}
-                onChange={(e) => handleChange(e.target.value)}
+                onChange={handleChange}
                 className={`${styles.textarea} ${validationError ? styles.textareaError : ''}`}
                 placeholder="Enter your professional summary..."
               />
