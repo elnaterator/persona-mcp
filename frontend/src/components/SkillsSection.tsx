@@ -16,8 +16,8 @@ interface SkillsSectionProps {
 type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
 
 const skillFields: FieldConfig[] = [
-  { name: 'name', label: 'Skill Name', type: 'text', required: true },
-  { name: 'category', label: 'Category', type: 'text', required: false },
+  { name: 'name', label: 'Skill Name', type: 'text', required: true, group: 'main' },
+  { name: 'category', label: 'Category', type: 'text', required: false, group: 'main' },
 ]
 
 export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSectionProps) {
@@ -117,25 +117,35 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
               <span className={styles.categoryLabel}>{category}</span>
               <div className={styles.skillItems}>
                 {groupedSkills[category].map((skill) => (
-                  <div key={skill.originalIndex} className={styles.skillItem}>
-                    <span className={styles.skillName}>{skill.name}</span>
-                    <div className={styles.skillActions}>
-                      <button
-                        className={styles.editButton}
-                        onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
-                        aria-label="Edit skill"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                      <button
-                        className={styles.deleteButton}
-                        onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
-                        aria-label="Delete skill"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                  typeof mode === 'object' && mode.type === 'edit' && mode.index === skill.originalIndex ? (
+                    <EntryForm
+                      key={skill.originalIndex}
+                      fields={skillFields}
+                      initialData={skill as unknown as Record<string, string | string[]>}
+                      onSubmit={handleEdit}
+                      onCancel={() => setMode('view')}
+                    />
+                  ) : (
+                    <div key={skill.originalIndex} className={styles.skillItem}>
+                      <span className={styles.skillName}>{skill.name}</span>
+                      <div className={styles.skillActions}>
+                        <button
+                          className={styles.editButton}
+                          onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
+                          aria-label="Edit skill"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          className={styles.deleteButton}
+                          onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
+                          aria-label="Delete skill"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 ))}
               </div>
             </div>
@@ -143,15 +153,6 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
         </div>
       ) : (
         <p className={styles.placeholder}>Click "Add Skill" to add skills</p>
-      )}
-
-      {typeof mode === 'object' && mode.type === 'edit' && (
-        <EntryForm
-          fields={skillFields}
-          initialData={skills[mode.index] as unknown as Record<string, string | string[]>}
-          onSubmit={handleEdit}
-          onCancel={() => setMode('view')}
-        />
       )}
 
       {mode === 'add' && (
