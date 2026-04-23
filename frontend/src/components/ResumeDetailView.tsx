@@ -37,10 +37,10 @@ export default function ResumeDetailView() {
     }
   }, [numericId, navigate])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (numericId === null) return
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await getResumeVersion(numericId)
       setVersion(data)
       setLabelInput(data.label)
@@ -54,7 +54,7 @@ export default function ResumeDetailView() {
         setStatusMessage({ type: 'error', message: 'Failed to load resume version' })
       }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [numericId])
 
@@ -79,7 +79,7 @@ export default function ResumeDetailView() {
     if (numericId === null) return
     try {
       await setDefaultResume(numericId)
-      await load()
+      await load(true)
       setStatusMessage({ type: 'success', message: 'Default resume updated' })
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to set default resume' })
@@ -178,27 +178,27 @@ export default function ResumeDetailView() {
       <div className={styles.document}>
         <ContactSection
           contact={resume.contact}
-          onUpdate={load}
+          onUpdate={() => load(true)}
           versionId={numericId}
         />
         <SummarySection
           summary={resume.summary}
-          onUpdate={load}
+          onUpdate={() => load(true)}
           versionId={numericId}
         />
         <ExperienceSection
           experience={resume.experience}
-          onUpdate={load}
+          onUpdate={() => load(true)}
           versionId={numericId}
         />
         <EducationSection
           education={resume.education}
-          onUpdate={load}
+          onUpdate={() => load(true)}
           versionId={numericId}
         />
         <SkillsSection
           skills={resume.skills}
-          onUpdate={load}
+          onUpdate={() => load(true)}
           versionId={numericId}
         />
       </div>
