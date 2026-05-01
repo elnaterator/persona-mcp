@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Note } from '../types/resume'
-import { getNote, updateNote, deleteNote } from '../services/api'
+import { getNote, updateNote, deleteNote, listNoteTags } from '../services/api'
+import { TagInput } from './TagInput'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -19,6 +20,7 @@ export default function NoteDetailView() {
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
   const [note, setNote] = useState<Note | null>(null)
+  const [allTags, setAllTags] = useState<string[]>([])
   const [notFound, setNotFound] = useState(false)
   const [forbidden, setForbidden] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -34,7 +36,13 @@ export default function NoteDetailView() {
       navigate('/notes', { replace: true })
       return
     }
-    getNote(numericId).then(setNote).catch((err: unknown) => {
+    Promise.all([
+      getNote(numericId),
+      listNoteTags(),
+    ]).then(([noteData, tags]) => {
+      setNote(noteData)
+      setAllTags(tags)
+    }).catch((err: unknown) => {
       const status = (err as { status?: number })?.status
       if (status === 404) {
         setNotFound(true)
@@ -169,18 +177,12 @@ export default function NoteDetailView() {
         <div className={styles.metaEdit}>
           <div className={styles.metaField}>
             <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
-            <input
+            <TagInput
               id="edit-tags"
-              className={styles.metaInput}
-              type="text"
-              value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : ''}
-              onChange={(e) =>
-                handleEditFieldChange(
-                  'tags',
-                  e.target.value.split(',').map((t) => t.trim()).filter(Boolean)
-                )
-              }
-              placeholder="tag1, tag2"
+              value={(editForm.tags as string[]) ?? []}
+              onChange={(tags) => handleEditFieldChange('tags', tags)}
+              availableTags={allTags}
+              allowCreate={true}
             />
           </div>
         </div>

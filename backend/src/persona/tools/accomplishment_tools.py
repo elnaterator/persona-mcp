@@ -24,7 +24,8 @@ def register_accomplishment_tools(mcp: FastMCP, get_service: Any) -> None:
         """
         user_id = require_user_id()
         service: AccomplishmentService = get_service()
-        return service.list_accomplishments(tag=tag, q=q, user_id=user_id)
+        tags = [tag] if tag else None
+        return service.list_accomplishments(tags=tags, q=q, user_id=user_id)
 
     @mcp.tool()
     def get_accomplishment(id: int) -> dict[str, Any] | str:

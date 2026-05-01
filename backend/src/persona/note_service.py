@@ -34,12 +34,14 @@ class NoteService:
         self._conn = conn
 
     def list_notes(
-        self, tag: str | None = None, q: str | None = None, user_id: str | None = None
+        self,
+        tags: list[str] | None = None,
+        q: str | None = None,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return NoteSummary dicts, ordered by updated_at DESC."""
-        if tag:
-            tag = tag.strip().lower()
-        return load_notes(self._conn, tag=tag, q=q, user_id=user_id)
+        normalized = [t.strip().lower() for t in (tags or []) if t.strip()]
+        return load_notes(self._conn, tags=normalized, q=q, user_id=user_id)
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""

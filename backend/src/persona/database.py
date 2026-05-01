@@ -714,7 +714,7 @@ def load_accomplishment(
 
 def load_accomplishments(
     conn: DBConnection,
-    tag: str | None = None,
+    tags: list[str] | None = None,
     q: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -729,9 +729,10 @@ def load_accomplishments(
     if user_id is not None:
         conditions.append("user_id = %s")
         params.append(user_id)
-    if tag:
-        conditions.append("tags ILIKE %s")
-        params.append(f'%"{tag}"%')
+    if tags:
+        for tag in tags:
+            conditions.append("tags ILIKE %s")
+            params.append(f'%"{tag}"%')
     if q:
         pattern = f"%{q}%"
         conditions.append(
@@ -889,7 +890,7 @@ def load_note(
 
 def load_notes(
     conn: DBConnection,
-    tag: str | None = None,
+    tags: list[str] | None = None,
     q: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -901,9 +902,10 @@ def load_notes(
     if user_id is not None:
         conditions.append("user_id = %s")
         params.append(user_id)
-    if tag:
-        conditions.append("tags ILIKE %s")
-        params.append(f'%"{tag}"%')
+    if tags:
+        for tag in tags:
+            conditions.append("tags ILIKE %s")
+            params.append(f'%"{tag}"%')
     if q:
         words = q.strip().split()
         for word in words:

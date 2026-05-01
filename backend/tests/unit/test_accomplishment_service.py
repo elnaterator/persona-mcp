@@ -66,6 +66,30 @@ class TestAccomplishmentServiceCreate:
         assert set(result["tags"]) == {"leadership", "technical"}
         assert len(result["tags"]) == 2  # deduplicated
 
+    def test_tags_normalized_to_lowercase(self, acc_service: object) -> None:
+        from persona.accomplishment_service import AccomplishmentService
+
+        svc: AccomplishmentService = acc_service  # type: ignore[assignment]
+        result = svc.create_accomplishment(
+            {
+                "title": "Test",
+                "tags": ["Leadership", "TECHNICAL", "Team Lead"],
+            }
+        )
+        assert set(result["tags"]) == {"leadership", "technical", "team lead"}
+
+    def test_tags_case_insensitive_dedup(self, acc_service: object) -> None:
+        from persona.accomplishment_service import AccomplishmentService
+
+        svc: AccomplishmentService = acc_service  # type: ignore[assignment]
+        result = svc.create_accomplishment(
+            {
+                "title": "Test",
+                "tags": ["Leadership", "leadership", "LEADERSHIP"],
+            }
+        )
+        assert result["tags"] == ["leadership"]
+
     def test_accomplishment_date_nullable(self, acc_service: object) -> None:
         from persona.accomplishment_service import AccomplishmentService
 
@@ -165,7 +189,7 @@ class TestAccomplishmentServiceList:
         svc: AccomplishmentService = acc_service  # type: ignore[assignment]
         svc.create_accomplishment({"title": "Leader", "tags": ["leadership"]})
         svc.create_accomplishment({"title": "Coder", "tags": ["technical"]})
-        results = svc.list_accomplishments(tag="leadership")
+        results = svc.list_accomplishments(tags=["leadership"])
         assert len(results) == 1
         assert results[0]["title"] == "Leader"
 
@@ -174,7 +198,7 @@ class TestAccomplishmentServiceList:
 
         svc: AccomplishmentService = acc_service  # type: ignore[assignment]
         svc.create_accomplishment({"title": "A", "tags": ["technical"]})
-        assert svc.list_accomplishments(tag="leadership") == []
+        assert svc.list_accomplishments(tags=["leadership"]) == []
 
     def test_returns_summary_shape_no_star_body(self, acc_service: object) -> None:
         from persona.accomplishment_service import AccomplishmentService
@@ -216,6 +240,51 @@ class TestAccomplishmentServiceList:
         results = svc.list_accomplishments()
         assert results[0]["title"] == "Has date"
         assert results[1]["title"] == "No date"
+
+
+class TestAccomplishmentServiceMultiTagFilter:
+    """Tests for AccomplishmentService.list_accomplishments multi-tag AND filter."""
+
+    def test_multi_tag_and_returns_intersection(self, acc_service: object) -> None:
+        from persona.accomplishment_service import AccomplishmentService
+
+        svc: AccomplishmentService = acc_service  # type: ignore[assignment]
+        svc.create_accomplishment(
+            {"title": "Both", "tags": ["leadership", "technical"]}
+        )
+        svc.create_accomplishment({"title": "Leader only", "tags": ["leadership"]})
+        svc.create_accomplishment({"title": "Tech only", "tags": ["technical"]})
+        results = svc.list_accomplishments(tags=["leadership", "technical"])
+        assert len(results) == 1
+        assert results[0]["title"] == "Both"
+
+    def test_single_tag_in_list_works(self, acc_service: object) -> None:
+        from persona.accomplishment_service import AccomplishmentService
+
+        svc: AccomplishmentService = acc_service  # type: ignore[assignment]
+        svc.create_accomplishment({"title": "Leader", "tags": ["leadership"]})
+        svc.create_accomplishment({"title": "Coder", "tags": ["technical"]})
+        results = svc.list_accomplishments(tags=["leadership"])
+        assert len(results) == 1
+        assert results[0]["title"] == "Leader"
+
+    def test_empty_tags_list_returns_all(self, acc_service: object) -> None:
+        from persona.accomplishment_service import AccomplishmentService
+
+        svc: AccomplishmentService = acc_service  # type: ignore[assignment]
+        svc.create_accomplishment({"title": "A", "tags": ["leadership"]})
+        svc.create_accomplishment({"title": "B", "tags": ["technical"]})
+        results = svc.list_accomplishments(tags=[])
+        assert len(results) == 2
+
+    def test_no_match_for_and_filter_returns_empty(self, acc_service: object) -> None:
+        from persona.accomplishment_service import AccomplishmentService
+
+        svc: AccomplishmentService = acc_service  # type: ignore[assignment]
+        svc.create_accomplishment({"title": "Leader only", "tags": ["leadership"]})
+        svc.create_accomplishment({"title": "Tech only", "tags": ["technical"]})
+        results = svc.list_accomplishments(tags=["leadership", "technical"])
+        assert results == []
 
 
 class TestAccomplishmentServiceListTags:

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from persona.accomplishment_service import AccomplishmentService
 from persona.application_service import ApplicationService
@@ -641,12 +641,12 @@ def create_router(
 
         @api.get("/api/accomplishments")
         def list_accomplishments(
-            tag: str | None = None,
+            tag: list[str] | None = Query(default=None),
             q: str | None = None,
             current_user: UserContext | None = Depends(_user_dep),
         ) -> list[dict[str, Any]]:
             uid = current_user.id if current_user is not None else None
-            return acc_service.list_accomplishments(tag=tag, q=q, user_id=uid)
+            return acc_service.list_accomplishments(tags=tag, q=q, user_id=uid)
 
         @api.post("/api/accomplishments", status_code=201)
         def create_accomplishment(
@@ -717,12 +717,12 @@ def create_router(
 
         @api.get("/api/notes")
         def list_notes(
-            tag: str | None = None,
+            tag: list[str] | None = Query(default=None),
             q: str | None = None,
             current_user: UserContext | None = Depends(_user_dep),
         ) -> list[dict[str, Any]]:
             uid = current_user.id if current_user is not None else None
-            return note_service.list_notes(tag=tag, q=q, user_id=uid)
+            return note_service.list_notes(tags=tag, q=q, user_id=uid)
 
         @api.post("/api/notes", status_code=201)
         def create_note(

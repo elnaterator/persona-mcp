@@ -259,6 +259,49 @@ class TestNoteServiceNormalizeTags:
         assert result["tags"] == ["python", "async"]
 
 
+class TestNoteServiceMultiTagFilter:
+    """Tests for NoteService.list_notes multi-tag AND filter."""
+
+    def test_multi_tag_and_returns_intersection(self, note_service: object) -> None:
+        from persona.note_service import NoteService
+
+        svc: NoteService = note_service  # type: ignore[assignment]
+        svc.create_note({"title": "Both", "tags": ["python", "async"]})
+        svc.create_note({"title": "Python only", "tags": ["python"]})
+        svc.create_note({"title": "Async only", "tags": ["async"]})
+        results = svc.list_notes(tags=["python", "async"])
+        assert len(results) == 1
+        assert results[0]["title"] == "Both"
+
+    def test_single_tag_in_list_works(self, note_service: object) -> None:
+        from persona.note_service import NoteService
+
+        svc: NoteService = note_service  # type: ignore[assignment]
+        svc.create_note({"title": "Python note", "tags": ["python"]})
+        svc.create_note({"title": "Async note", "tags": ["async"]})
+        results = svc.list_notes(tags=["python"])
+        assert len(results) == 1
+        assert results[0]["title"] == "Python note"
+
+    def test_empty_tags_list_returns_all(self, note_service: object) -> None:
+        from persona.note_service import NoteService
+
+        svc: NoteService = note_service  # type: ignore[assignment]
+        svc.create_note({"title": "A", "tags": ["python"]})
+        svc.create_note({"title": "B", "tags": ["async"]})
+        results = svc.list_notes(tags=[])
+        assert len(results) == 2
+
+    def test_no_match_for_and_filter_returns_empty(self, note_service: object) -> None:
+        from persona.note_service import NoteService
+
+        svc: NoteService = note_service  # type: ignore[assignment]
+        svc.create_note({"title": "Python only", "tags": ["python"]})
+        svc.create_note({"title": "Async only", "tags": ["async"]})
+        results = svc.list_notes(tags=["python", "async"])
+        assert results == []
+
+
 class TestNoteServiceListTags:
     """Tests for NoteService.list_tags."""
 
@@ -322,7 +365,7 @@ class TestNoteServiceSearch:
         svc: NoteService = note_service  # type: ignore[assignment]
         svc.create_note({"title": "Python note", "tags": ["python"]})
         svc.create_note({"title": "Go note", "tags": ["go"]})
-        results = svc.list_notes(tag="python")
+        results = svc.list_notes(tags=["python"])
         assert len(results) == 1
         assert results[0]["title"] == "Python note"
 
@@ -375,6 +418,6 @@ class TestNoteServiceSearch:
         svc.create_note(
             {"title": "Python sync", "tags": ["python"], "content": "sync stuff"}
         )
-        results = svc.list_notes(tag="python", q="async")
+        results = svc.list_notes(tags=["python"], q="async")
         assert len(results) == 1
         assert results[0]["title"] == "Python note"

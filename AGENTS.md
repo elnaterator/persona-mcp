@@ -99,6 +99,8 @@ specs/                    # Feature specifications
 - PostgreSQL 16+, schema v5 → v6 migration (013-personal-context-section)
 - TypeScript 5.x / React 18 + React Router v7, Vite 6, CSS Modules, `@clerk/clerk-react` v5, `lucide-react` (new — icon library) (014-ux-overhaul)
 - N/A — no storage changes (014-ux-overhaul)
+- Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0 (backend); React 18, Vite 6, Vitest 2 (frontend) — all existing, no new deps (feat-015-tags-handling)
+- PostgreSQL 16+ — no schema changes (feat-015-tags-handling)
 
 ### Backend
 - Python 3.11+ with type hints + Pydantic validation

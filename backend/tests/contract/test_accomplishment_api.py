@@ -345,6 +345,51 @@ class TestRESTListTagsAccomplishments:
         assert resp.json() == []
 
 
+class TestRESTMultiTagFilterAccomplishments:
+    """REST contract tests for multi-tag AND filter on GET /api/accomplishments."""
+
+    def test_multi_tag_and_returns_intersection(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
+        client.post(
+            "/api/accomplishments",
+            json={"title": "Both", "tags": ["leadership", "technical"]},
+        )
+        client.post(
+            "/api/accomplishments",
+            json={"title": "Leader only", "tags": ["leadership"]},
+        )
+        client.post(
+            "/api/accomplishments", json={"title": "Tech only", "tags": ["technical"]}
+        )
+        resp = client.get("/api/accomplishments?tag=leadership&tag=technical")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Both"
+
+    def test_single_tag_param_still_works(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
+        client.post(
+            "/api/accomplishments", json={"title": "Leader", "tags": ["leadership"]}
+        )
+        client.post(
+            "/api/accomplishments", json={"title": "Coder", "tags": ["technical"]}
+        )
+        resp = client.get("/api/accomplishments?tag=leadership")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Leader"
+
+    def test_no_tag_params_returns_all(self, db_conn: Connection[Any]) -> None:
+        client = _make_acc_client(db_conn)
+        client.post("/api/accomplishments", json={"title": "A", "tags": ["leadership"]})
+        client.post("/api/accomplishments", json={"title": "B", "tags": ["technical"]})
+        resp = client.get("/api/accomplishments")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+
+
 # ── US3: Edit ─────────────────────────────────────────────────────────────────
 
 

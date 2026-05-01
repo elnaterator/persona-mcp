@@ -25,7 +25,7 @@ def register_note_tools(mcp: FastMCP, get_service: Any) -> None:
         """
         user_id = require_user_id()
         service: NoteService = get_service()
-        return service.list_notes(tag=tag, q=q, user_id=user_id)
+        return service.list_notes(tags=[tag] if tag else None, q=q, user_id=user_id)
 
     @mcp.tool()
     def get_note(id: int) -> dict[str, Any] | str:
