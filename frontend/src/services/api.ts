@@ -563,14 +563,14 @@ export async function removeCommunication(
 // ─── Accomplishments API ──────────────────────────────────────────────────────
 
 /**
- * List accomplishments as summaries with optional tag filter and text search
+ * List accomplishments as summaries with optional tag filter (AND logic) and text search
  */
 export async function listAccomplishments(
-  tag?: string,
+  tags?: string[],
   q?: string
 ): Promise<AccomplishmentSummary[]> {
   const params = new URLSearchParams()
-  if (tag) params.set('tag', tag)
+  if (tags && tags.length > 0) tags.forEach((t) => params.append('tag', t))
   if (q) params.set('q', q)
   const query = params.toString() ? `?${params.toString()}` : ''
   const response = await fetchWithErrorHandling(`${API_BASE}/accomplishments${query}`)
@@ -635,14 +635,14 @@ export async function listAccomplishmentTags(): Promise<string[]> {
 // ─── Notes API ─────────────────────────────────────────────────────────────────
 
 /**
- * List notes as summaries with optional tag filter and text search
+ * List notes as summaries with optional tag filter (AND logic) and text search
  */
 export async function listNotes(
-  tag?: string,
+  tags?: string[],
   q?: string
 ): Promise<NoteSummary[]> {
   const params = new URLSearchParams()
-  if (tag) params.set('tag', tag)
+  if (tags && tags.length > 0) tags.forEach((t) => params.append('tag', t))
   if (q) params.set('q', q)
   const query = params.toString() ? `?${params.toString()}` : ''
   const response = await fetchWithErrorHandling(`${API_BASE}/notes${query}`)

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Accomplishment } from '../types/resume'
-import { getAccomplishment, updateAccomplishment, deleteAccomplishment } from '../services/api'
+import { getAccomplishment, updateAccomplishment, deleteAccomplishment, listAccomplishmentTags } from '../services/api'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
 import { ConfirmDialog } from './ConfirmDialog'
+import { TagInput } from './TagInput'
 import { StatusMessage } from './StatusMessage'
 import { SectionCard } from './SectionCard'
 import { MarkdownContent } from './MarkdownContent'
@@ -19,6 +20,7 @@ export default function AccomplishmentDetailView() {
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
   const [acc, setAcc] = useState<Accomplishment | null>(null)
+  const [allTags, setAllTags] = useState<string[]>([])
   const [notFound, setNotFound] = useState(false)
   const [forbidden, setForbidden] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -34,7 +36,13 @@ export default function AccomplishmentDetailView() {
       navigate('/accomplishments', { replace: true })
       return
     }
-    getAccomplishment(numericId).then(setAcc).catch((err: unknown) => {
+    Promise.all([
+      getAccomplishment(numericId),
+      listAccomplishmentTags(),
+    ]).then(([accData, tags]) => {
+      setAcc(accData)
+      setAllTags(tags)
+    }).catch((err: unknown) => {
       const status = (err as { status?: number })?.status
       if (status === 404) {
         setNotFound(true)
@@ -189,18 +197,12 @@ export default function AccomplishmentDetailView() {
           </div>
           <div className={styles.metaField}>
             <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
-            <input
+            <TagInput
               id="edit-tags"
-              className={styles.metaInput}
-              type="text"
-              value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : ''}
-              onChange={(e) =>
-                handleEditFieldChange(
-                  'tags',
-                  e.target.value.split(',').map((t) => t.trim()).filter(Boolean)
-                )
-              }
-              placeholder="tag1, tag2"
+              value={(editForm.tags as string[]) ?? []}
+              onChange={(tags) => handleEditFieldChange('tags', tags)}
+              availableTags={allTags}
+              allowCreate={true}
             />
           </div>
         </div>

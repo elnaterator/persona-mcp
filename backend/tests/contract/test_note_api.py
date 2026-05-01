@@ -233,6 +233,39 @@ class TestRESTNoteSearch:
         assert data[0]["title"] == "Python async"
 
 
+class TestRESTNoteMultiTagFilter:
+    """REST contract tests for multi-tag AND filter on GET /api/notes."""
+
+    def test_multi_tag_and_returns_intersection(self, db_conn: Connection[Any]) -> None:
+        client = _make_note_client(db_conn)
+        client.post("/api/notes", json={"title": "Both", "tags": ["python", "async"]})
+        client.post("/api/notes", json={"title": "Python only", "tags": ["python"]})
+        client.post("/api/notes", json={"title": "Async only", "tags": ["async"]})
+        resp = client.get("/api/notes?tag=python&tag=async")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Both"
+
+    def test_single_tag_param_still_works(self, db_conn: Connection[Any]) -> None:
+        client = _make_note_client(db_conn)
+        client.post("/api/notes", json={"title": "Python note", "tags": ["python"]})
+        client.post("/api/notes", json={"title": "Go note", "tags": ["go"]})
+        resp = client.get("/api/notes?tag=python")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Python note"
+
+    def test_no_tag_params_returns_all(self, db_conn: Connection[Any]) -> None:
+        client = _make_note_client(db_conn)
+        client.post("/api/notes", json={"title": "A", "tags": ["python"]})
+        client.post("/api/notes", json={"title": "B", "tags": ["go"]})
+        resp = client.get("/api/notes")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+
+
 # ── US6: MCP Tools ───────────────────────────────────────────────────────────
 
 

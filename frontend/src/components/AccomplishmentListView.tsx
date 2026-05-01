@@ -6,6 +6,7 @@ import {
   listAccomplishmentTags,
   createAccomplishment,
 } from '../services/api'
+import { TagInput } from './TagInput'
 import styles from './AccomplishmentListView.module.css'
 
 interface FormState {
@@ -15,7 +16,7 @@ interface FormState {
   action: string
   result: string
   accomplishment_date: string
-  tags: string
+  tags: string[]
 }
 
 const EMPTY_FORM: FormState = {
@@ -25,13 +26,13 @@ const EMPTY_FORM: FormState = {
   action: '',
   result: '',
   accomplishment_date: '',
-  tags: '',
+  tags: [],
 }
 
 export default function AccomplishmentListView() {
   const [accomplishments, setAccomplishments] = useState<AccomplishmentSummary[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
-  const [tagFilter, setTagFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
@@ -39,7 +40,7 @@ export default function AccomplishmentListView() {
 
   const loadData = useCallback(async () => {
     const [accs, tags] = await Promise.all([
-      listAccomplishments(tagFilter || undefined),
+      listAccomplishments(tagFilter.length ? tagFilter : undefined),
       listAccomplishmentTags(),
     ])
     setAccomplishments(accs)
@@ -50,7 +51,7 @@ export default function AccomplishmentListView() {
     loadData()
   }, [loadData])
 
-  const handleFieldChange = (field: keyof FormState, value: string) => {
+  const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -62,10 +63,6 @@ export default function AccomplishmentListView() {
     setSaving(true)
     setFormError('')
     try {
-      const tags = form.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
       await createAccomplishment({
         title: form.title.trim(),
         situation: form.situation,
@@ -73,7 +70,7 @@ export default function AccomplishmentListView() {
         action: form.action,
         result: form.result,
         accomplishment_date: form.accomplishment_date || null,
-        tags,
+        tags: form.tags,
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
@@ -178,20 +175,14 @@ export default function AccomplishmentListView() {
 
           <div className={styles.formField}>
             <label className={styles.formLabel} htmlFor="acc-tags">Tags</label>
-            <input
+            <TagInput
               id="acc-tags"
-              className={styles.input}
-              type="text"
               value={form.tags}
-              onChange={(e) => handleFieldChange('tags', e.target.value)}
-              placeholder="e.g. leadership, technical (comma-separated)"
-              list="acc-tags-suggestions"
+              onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
+              availableTags={allTags}
+              allowCreate={true}
+              placeholder="Add tag..."
             />
-            <datalist id="acc-tags-suggestions">
-              {allTags.map((tag) => (
-                <option key={tag} value={tag} />
-              ))}
-            </datalist>
           </div>
 
           <div className={styles.formActions}>
@@ -217,19 +208,13 @@ export default function AccomplishmentListView() {
       )}
 
       <div className={styles.filters}>
-        <select
-          id="acc-tag-filter"
-          className={styles.filterSelect}
+        <TagInput
           value={tagFilter}
-          onChange={(e) => setTagFilter(e.target.value)}
-        >
-          <option value="">All tags</option>
-          {allTags.map((tag) => (
-            <option key={tag} value={tag}>
-              {tag}
-            </option>
-          ))}
-        </select>
+          onChange={setTagFilter}
+          availableTags={allTags}
+          allowCreate={false}
+          placeholder="Filter by tag..."
+        />
       </div>
 
       {accomplishments.length === 0 ? (

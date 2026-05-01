@@ -7,24 +7,25 @@ import {
   listAccomplishmentTags,
   createNote,
 } from '../services/api'
+import { TagInput } from './TagInput'
 import styles from './NoteListView.module.css'
 
 interface FormState {
   title: string
   content: string
-  tags: string
+  tags: string[]
 }
 
 const EMPTY_FORM: FormState = {
   title: '',
   content: '',
-  tags: '',
+  tags: [],
 }
 
 export default function NoteListView() {
   const [notes, setNotes] = useState<NoteSummary[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
-  const [tagFilter, setTagFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
@@ -33,7 +34,7 @@ export default function NoteListView() {
 
   const loadData = useCallback(async () => {
     const [noteList, noteTags, accTags] = await Promise.all([
-      listNotes(tagFilter || undefined, searchQuery || undefined),
+      listNotes(tagFilter.length ? tagFilter : undefined, searchQuery || undefined),
       listNoteTags(),
       listAccomplishmentTags(),
     ])
@@ -47,7 +48,7 @@ export default function NoteListView() {
     loadData()
   }, [loadData])
 
-  const handleFieldChange = (field: keyof FormState, value: string) => {
+  const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -59,14 +60,10 @@ export default function NoteListView() {
     setSaving(true)
     setFormError('')
     try {
-      const tags = form.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
       await createNote({
         title: form.title.trim(),
         content: form.content,
-        tags,
+        tags: form.tags,
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
@@ -124,20 +121,14 @@ export default function NoteListView() {
 
           <div className={styles.formField}>
             <label className={styles.formLabel} htmlFor="note-tags">Tags</label>
-            <input
+            <TagInput
               id="note-tags"
-              className={styles.input}
-              type="text"
               value={form.tags}
-              onChange={(e) => handleFieldChange('tags', e.target.value)}
-              placeholder="e.g. personal, career (comma-separated)"
-              list="note-tags-suggestions"
+              onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
+              availableTags={allTags}
+              allowCreate={true}
+              placeholder="Add tag..."
             />
-            <datalist id="note-tags-suggestions">
-              {allTags.map((tag) => (
-                <option key={tag} value={tag} />
-              ))}
-            </datalist>
           </div>
 
           <div className={styles.formActions}>
@@ -163,19 +154,13 @@ export default function NoteListView() {
       )}
 
       <div className={styles.filters}>
-        <select
-          id="note-tag-filter"
-          className={styles.filterSelect}
+        <TagInput
           value={tagFilter}
-          onChange={(e) => setTagFilter(e.target.value)}
-        >
-          <option value="">All tags</option>
-          {allTags.map((tag) => (
-            <option key={tag} value={tag}>
-              {tag}
-            </option>
-          ))}
-        </select>
+          onChange={setTagFilter}
+          availableTags={allTags}
+          allowCreate={false}
+          placeholder="Filter by tag..."
+        />
         <input
           className={styles.searchInput}
           type="text"

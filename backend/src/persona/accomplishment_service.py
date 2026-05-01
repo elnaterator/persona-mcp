@@ -25,11 +25,11 @@ def _validate_date(value: str) -> None:
 
 
 def _normalize_tags(tags: list[str]) -> list[str]:
-    """Trim whitespace from each tag and deduplicate while preserving order."""
+    """Trim whitespace, lowercase, and deduplicate while preserving order."""
     seen: set[str] = set()
     result: list[str] = []
     for tag in tags:
-        normalized = tag.strip()
+        normalized = tag.strip().lower()
         if normalized and normalized not in seen:
             seen.add(normalized)
             result.append(normalized)
@@ -43,10 +43,13 @@ class AccomplishmentService:
         self._conn = conn
 
     def list_accomplishments(
-        self, tag: str | None = None, q: str | None = None, user_id: str | None = None
+        self,
+        tags: list[str] | None = None,
+        q: str | None = None,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return AccomplishmentSummary dicts, ordered reverse-chronologically."""
-        return load_accomplishments(self._conn, tag=tag, q=q, user_id=user_id)
+        return load_accomplishments(self._conn, tags=tags or [], q=q, user_id=user_id)
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
