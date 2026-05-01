@@ -36,6 +36,16 @@ export default function LandingPage() {
             <h3>Accomplishments</h3>
             <p>Log achievements as they happen so you never forget the details.</p>
           </div>
+          <div className={styles.feature}>
+            <div className={styles.featureIcon}>📝</div>
+            <h3>Notes</h3>
+            <p>Capture free-form notes with tags — research, prep work, anything you want to recall later.</p>
+          </div>
+          <div className={styles.feature}>
+            <div className={styles.featureIcon}>🤝</div>
+            <h3>Contacts</h3>
+            <p>Track people you meet during your job search — recruiters, hiring managers, and connections.</p>
+          </div>
         </section>
       </main>
     </div>
