@@ -127,16 +127,35 @@ def register_resume_tools(mcp: FastMCP, get_service: Any) -> None:
         return service.remove_entry(section, index, id, user_id=user_id)
 
     @mcp.tool()
-    def create_resume(label: str) -> str:
+    def create_resume(label: str, tags: list[str] | None = None) -> str:
         """Create a new resume version, initialized as a copy of the default.
 
         Args:
             label: Label for the new version.
+            tags: Tags for categorizing the version (e.g. "backend", "leadership").
         """
         user_id = require_user_id()
         service: ResumeService = get_service()
-        version = service.create_resume(label, user_id=user_id)
+        version = service.create_resume(label, user_id=user_id, tags=tags)
         return f"Created resume version '{label}' (id={version['id']})"
+
+    @mcp.tool()
+    def update_resume_metadata(
+        id: int, label: str | None = None, tags: list[str] | None = None
+    ) -> str:
+        """Update label and/or tags for a resume version.
+
+        Args:
+            id: Resume version ID.
+            label: New label for the version.
+            tags: Tags for categorizing the resume version.
+        """
+        user_id = require_user_id()
+        service: ResumeService = get_service()
+        version = service.get_resume(id, user_id=user_id)
+        new_label = label or version["label"]
+        service.update_metadata(id, new_label, user_id=user_id, tags=tags)
+        return f"Updated resume version {id}"
 
     @mcp.tool()
     def set_default_resume(id: int) -> str:

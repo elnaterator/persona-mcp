@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Trash2, Pencil, Check, X } from 'lucide-react'
 import type { ResumeVersion } from '../types/resume'
-import { getResumeVersion, updateResumeLabel, deleteResume, setDefaultResume } from '../services/api'
+import { getResumeVersion, updateResumeLabel, deleteResume, setDefaultResume, listAllTags } from '../services/api'
+import { TagInput } from './TagInput'
 import ContactSection from './ContactSection'
 import SummarySection from './SummarySection'
 import ExperienceSection from './ExperienceSection'
@@ -22,6 +23,9 @@ export default function ResumeDetailView() {
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
   const [version, setVersion] = useState<ResumeVersion | null>(null)
+  const [allTags, setAllTags] = useState<string[]>([])
+  const [editingTags, setEditingTags] = useState(false)
+  const [tagsForm, setTagsForm] = useState<string[]>([])
   const [notFound, setNotFound] = useState(false)
   const [forbidden, setForbidden] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -41,9 +45,10 @@ export default function ResumeDetailView() {
     if (numericId === null) return
     try {
       if (!silent) setLoading(true)
-      const data = await getResumeVersion(numericId)
+      const [data, tags] = await Promise.all([getResumeVersion(numericId), listAllTags()])
       setVersion(data)
       setLabelInput(data.label)
+      setAllTags(tags)
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status
       if (status === 404) {
@@ -94,6 +99,23 @@ export default function ResumeDetailView() {
       setEditingLabel(false)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to update label' })
+    }
+  }
+
+  const handleTagsEdit = () => {
+    if (!version) return
+    setTagsForm(version.tags ?? [])
+    setEditingTags(true)
+  }
+
+  const handleTagsSave = async () => {
+    if (numericId === null || !version) return
+    try {
+      const updated = await updateResumeLabel(numericId, version.label, tagsForm)
+      setVersion((prev) => prev ? { ...prev, tags: updated.tags } : prev)
+      setEditingTags(false)
+    } catch {
+      setStatusMessage({ type: 'error', message: 'Failed to update tags' })
     }
   }
 
@@ -161,6 +183,41 @@ export default function ResumeDetailView() {
           <div className={styles.labelDisplay}>
             <h2 className={styles.label}>{version.label}</h2>
             <button className={styles.iconBtn} onClick={() => setEditingLabel(true)} aria-label="Edit label">
+              <Pencil size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.tagsRow}>
+        {editingTags ? (
+          <div className={styles.tagsEdit}>
+            <TagInput
+              value={tagsForm}
+              onChange={setTagsForm}
+              availableTags={allTags}
+              allowCreate={true}
+              placeholder="Add tag..."
+            />
+            <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleTagsSave} aria-label="Save tags">
+              <Check size={14} />
+            </button>
+            <button className={`${styles.iconBtn} ${styles.cancelIcon}`} onClick={() => setEditingTags(false)} aria-label="Cancel">
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <div className={styles.tagsDisplay}>
+            {version.tags && version.tags.length > 0 ? (
+              <div className={styles.tagList}>
+                {version.tags.map((tag) => (
+                  <span key={tag} className={styles.tagBadge}>{tag}</span>
+                ))}
+              </div>
+            ) : (
+              <span className={styles.tagsPlaceholder}>No tags</span>
+            )}
+            <button className={styles.iconBtn} onClick={handleTagsEdit} aria-label="Edit tags">
               <Pencil size={14} />
             </button>
           </div>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import type { ResumeVersionSummary } from '../types/resume'
-import { listResumes, createResume } from '../services/api'
+import { listResumes, createResume, listAllTags } from '../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
 import { StatusMessage } from './StatusMessage'
 import { InlineCreateForm } from './InlineCreateForm'
@@ -12,12 +12,14 @@ export default function ResumeListView() {
   const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [creating, setCreating] = useState(false)
+  const [, setAllTags] = useState<string[]>([])
 
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await listResumes()
+      const [data, tags] = await Promise.all([listResumes(), listAllTags()])
       setResumes(data)
+      setAllTags(tags)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to load resume versions' })
     } finally {
@@ -85,6 +87,13 @@ export default function ResumeListView() {
                     <span className={styles.defaultBadge}>Default</span>
                   )}
                 </div>
+                {resume.tags && resume.tags.length > 0 && (
+                  <div className={styles.tagList}>
+                    {resume.tags.map((tag) => (
+                      <span key={tag} className={styles.tagBadge}>{tag}</span>
+                    ))}
+                  </div>
+                )}
                 <div className={styles.itemMeta}>
                   <span className={styles.metaItem}>
                     {resume.app_count} application{resume.app_count !== 1 ? 's' : ''}

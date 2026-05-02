@@ -95,6 +95,12 @@
   color: var(--text-muted);
 }
 
+.accomplishmentDate {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .tagList {
   display: flex;
   flex-wrap: wrap;
@@ -155,6 +161,10 @@
   flex-wrap: wrap;
 }
 
+.metaFieldDate {
+  margin-left: auto;
+}
+
 .metaField {
   display: flex;
   flex-direction: column;
@@ -176,6 +186,8 @@
   font-family: var(--font-mono);
   background-color: var(--bg-input);
   color: var(--text-primary);
+  min-height: 2.25rem;
+  box-sizing: border-box;
 }
 
 .metaInput:focus {

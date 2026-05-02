@@ -682,3 +682,44 @@ class TestVersionIsolation:
         # Original default should be unchanged
         default_again = service.get_resume(version_id=default["id"])
         assert len(default_again["resume_data"]["skills"]) == original_skill_count
+
+
+class TestResumeServiceTags:
+    """Unit tests for tag normalization in ResumeService."""
+
+    def test_tags_normalized_on_create(self, resume_service: object) -> None:
+        from persona.resume_service import ResumeService
+
+        service: ResumeService = resume_service  # type: ignore[assignment]
+        version = service.create_resume(
+            "Tagged", tags=["  Backend  ", "BACKEND", "cloud"]
+        )
+        assert version["tags"] == ["backend", "cloud"]
+
+    def test_tags_50_char_limit_on_create(self, resume_service: object) -> None:
+        from persona.resume_service import ResumeService
+
+        service: ResumeService = resume_service  # type: ignore[assignment]
+        long_tag = "x" * 51
+        with pytest.raises(ValueError, match="50 characters"):
+            service.create_resume("Tagged", tags=[long_tag])
+
+    def test_tags_normalized_on_update_metadata(self, resume_service: object) -> None:
+        from persona.resume_service import ResumeService
+
+        service: ResumeService = resume_service  # type: ignore[assignment]
+        version = service.create_resume("V1")
+        updated = service.update_metadata(
+            version["id"], "V1", tags=["  ML  ", "ml", "data"]
+        )
+        assert updated["tags"] == ["ml", "data"]
+
+    def test_list_tags_returns_merged(self, resume_service: object) -> None:
+        from persona.resume_service import ResumeService
+
+        service: ResumeService = resume_service  # type: ignore[assignment]
+        service.create_resume("A", tags=["backend"])
+        service.create_resume("B", tags=["frontend"])
+        tags = service.list_tags()
+        assert "backend" in tags
+        assert "frontend" in tags

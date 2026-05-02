@@ -267,13 +267,19 @@ export async function setDefaultResume(id: number): Promise<ApiSuccessResponse> 
 }
 
 /**
- * Update the label of a resume version
+ * Update the label and/or tags of a resume version
  */
-export async function updateResumeLabel(id: number, label: string): Promise<ResumeVersion> {
+export async function updateResumeLabel(
+  id: number,
+  label: string,
+  tags?: string[]
+): Promise<ResumeVersion> {
+  const body: Record<string, unknown> = { label }
+  if (tags !== undefined) body.tags = tags
   const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ label }),
+    body: JSON.stringify(body),
   })
   return handleResponse<ResumeVersion>(response)
 }
@@ -373,15 +379,17 @@ export async function removeVersionEntry(
 // ─── Application API ──────────────────────────────────────────────────────────
 
 /**
- * List applications with optional status filter and search query
+ * List applications with optional status/tag filter and search query
  */
 export async function listApplications(
   status?: string,
-  q?: string
+  q?: string,
+  tags?: string[]
 ): Promise<Application[]> {
   const params = new URLSearchParams()
   if (status) params.set('status', status)
   if (q) params.set('q', q)
+  if (tags && tags.length > 0) tags.forEach((t) => params.append('tag', t))
   const query = params.toString() ? `?${params.toString()}` : ''
   const response = await fetchWithErrorHandling(`${API_BASE}/applications${query}`)
   return handleResponse<Application[]>(response)
@@ -701,5 +709,31 @@ export async function deleteNote(id: number): Promise<ApiSuccessResponse> {
  */
 export async function listNoteTags(): Promise<string[]> {
   const response = await fetchWithErrorHandling(`${API_BASE}/notes/tags`)
+  return handleResponse<string[]>(response)
+}
+
+// ─── Unified Tags API ──────────────────────────────────────────────────────────
+
+/**
+ * Get a sorted, deduplicated list of all tags across all resource types
+ */
+export async function listAllTags(): Promise<string[]> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/tags`)
+  return handleResponse<string[]>(response)
+}
+
+/**
+ * Get all unique tags used across applications
+ */
+export async function listApplicationTags(): Promise<string[]> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/applications/tags`)
+  return handleResponse<string[]>(response)
+}
+
+/**
+ * Get all unique tags used across resume versions
+ */
+export async function listResumeTags(): Promise<string[]> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/tags`)
   return handleResponse<string[]>(response)
 }

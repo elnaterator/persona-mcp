@@ -65,12 +65,13 @@ def delete_user(conn: DBConnection, user_id: str) -> None:
 
 
 def _row_to_resume_data(row: Any) -> dict[str, Any]:
-    """Convert a resume_version row to a dict with parsed resume_data."""
+    """Convert a resume_version row to a dict with parsed resume_data and tags."""
     return {
         "id": row["id"],
         "label": row["label"],
         "is_default": bool(row["is_default"]),
         "resume_data": json.loads(row["resume_data"]),
+        "tags": json.loads(row["tags"]) if "tags" in dict(row) else [],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -81,14 +82,15 @@ def create_resume_version(
     label: str,
     resume_data: dict[str, Any],
     user_id: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict[str, Any]:
     """Create a new resume version. Returns the created version."""
     effective_uid = user_id or "legacy"
     data_json = json.dumps(resume_data)
     row = conn.execute(
-        "INSERT INTO resume_version (user_id, label, is_default, resume_data) "
-        "VALUES (%s, %s, 0, %s) RETURNING id",
-        (effective_uid, label, data_json),
+        "INSERT INTO resume_version (user_id, label, is_default, resume_data, tags) "
+        "VALUES (%s, %s, 0, %s, %s) RETURNING id",
+        (effective_uid, label, data_json, json.dumps(tags or [])),
     ).fetchone()
     new_id = row["id"]
     result_row = conn.execute(
@@ -122,7 +124,7 @@ def load_resume_versions(
 ) -> list[dict[str, Any]]:
     """Load all resume versions with metadata and app_count."""
     query = (
-        "SELECT rv.id, rv.label, rv.is_default, rv.created_at, rv.updated_at, "
+        "SELECT rv.id, rv.label, rv.is_default, rv.tags, rv.created_at, rv.updated_at, "
         "COUNT(a.id) AS app_count "
         "FROM resume_version rv "
         "LEFT JOIN application a ON a.resume_version_id = rv.id"
@@ -142,6 +144,7 @@ def load_resume_versions(
             "label": row["label"],
             "is_default": bool(row["is_default"]),
             "app_count": row["app_count"],
+            "tags": json.loads(row["tags"]),
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
         }
@@ -174,8 +177,9 @@ def update_resume_version_metadata(
     version_id: int,
     label: str,
     user_id: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Update resume version label. Returns updated version."""
+    """Update resume version label (and optionally tags). Returns updated version."""
     row = conn.execute(
         "SELECT * FROM resume_version WHERE id = %s", (version_id,)
     ).fetchone()
@@ -186,11 +190,18 @@ def update_resume_version_metadata(
             f"Resume version {version_id} belongs to a different user"
         )
 
-    conn.execute(
-        "UPDATE resume_version SET label = %s, updated_at = CURRENT_TIMESTAMP "
-        "WHERE id = %s",
-        (label, version_id),
-    )
+    if tags is not None:
+        conn.execute(
+            "UPDATE resume_version SET label = %s, tags = %s, "
+            "updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+            (label, json.dumps(tags), version_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE resume_version SET label = %s, updated_at = CURRENT_TIMESTAMP "
+            "WHERE id = %s",
+            (label, version_id),
+        )
     return load_resume_version(conn, version_id)
 
 
@@ -319,7 +330,31 @@ def set_default_resume_version(
     return label
 
 
+def load_resume_version_tags(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[str]:
+    """Return a sorted unique list of all tags across all resume versions."""
+    if user_id is not None:
+        rows = conn.execute(
+            "SELECT tags FROM resume_version WHERE user_id = %s", (user_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT tags FROM resume_version").fetchall()
+    all_tags: set[str] = set()
+    for row in rows:
+        all_tags.update(json.loads(row["tags"]))
+    return sorted(all_tags)
+
+
 # --- Application operations ---
+
+
+def _row_to_application(row: Any) -> dict[str, Any]:
+    """Convert an application row to a dict with parsed tags."""
+    d = dict(row)
+    d["tags"] = json.loads(d.get("tags", "[]"))
+    return d
 
 
 def create_application(
@@ -332,8 +367,8 @@ def create_application(
     row = conn.execute(
         "INSERT INTO application "
         "(user_id, company, position, description, status, url, notes, "
-        "resume_version_id) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        "resume_version_id, tags) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (
             effective_uid,
             data["company"],
@@ -343,6 +378,7 @@ def create_application(
             data.get("url"),
             data.get("notes", ""),
             data.get("resume_version_id"),
+            json.dumps(data.get("tags", [])),
         ),
     ).fetchone()
     return load_application(conn, row["id"])
@@ -359,19 +395,20 @@ def load_application(
         raise ValueError(f"Application {app_id} not found")
     if user_id is not None and row["user_id"] != user_id:
         raise PermissionError(f"Application {app_id} belongs to a different user")
-    return dict(row)
+    return _row_to_application(row)
 
 
 def load_applications(
     conn: DBConnection,
     status: str | None = None,
+    tags: list[str] | None = None,
     q: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Load applications with optional status filter and search."""
+    """Load applications with optional status/tag filter and search."""
     query = (
         "SELECT id, company, position, status, url, "
-        "resume_version_id, created_at, updated_at "
+        "resume_version_id, tags, created_at, updated_at "
         "FROM application"
     )
     conditions: list[str] = []
@@ -383,6 +420,10 @@ def load_applications(
     if status:
         conditions.append("status = %s")
         params.append(status)
+    if tags:
+        for tag in tags:
+            conditions.append("tags ILIKE %s")
+            params.append(f'%"{tag}"%')
     if q:
         conditions.append("(company ILIKE %s OR position ILIKE %s)")
         pattern = f"%{q}%"
@@ -394,7 +435,7 @@ def load_applications(
     query += " ORDER BY updated_at DESC"
 
     rows = conn.execute(query, params).fetchall()
-    return [dict(row) for row in rows]
+    return [_row_to_application(row) for row in rows]
 
 
 def update_application(
@@ -422,6 +463,10 @@ def update_application(
             sets.append(f"{field} = %s")
             params.append(data[field])
 
+    if "tags" in data:
+        sets.append("tags = %s")
+        params.append(json.dumps(data["tags"]))
+
     if not sets:
         return existing
 
@@ -433,6 +478,23 @@ def update_application(
         params,
     )
     return load_application(conn, app_id)
+
+
+def load_application_tags(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[str]:
+    """Return a sorted unique list of all tags across all applications."""
+    if user_id is not None:
+        rows = conn.execute(
+            "SELECT tags FROM application WHERE user_id = %s", (user_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT tags FROM application").fetchall()
+    all_tags: set[str] = set()
+    for row in rows:
+        all_tags.update(json.loads(row["tags"]))
+    return sorted(all_tags)
 
 
 def delete_application(

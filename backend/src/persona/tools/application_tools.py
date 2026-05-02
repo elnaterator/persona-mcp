@@ -13,17 +13,21 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
 
     @mcp.tool()
     def list_applications(
-        status: str | None = None, q: str | None = None
+        status: str | None = None,
+        tag: str | None = None,
+        q: str | None = None,
     ) -> list[dict[str, Any]]:
         """List all job applications with optional filtering.
 
         Args:
             status: Filter by status (exact match).
+            tag: Filter by tag (single tag, case-insensitive).
             q: Search company/position (case-insensitive substring).
         """
         user_id = require_user_id()
         service: ApplicationService = get_service()
-        return service.list_applications(status=status, q=q, user_id=user_id)
+        tags = [tag] if tag else None
+        return service.list_applications(status=status, tags=tags, q=q, user_id=user_id)
 
     @mcp.tool()
     def get_application(id: int) -> dict[str, Any]:
@@ -45,6 +49,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         url: str | None = None,
         notes: str = "",
         resume_version_id: int | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Create a new job application.
 
@@ -56,6 +61,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             url: Job posting URL.
             notes: Free-text notes.
             resume_version_id: Associated resume version.
+            tags: Tags for categorizing the application.
         """
         user_id = require_user_id()
         service: ApplicationService = get_service()
@@ -68,6 +74,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
                 "url": url,
                 "notes": notes,
                 "resume_version_id": resume_version_id,
+                "tags": tags or [],
             },
             user_id=user_id,
         )
@@ -83,6 +90,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         url: str | None = None,
         notes: str | None = None,
         resume_version_id: int | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Update an existing application's fields.
 
@@ -95,6 +103,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             url: Updated URL.
             notes: Updated notes.
             resume_version_id: Updated resume version.
+            tags: Updated tags.
         """
         user_id = require_user_id()
         service: ApplicationService = get_service()
@@ -107,6 +116,7 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             ("url", url),
             ("notes", notes),
             ("resume_version_id", resume_version_id),
+            ("tags", tags),
         ]:
             if value is not None:
                 data[field] = value

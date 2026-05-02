@@ -8,6 +8,7 @@ from persona.database import (
     delete_resume_version,
     load_default_resume_version,
     load_resume_version,
+    load_resume_version_tags,
     load_resume_versions,
     set_default_resume_version,
     update_resume_version_data,
@@ -20,6 +21,23 @@ from persona.models import (
     Skill,
     WorkExperience,
 )
+
+
+def _normalize_tags(tags: list[str]) -> list[str]:
+    """Trim, lowercase, enforce 50-char max, deduplicate while preserving order."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for tag in tags:
+        normalized = tag.strip().lower()
+        if not normalized:
+            continue
+        if len(normalized) > 50:
+            raise ValueError(f"Tag must not exceed 50 characters: '{normalized}'")
+        if normalized not in seen:
+            seen.add(normalized)
+            result.append(normalized)
+    return result
+
 
 SECTION_UPDATE = ("contact", "summary")
 SECTION_LIST = ("experience", "education", "skills")
@@ -46,7 +64,16 @@ class ResumeService:
             return load_default_resume_version(self._conn, user_id=user_id)
         return load_resume_version(self._conn, version_id, user_id=user_id)
 
-    def create_resume(self, label: str, user_id: str | None = None) -> dict[str, Any]:
+    def list_tags(self, user_id: str | None = None) -> list[str]:
+        """Return sorted unique tag list for autocomplete."""
+        return load_resume_version_tags(self._conn, user_id=user_id)
+
+    def create_resume(
+        self,
+        label: str,
+        user_id: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Create a new resume version copied from the default.
 
         If the user has no existing default resume, creates one with empty data.
@@ -58,8 +85,13 @@ class ResumeService:
             resume_data = default["resume_data"]
         except ValueError:
             resume_data = {}
+        normalized_tags = _normalize_tags(tags) if tags else []
         return create_resume_version(
-            self._conn, label.strip(), resume_data, user_id=user_id
+            self._conn,
+            label.strip(),
+            resume_data,
+            user_id=user_id,
+            tags=normalized_tags,
         )
 
     def set_default(self, version_id: int, user_id: str | None = None) -> str:
@@ -73,13 +105,22 @@ class ResumeService:
         return f"Deleted resume version '{label}'"
 
     def update_metadata(
-        self, version_id: int, label: str, user_id: str | None = None
+        self,
+        version_id: int,
+        label: str,
+        user_id: str | None = None,
+        tags: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Update resume version label."""
+        """Update resume version label (and optionally tags)."""
         if not label or not label.strip():
             raise ValueError("Label must not be empty")
+        normalized_tags = _normalize_tags(tags) if tags is not None else None
         return update_resume_version_metadata(
-            self._conn, version_id, label.strip(), user_id=user_id
+            self._conn,
+            version_id,
+            label.strip(),
+            user_id=user_id,
+            tags=normalized_tags,
         )
 
     # --- Section operations (version-scoped) ---

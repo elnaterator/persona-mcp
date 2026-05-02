@@ -10,6 +10,7 @@ from persona.database import (
     delete_communication,
     delete_contact,
     load_application,
+    load_application_tags,
     load_applications,
     load_communications,
     load_contacts,
@@ -21,6 +22,22 @@ from persona.database import (
 )
 from persona.db import DBConnection
 from persona.models import APPLICATION_STATUSES
+
+
+def _normalize_tags(tags: list[str]) -> list[str]:
+    """Trim, lowercase, enforce 50-char max, deduplicate while preserving order."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for tag in tags:
+        normalized = tag.strip().lower()
+        if not normalized:
+            continue
+        if len(normalized) > 50:
+            raise ValueError(f"Tag must not exceed 50 characters: '{normalized}'")
+        if normalized not in seen:
+            seen.add(normalized)
+            result.append(normalized)
+    return result
 
 
 class ApplicationService:
@@ -43,6 +60,8 @@ class ApplicationService:
         if status not in APPLICATION_STATUSES:
             valid = ", ".join(APPLICATION_STATUSES)
             raise ValueError(f"Invalid status: '{status}'. Must be one of: {valid}")
+        if "tags" in data and data["tags"] is not None:
+            data = {**data, "tags": _normalize_tags(data["tags"])}
         return create_application(self._conn, data, user_id=user_id)
 
     def get_application(
@@ -54,11 +73,18 @@ class ApplicationService:
     def list_applications(
         self,
         status: str | None = None,
+        tags: list[str] | None = None,
         q: str | None = None,
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """List applications with optional filter/search."""
-        return load_applications(self._conn, status=status, q=q, user_id=user_id)
+        return load_applications(
+            self._conn, status=status, tags=tags, q=q, user_id=user_id
+        )
+
+    def list_tags(self, user_id: str | None = None) -> list[str]:
+        """Return sorted unique tag list for autocomplete."""
+        return load_application_tags(self._conn, user_id=user_id)
 
     def update_application(
         self, app_id: int, data: dict[str, Any], user_id: str | None = None
@@ -69,6 +95,8 @@ class ApplicationService:
             if status not in APPLICATION_STATUSES:
                 valid = ", ".join(APPLICATION_STATUSES)
                 raise ValueError(f"Invalid status: '{status}'. Must be one of: {valid}")
+        if "tags" in data and data["tags"] is not None:
+            data = {**data, "tags": _normalize_tags(data["tags"])}
         return update_application(self._conn, app_id, data, user_id=user_id)
 
     def delete_application(

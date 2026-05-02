@@ -6,7 +6,7 @@
 Home page "Your career data, organized." shows on 2 lines, make it 1.  Show resumes, applications, accomplishments, missing notes and contacts.
 
 
-## Common pool of tags across all resource types
+## Common pool of tags across all resource types - DONE
 
 Rather then separate tags for accomplishments and notes, make it common across all types. Tags added on a note should be recommended when adding a tag to accomplishment and vice versa.  Also add tags to resumes and applications. 
 

@@ -426,6 +426,16 @@ def migrate_v5_to_v6(conn) -> None:
     conn.commit()
 
 
+def migrate_v6_to_v7(conn) -> None:
+    """Add tags column to application and resume_version tables."""
+    conn.execute("ALTER TABLE application ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
+    conn.execute(
+        "ALTER TABLE resume_version ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'"
+    )
+    conn.execute("UPDATE schema_version SET version = %s", (7,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -433,6 +443,7 @@ MIGRATIONS: list = [
     migrate_v3_to_v4,
     migrate_v4_to_v5,
     migrate_v5_to_v6,
+    migrate_v6_to_v7,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)
