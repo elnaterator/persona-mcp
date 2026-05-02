@@ -286,6 +286,20 @@
   gap: 0.75rem;
 }
 
+.tagsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.tagsEdit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
 .tagList {
   display: flex;
   flex-wrap: wrap;

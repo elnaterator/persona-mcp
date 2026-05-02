@@ -227,6 +227,35 @@ export default function ApplicationDetailView() {
             {app.url}
           </a>
         )}
+        {editingSection === 'tags' ? (
+          <div className={styles.tagsEdit}>
+            <TagInput
+              value={(sectionForm.tags as string[]) ?? []}
+              onChange={(tags) => setSectionForm((prev) => ({ ...prev, tags }))}
+              availableTags={allTags}
+              allowCreate={true}
+            />
+            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
+              <Check size={14} />
+            </button>
+            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <div className={styles.tagsRow}>
+            {app.tags && app.tags.length > 0 && (
+              <div className={styles.tagList}>
+                {app.tags.map((tag) => (
+                  <span key={tag} className={styles.tagBadge}>{tag}</span>
+                ))}
+              </div>
+            )}
+            <button className={styles.editButton} onClick={() => startEdit('tags')} aria-label="Edit tags">
+              <Pencil size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {statusMessage && (
@@ -461,43 +490,6 @@ export default function ApplicationDetailView() {
           </p>
         ) : (
           <p className={styles.emptyText}>No resume linked</p>
-        )}
-      </SectionCard>
-      {/* Tags section */}
-      <SectionCard
-        label="Tags"
-        action={editingSection === 'tags' ? (
-          <div className={styles.sectionActions}>
-            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
-              <Check size={14} />
-            </button>
-            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button className={styles.editButton} onClick={() => startEdit('tags')} aria-label="Edit tags">
-            <Pencil size={14} />
-          </button>
-        )}
-      >
-        {editingSection === 'tags' ? (
-          <div className={styles.sectionForm}>
-            <TagInput
-              value={(sectionForm.tags as string[]) ?? []}
-              onChange={(tags) => setSectionForm((prev) => ({ ...prev, tags }))}
-              availableTags={allTags}
-              allowCreate={true}
-            />
-          </div>
-        ) : app.tags && app.tags.length > 0 ? (
-          <div className={styles.tagList}>
-            {app.tags.map((tag) => (
-              <span key={tag} className={styles.tagBadge}>{tag}</span>
-            ))}
-          </div>
-        ) : (
-          <p className={styles.emptyText}>No tags</p>
         )}
       </SectionCard>
       </div>
