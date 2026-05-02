@@ -25,12 +25,16 @@ def _validate_date(value: str) -> None:
 
 
 def _normalize_tags(tags: list[str]) -> list[str]:
-    """Trim whitespace, lowercase, and deduplicate while preserving order."""
+    """Trim, lowercase, enforce 50-char max, deduplicate while preserving order."""
     seen: set[str] = set()
     result: list[str] = []
     for tag in tags:
         normalized = tag.strip().lower()
-        if normalized and normalized not in seen:
+        if not normalized:
+            continue
+        if len(normalized) > 50:
+            raise ValueError(f"Tag must not exceed 50 characters: '{normalized}'")
+        if normalized not in seen:
             seen.add(normalized)
             result.append(normalized)
     return result

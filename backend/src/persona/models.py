@@ -69,6 +69,7 @@ class ResumeVersion(BaseModel):
     label: str
     is_default: bool = False
     resume_data: Resume = Resume()
+    tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
 
@@ -80,6 +81,7 @@ class ResumeVersionSummary(BaseModel):
     label: str
     is_default: bool = False
     app_count: int = 0
+    tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
 
@@ -111,6 +113,7 @@ class Application(BaseModel):
     url: str | None = None
     notes: str = ""
     resume_version_id: int | None = None
+    tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
 
@@ -132,6 +135,7 @@ class ApplicationSummary(BaseModel):
     status: str = "Interested"
     url: str | None = None
     resume_version_id: int | None = None
+    tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
 

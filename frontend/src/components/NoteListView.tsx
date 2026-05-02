@@ -3,9 +3,8 @@ import { Link } from 'react-router'
 import type { NoteSummary } from '../types/resume'
 import {
   listNotes,
-  listNoteTags,
-  listAccomplishmentTags,
   createNote,
+  listAllTags,
 } from '../services/api'
 import { TagInput } from './TagInput'
 import styles from './NoteListView.module.css'
@@ -33,15 +32,12 @@ export default function NoteListView() {
   const [saving, setSaving] = useState(false)
 
   const loadData = useCallback(async () => {
-    const [noteList, noteTags, accTags] = await Promise.all([
+    const [noteList, tags] = await Promise.all([
       listNotes(tagFilter.length ? tagFilter : undefined, searchQuery || undefined),
-      listNoteTags(),
-      listAccomplishmentTags(),
+      listAllTags(),
     ])
     setNotes(noteList)
-    // Merge and deduplicate tags from notes and accomplishments
-    const merged = Array.from(new Set([...noteTags, ...accTags])).sort()
-    setAllTags(merged)
+    setAllTags(tags)
   }, [tagFilter, searchQuery])
 
   useEffect(() => {

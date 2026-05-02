@@ -415,3 +415,55 @@ class TestApplicationServiceContext:
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
             svc.get_application_context(9999)
+
+
+class TestApplicationServiceTags:
+    """Unit tests for tag normalization and filtering in ApplicationService."""
+
+    def test_tags_normalized_on_create(self, app_service: object) -> None:
+        from persona.application_service import ApplicationService
+
+        svc: ApplicationService = app_service  # type: ignore[assignment]
+        result = svc.create_application(
+            {"company": "A", "position": "P", "tags": ["  Python  ", "PYTHON", "go"]}
+        )
+        assert result["tags"] == ["python", "go"]
+
+    def test_tags_50_char_limit_on_create(self, app_service: object) -> None:
+        from persona.application_service import ApplicationService
+
+        svc: ApplicationService = app_service  # type: ignore[assignment]
+        long_tag = "x" * 51
+        with pytest.raises(ValueError, match="50 characters"):
+            svc.create_application(
+                {"company": "A", "position": "P", "tags": [long_tag]}
+            )
+
+    def test_tags_normalized_on_update(self, app_service: object) -> None:
+        from persona.application_service import ApplicationService
+
+        svc: ApplicationService = app_service  # type: ignore[assignment]
+        created = svc.create_application({"company": "A", "position": "P"})
+        updated = svc.update_application(
+            created["id"], {"tags": ["  Java  ", "JAVA", "rust"]}
+        )
+        assert updated["tags"] == ["java", "rust"]
+
+    def test_filter_by_tag(self, app_service: object) -> None:
+        from persona.application_service import ApplicationService
+
+        svc: ApplicationService = app_service  # type: ignore[assignment]
+        svc.create_application({"company": "A", "position": "P1", "tags": ["python"]})
+        svc.create_application({"company": "B", "position": "P2", "tags": ["java"]})
+        results = svc.list_applications(tags=["python"])
+        assert len(results) == 1
+        assert results[0]["company"] == "A"
+
+    def test_list_tags(self, app_service: object) -> None:
+        from persona.application_service import ApplicationService
+
+        svc: ApplicationService = app_service  # type: ignore[assignment]
+        svc.create_application({"company": "A", "position": "P1", "tags": ["python"]})
+        svc.create_application({"company": "B", "position": "P2", "tags": ["java"]})
+        tags = svc.list_tags()
+        assert sorted(tags) == ["java", "python"]

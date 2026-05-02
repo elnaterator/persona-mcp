@@ -67,6 +67,7 @@ export interface ResumeVersion {
   is_default: boolean
   resume_data: Resume
   app_count: number
+  tags: string[]
   created_at: string
   updated_at: string
 }
@@ -76,6 +77,7 @@ export interface ResumeVersionSummary {
   label: string
   is_default: boolean
   app_count: number
+  tags: string[]
   created_at: string
   updated_at: string
 }
@@ -89,6 +91,19 @@ export interface Application {
   url: string | null
   notes: string
   resume_version_id: number | null
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ApplicationSummary {
+  id: number
+  company: string
+  position: string
+  status: string
+  url: string | null
+  resume_version_id: number | null
+  tags: string[]
   created_at: string
   updated_at: string
 }

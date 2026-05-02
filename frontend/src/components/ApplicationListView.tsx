@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router'
 import type { Application } from '../types/resume'
-import { listApplications, createApplication } from '../services/api'
+import { listApplications, createApplication, listAllTags } from '../services/api'
+import { TagInput } from './TagInput'
 import { LoadingSpinner } from './LoadingSpinner'
 import { StatusMessage } from './StatusMessage'
 import styles from './ApplicationListView.module.css'
@@ -35,6 +36,7 @@ interface NewAppForm {
   url: string
   notes: string
   description: string
+  tags: string[]
 }
 
 const emptyForm: NewAppForm = {
@@ -44,11 +46,14 @@ const emptyForm: NewAppForm = {
   url: '',
   notes: '',
   description: '',
+  tags: [],
 }
 
 export default function ApplicationListView() {
   const navigate = useNavigate()
   const [applications, setApplications] = useState<Application[]>([])
+  const [allTags, setAllTags] = useState<string[]>([])
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -57,21 +62,29 @@ export default function ApplicationListView() {
   const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  const load = async (status?: string, q?: string) => {
+  const load = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await listApplications(status || undefined, q || undefined)
+      const [data, tags] = await Promise.all([
+        listApplications(
+          statusFilter || undefined,
+          searchQuery || undefined,
+          tagFilter.length ? tagFilter : undefined,
+        ),
+        listAllTags(),
+      ])
       setApplications(data)
+      setAllTags(tags)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to load applications' })
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, searchQuery, tagFilter])
 
   useEffect(() => {
-    load(statusFilter, searchQuery)
-  }, [statusFilter, searchQuery])
+    load()
+  }, [load])
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,6 +99,7 @@ export default function ApplicationListView() {
         url: newForm.url.trim() || null,
         notes: newForm.notes.trim(),
         description: newForm.description.trim(),
+        tags: newForm.tags,
       })
       setShowNewForm(false)
       setNewForm(emptyForm)
@@ -223,6 +237,13 @@ export default function ApplicationListView() {
           onChange={(e) => setSearchQuery(e.target.value)}
           aria-label="Search applications"
         />
+        <TagInput
+          value={tagFilter}
+          onChange={setTagFilter}
+          availableTags={allTags}
+          allowCreate={false}
+          placeholder="Filter by tag..."
+        />
       </div>
 
       {loading ? (
@@ -245,6 +266,13 @@ export default function ApplicationListView() {
                 </div>
                 <div className={styles.itemMeta}>
                   <span className={styles.metaDate}>Updated {formatDate(app.updated_at)}</span>
+                  {app.tags && app.tags.length > 0 && (
+                    <div className={styles.tagList}>
+                      {app.tags.map((tag) => (
+                        <span key={tag} className={styles.tagBadge}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </Link>
               {app.url && (

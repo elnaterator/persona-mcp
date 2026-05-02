@@ -3,8 +3,8 @@ import { Link } from 'react-router'
 import type { AccomplishmentSummary } from '../types/resume'
 import {
   listAccomplishments,
-  listAccomplishmentTags,
   createAccomplishment,
+  listAllTags,
 } from '../services/api'
 import { TagInput } from './TagInput'
 import styles from './AccomplishmentListView.module.css'
@@ -41,7 +41,7 @@ export default function AccomplishmentListView() {
   const loadData = useCallback(async () => {
     const [accs, tags] = await Promise.all([
       listAccomplishments(tagFilter.length ? tagFilter : undefined),
-      listAccomplishmentTags(),
+      listAllTags(),
     ])
     setAccomplishments(accs)
     setAllTags(tags)

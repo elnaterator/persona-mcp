@@ -7,7 +7,9 @@ import {
   updateApplication,
   deleteApplication,
   listResumes,
+  listAllTags,
 } from '../services/api'
+import { TagInput } from './TagInput'
 import ContactsPanel from './ContactsPanel'
 import CommunicationsPanel from './CommunicationsPanel'
 import Breadcrumb from './Breadcrumb'
@@ -42,7 +44,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   Accepted:       { bg: 'rgba(82,183,136,0.22)',  color: '#52b788' },
 }
 
-type EditSection = 'details' | 'description' | 'notes' | 'resume' | null
+type EditSection = 'details' | 'description' | 'notes' | 'resume' | 'tags' | null
 
 export default function ApplicationDetailView() {
   const { id } = useParams<{ id: string }>()
@@ -52,6 +54,7 @@ export default function ApplicationDetailView() {
 
   const [app, setApp] = useState<Application | null>(null)
   const [resumeVersions, setResumeVersions] = useState<ResumeVersionSummary[]>([])
+  const [allTags, setAllTags] = useState<string[]>([])
   const [notFound, setNotFound] = useState(false)
   const [forbidden, setForbidden] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -71,12 +74,14 @@ export default function ApplicationDetailView() {
     if (numericId === null) return
     try {
       setLoading(true)
-      const [appData, versions] = await Promise.all([
+      const [appData, versions, tags] = await Promise.all([
         getApplication(numericId),
         listResumes(),
+        listAllTags(),
       ])
       setApp(appData)
       setResumeVersions(versions)
+      setAllTags(tags)
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status
       if (status === 404) {
@@ -108,20 +113,23 @@ export default function ApplicationDetailView() {
 
   const saveSection = async () => {
     if (!app || numericId === null) return
-    if (!sectionForm.company?.trim() || !sectionForm.position?.trim()) return
+    if (editingSection === 'details' && (!sectionForm.company?.trim() || !sectionForm.position?.trim())) return
     try {
       setSaving(true)
-      const updated = await updateApplication(numericId, {
-        company: sectionForm.company?.trim() ?? app.company,
-        position: sectionForm.position?.trim() ?? app.position,
-        status: sectionForm.status ?? app.status,
-        url: sectionForm.url?.trim() || null,
-        description: sectionForm.description?.trim() ?? app.description,
-        notes: sectionForm.notes?.trim() ?? app.notes,
-        resume_version_id: 'resume_version_id' in sectionForm
-          ? sectionForm.resume_version_id ?? null
-          : app.resume_version_id,
-      })
+      const payload: Partial<Application> = editingSection === 'tags'
+        ? { tags: sectionForm.tags ?? app.tags }
+        : {
+            company: sectionForm.company?.trim() ?? app.company,
+            position: sectionForm.position?.trim() ?? app.position,
+            status: sectionForm.status ?? app.status,
+            url: sectionForm.url?.trim() || null,
+            description: sectionForm.description?.trim() ?? app.description,
+            notes: sectionForm.notes?.trim() ?? app.notes,
+            resume_version_id: 'resume_version_id' in sectionForm
+              ? sectionForm.resume_version_id ?? null
+              : app.resume_version_id,
+          }
+      const updated = await updateApplication(numericId, payload)
       setApp(updated)
       setEditingSection(null)
       setSectionForm({})
@@ -453,6 +461,43 @@ export default function ApplicationDetailView() {
           </p>
         ) : (
           <p className={styles.emptyText}>No resume linked</p>
+        )}
+      </SectionCard>
+      {/* Tags section */}
+      <SectionCard
+        label="Tags"
+        action={editingSection === 'tags' ? (
+          <div className={styles.sectionActions}>
+            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
+              <Check size={14} />
+            </button>
+            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <button className={styles.editButton} onClick={() => startEdit('tags')} aria-label="Edit tags">
+            <Pencil size={14} />
+          </button>
+        )}
+      >
+        {editingSection === 'tags' ? (
+          <div className={styles.sectionForm}>
+            <TagInput
+              value={(sectionForm.tags as string[]) ?? []}
+              onChange={(tags) => setSectionForm((prev) => ({ ...prev, tags }))}
+              availableTags={allTags}
+              allowCreate={true}
+            />
+          </div>
+        ) : app.tags && app.tags.length > 0 ? (
+          <div className={styles.tagList}>
+            {app.tags.map((tag) => (
+              <span key={tag} className={styles.tagBadge}>{tag}</span>
+            ))}
+          </div>
+        ) : (
+          <p className={styles.emptyText}>No tags</p>
         )}
       </SectionCard>
       </div>

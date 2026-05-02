@@ -86,10 +86,20 @@ def create_router(
         if not label or not label.strip():
             raise HTTPException(status_code=422, detail="Label is required")
         uid = current_user.id if current_user is not None else None
+        tags = data.get("tags") or []
         try:
-            return service.create_resume(label, user_id=uid)
+            return service.create_resume(label, user_id=uid, tags=tags)
         except ValueError as e:
-            raise HTTPException(status_code=404, detail=str(e))
+            raise HTTPException(status_code=422, detail=str(e))
+
+    # NOTE: /tags MUST be registered BEFORE /{version_id} to prevent FastAPI
+    # matching the literal string "tags" as an integer path parameter.
+    @api.get("/api/resumes/tags")
+    def list_resume_tags(
+        current_user: UserContext | None = Depends(_user_dep),
+    ) -> list[str]:
+        uid = current_user.id if current_user is not None else None
+        return service.list_tags(user_id=uid)
 
     @api.get("/api/resumes/default")
     def get_default_resume(
@@ -130,12 +140,16 @@ def create_router(
         if not label or not label.strip():
             raise HTTPException(status_code=422, detail="Label is required")
         uid = current_user.id if current_user is not None else None
+        tags = data.get("tags")
         try:
-            version = service.update_metadata(version_id, label, user_id=uid)
+            version = service.update_metadata(version_id, label, user_id=uid, tags=tags)
         except PermissionError as e:
             raise HTTPException(status_code=403, detail=str(e))
         except ValueError as e:
-            raise HTTPException(status_code=404, detail=str(e))
+            detail = str(e)
+            if "not found" in detail:
+                raise HTTPException(status_code=404, detail=detail)
+            raise HTTPException(status_code=422, detail=detail)
         resume = Resume(**version["resume_data"])
         version["resume_data"] = resume.model_dump()
         return version
@@ -417,11 +431,14 @@ def create_router(
         @api.get("/api/applications")
         def list_applications(
             status: str | None = None,
+            tag: list[str] | None = Query(default=None),
             q: str | None = None,
             current_user: UserContext | None = Depends(_user_dep),
         ) -> list[dict[str, Any]]:
             uid = current_user.id if current_user is not None else None
-            return app_service.list_applications(status=status, q=q, user_id=uid)
+            return app_service.list_applications(
+                status=status, tags=tag, q=q, user_id=uid
+            )
 
         @api.post("/api/applications", status_code=201)
         def create_application(
@@ -433,6 +450,15 @@ def create_router(
                 return app_service.create_application(data, user_id=uid)
             except ValueError as e:
                 raise HTTPException(status_code=422, detail=str(e))
+
+        # NOTE: /tags MUST be registered BEFORE /{app_id} to prevent FastAPI
+        # matching the literal string "tags" as an integer path parameter.
+        @api.get("/api/applications/tags")
+        def list_application_tags(
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[str]:
+            uid = current_user.id if current_user is not None else None
+            return app_service.list_tags(user_id=uid)
 
         @api.get("/api/applications/{app_id}")
         def get_application(
@@ -787,6 +813,25 @@ def create_router(
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
             return {"message": f"Deleted note '{note['title']}'"}
+
+    # ==========================================================
+    # Unified Tags Route
+    # ==========================================================
+
+    @api.get("/api/tags")
+    def list_all_tags(
+        current_user: UserContext | None = Depends(_user_dep),
+    ) -> list[str]:
+        uid = current_user.id if current_user is not None else None
+        all_tags: set[str] = set()
+        all_tags.update(service.list_tags(user_id=uid))
+        if app_service is not None:
+            all_tags.update(app_service.list_tags(user_id=uid))
+        if acc_service is not None:
+            all_tags.update(acc_service.list_tags(user_id=uid))
+        if note_service is not None:
+            all_tags.update(note_service.list_tags(user_id=uid))
+        return sorted(all_tags)
 
     # ==========================================================
     # Webhook Routes (no auth — verified via Svix signature)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Accomplishment } from '../types/resume'
-import { getAccomplishment, updateAccomplishment, deleteAccomplishment, listAccomplishmentTags } from '../services/api'
+import { getAccomplishment, updateAccomplishment, deleteAccomplishment, listAllTags } from '../services/api'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -38,7 +38,7 @@ export default function AccomplishmentDetailView() {
     }
     Promise.all([
       getAccomplishment(numericId),
-      listAccomplishmentTags(),
+      listAllTags(),
     ]).then(([accData, tags]) => {
       setAcc(accData)
       setAllTags(tags)

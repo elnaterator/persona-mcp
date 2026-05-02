@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Note } from '../types/resume'
-import { getNote, updateNote, deleteNote, listNoteTags } from '../services/api'
+import { getNote, updateNote, deleteNote, listAllTags } from '../services/api'
 import { TagInput } from './TagInput'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
@@ -38,7 +38,7 @@ export default function NoteDetailView() {
     }
     Promise.all([
       getNote(numericId),
-      listNoteTags(),
+      listAllTags(),
     ]).then(([noteData, tags]) => {
       setNote(noteData)
       setAllTags(tags)

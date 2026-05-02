@@ -976,3 +976,110 @@ class TestApplicationContextEndpoint:
         client = _make_full_client(service, app_service)
         resp = client.get("/api/applications/9999/context")
         assert resp.status_code == 404
+
+
+# ── Tag Contract Tests ────────────────────────────────────────────────────────
+
+
+def _make_all_services_client(db_conn: Any) -> TestClient:
+    """TestClient with all services enabled."""
+    from fastapi import FastAPI
+
+    from persona.accomplishment_service import AccomplishmentService
+    from persona.note_service import NoteService
+
+    svc = ResumeService(db_conn)  # type: ignore[arg-type]
+    app_svc = ApplicationService(db_conn)  # type: ignore[arg-type]
+    acc_svc = AccomplishmentService(db_conn)  # type: ignore[arg-type]
+    note_svc = NoteService(db_conn)  # type: ignore[arg-type]
+    app = FastAPI()
+    app.include_router(
+        create_router(
+            svc,
+            app_service=app_svc,
+            acc_service=acc_svc,
+            note_service=note_svc,
+        )
+    )
+    return TestClient(app)
+
+
+class TestApplicationTagFilter:
+    """Contract tests for application tag endpoints."""
+
+    def test_list_applications_tag_filter(self, db_conn: Any) -> None:
+        client = _make_full_client(
+            ResumeService(db_conn),  # type: ignore[arg-type]
+            ApplicationService(db_conn),  # type: ignore[arg-type]
+        )
+        client.post(
+            "/api/applications",
+            json={"company": "A", "position": "P1", "tags": ["python"]},
+        )
+        client.post(
+            "/api/applications",
+            json={"company": "B", "position": "P2", "tags": ["java"]},
+        )
+        resp = client.get("/api/applications?tag=python")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["company"] == "A"
+
+    def test_list_application_tags(self, db_conn: Any) -> None:
+        client = _make_full_client(
+            ResumeService(db_conn),  # type: ignore[arg-type]
+            ApplicationService(db_conn),  # type: ignore[arg-type]
+        )
+        client.post(
+            "/api/applications",
+            json={"company": "A", "position": "P1", "tags": ["python"]},
+        )
+        client.post(
+            "/api/applications",
+            json={"company": "B", "position": "P2", "tags": ["java"]},
+        )
+        resp = client.get("/api/applications/tags")
+        assert resp.status_code == 200
+        assert sorted(resp.json()) == ["java", "python"]
+
+
+class TestUnifiedTagsEndpoint:
+    """Contract tests for GET /api/tags aggregated endpoint."""
+
+    def test_aggregates_all_resource_tags(self, db_conn: Any) -> None:
+        client = _make_all_services_client(db_conn)
+        client.post(
+            "/api/applications",
+            json={"company": "A", "position": "P", "tags": ["app-tag"]},
+        )
+        client.post("/api/accomplishments", json={"title": "Acc", "tags": ["acc-tag"]})
+        client.post("/api/notes", json={"title": "Note", "tags": ["note-tag"]})
+        resp = client.get("/api/tags")
+        assert resp.status_code == 200
+        tags = resp.json()
+        assert "app-tag" in tags
+        assert "acc-tag" in tags
+        assert "note-tag" in tags
+
+    def test_deduplicates_tags(self, db_conn: Any) -> None:
+        client = _make_all_services_client(db_conn)
+        client.post(
+            "/api/applications",
+            json={"company": "A", "position": "P", "tags": ["shared"]},
+        )
+        client.post("/api/notes", json={"title": "N", "tags": ["shared"]})
+        resp = client.get("/api/tags")
+        assert resp.status_code == 200
+        assert resp.json().count("shared") == 1
+
+    def test_returns_sorted(self, db_conn: Any) -> None:
+        client = _make_all_services_client(db_conn)
+        client.post(
+            "/api/applications",
+            json={"company": "A", "position": "P", "tags": ["zebra", "apple"]},
+        )
+        resp = client.get("/api/tags")
+        assert resp.status_code == 200
+        tags = resp.json()
+        assert tags == sorted(tags)

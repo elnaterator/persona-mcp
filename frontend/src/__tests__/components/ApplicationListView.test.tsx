@@ -18,6 +18,7 @@ const mockApplications: Application[] = [
     url: 'https://acme.com/job',
     notes: 'Looks promising',
     resume_version_id: 1,
+    tags: ['python', 'backend'],
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-15T00:00:00Z',
   },
@@ -30,6 +31,7 @@ const mockApplications: Application[] = [
     url: null,
     notes: '',
     resume_version_id: null,
+    tags: [],
     created_at: '2024-02-01T00:00:00Z',
     updated_at: '2024-02-10T00:00:00Z',
   },
@@ -46,6 +48,7 @@ function renderView() {
 describe('ApplicationListView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(api.listAllTags).mockResolvedValue([])
   })
 
   it('shows loading spinner while fetching', () => {
@@ -136,6 +139,24 @@ describe('ApplicationListView', () => {
     renderView()
     await waitFor(() => {
       expect(screen.getByRole('searchbox', { name: /search applications/i })).toBeInTheDocument()
+    })
+  })
+
+  it('renders tag badges on applications', async () => {
+    vi.mocked(api.listApplications).mockResolvedValue(mockApplications)
+    renderView()
+    await waitFor(() => {
+      expect(screen.getByText('python')).toBeInTheDocument()
+    })
+    expect(screen.getByText('backend')).toBeInTheDocument()
+  })
+
+  it('populates tag autocomplete from listAllTags', async () => {
+    vi.mocked(api.listApplications).mockResolvedValue([])
+    vi.mocked(api.listAllTags).mockResolvedValue(['python', 'backend', 'react'])
+    renderView()
+    await waitFor(() => {
+      expect(api.listAllTags).toHaveBeenCalled()
     })
   })
 })
