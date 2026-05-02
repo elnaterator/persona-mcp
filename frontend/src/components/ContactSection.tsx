@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ContactInfo } from '../types/resume';
 import { EditableSection } from './EditableSection';
-import { updateContact, updateVersionContact } from '../services/api';
+import { updateResumeContact, updateVersionContact } from '../services/api';
 import styles from './ContactSection.module.css';
 
 interface ContactSectionProps {
@@ -77,7 +77,7 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
     if (versionId !== undefined) {
       await updateVersionContact(versionId, formData);
     } else {
-      await updateContact(formData);
+      await updateResumeContact(formData);
     }
     if (onUpdate) {
       onUpdate();

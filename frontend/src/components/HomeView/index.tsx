@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import { useUser } from '@clerk/clerk-react'
 import { APIKeys } from '@clerk/clerk-react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { listResumes, listApplications, listNotes, listAccomplishments } from '../../services/api'
+import { listResumes, listApplications, listNotes, listAccomplishments, listContacts } from '../../services/api'
 import styles from './HomeView.module.css'
 
 // ─── Connect section ──────────────────────────────────────────────────────────
@@ -211,6 +211,7 @@ interface Stats {
   activeApplications: number
   notes: number
   accomplishments: number
+  contacts: number
 }
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
@@ -223,8 +224,8 @@ export default function HomeView() {
   const [connectOpen, setConnectOpen] = useState(false)
 
   useEffect(() => {
-    Promise.all([listResumes(), listApplications(), listNotes(), listAccomplishments()]).then(
-      ([resumes, applications, notes, accomplishments]) => {
+    Promise.all([listResumes(), listApplications(), listNotes(), listAccomplishments(), listContacts()]).then(
+      ([resumes, applications, notes, accomplishments, contacts]) => {
         const active = applications.filter((a) => !TERMINAL_STATUSES.has(a.status))
         setStats({
           resumes: (resumes || []).length,
@@ -232,6 +233,7 @@ export default function HomeView() {
           activeApplications: active.length,
           notes: (notes || []).length,
           accomplishments: (accomplishments || []).length,
+          contacts: (contacts || []).length,
         })
       }
     )
@@ -265,6 +267,11 @@ export default function HomeView() {
         <Link to="/notes" className={styles.statCard}>
           <span className={styles.statLabel}>Notes</span>
           <span className={styles.statValue}>{stats === null ? '—' : stats.notes}</span>
+        </Link>
+
+        <Link to="/contacts" className={styles.statCard}>
+          <span className={styles.statLabel}>Contacts</span>
+          <span className={styles.statValue}>{stats === null ? '—' : stats.contacts}</span>
         </Link>
       </div>
 

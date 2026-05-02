@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from persona.accomplishment_service import AccomplishmentService
 from persona.application_service import ApplicationService
 from persona.auth import UserContext
+from persona.contact_service import ContactService
 from persona.models import Resume
 from persona.note_service import NoteService
 from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
@@ -34,6 +35,7 @@ def create_router(
     app_service: ApplicationService | None = None,
     acc_service: AccomplishmentService | None = None,
     note_service: NoteService | None = None,
+    contact_service: ContactService | None = None,
     get_current_user: Callable | None = None,
 ) -> APIRouter:
     """Create an APIRouter with all endpoints.
@@ -512,7 +514,7 @@ def create_router(
         # --- Application Contacts ---
 
         @api.get("/api/applications/{app_id}/contacts")
-        def list_contacts(
+        def list_app_contacts(
             app_id: int,
             current_user: UserContext | None = Depends(_user_dep),
         ) -> list[dict[str, Any]]:
@@ -544,7 +546,7 @@ def create_router(
                 raise HTTPException(status_code=422, detail=detail)
 
         @api.patch("/api/applications/{app_id}/contacts/{contact_id}")
-        def update_contact(
+        def update_app_contact(
             app_id: int,
             contact_id: int,
             data: dict[str, Any],
@@ -560,7 +562,7 @@ def create_router(
                 raise HTTPException(status_code=404, detail=str(e))
 
         @api.delete("/api/applications/{app_id}/contacts/{contact_id}")
-        def delete_contact(
+        def delete_app_contact(
             app_id: int,
             contact_id: int,
             current_user: UserContext | None = Depends(_user_dep),
@@ -815,6 +817,85 @@ def create_router(
             return {"message": f"Deleted note '{note['title']}'"}
 
     # ==========================================================
+    # Contact Routes
+    # ==========================================================
+
+    if contact_service is not None:
+
+        @api.get("/api/contacts")
+        def list_contacts(
+            tag: list[str] | None = Query(default=None),
+            q: str | None = None,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[dict[str, Any]]:
+            uid = current_user.id if current_user is not None else None
+            return contact_service.list_contacts(tags=tag, q=q, user_id=uid)
+
+        @api.post("/api/contacts", status_code=201)
+        def create_contact(
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return contact_service.create_contact(data, user_id=uid)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
+
+        # NOTE: /tags MUST be registered BEFORE /{contact_id} to prevent FastAPI
+        # matching the literal string "tags" as an integer path parameter.
+        @api.get("/api/contacts/tags")
+        def list_contact_tags(
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[str]:
+            uid = current_user.id if current_user is not None else None
+            return contact_service.list_tags(user_id=uid)
+
+        @api.get("/api/contacts/{contact_id}")
+        def get_contact(
+            contact_id: int,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return contact_service.get_contact(contact_id, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @api.patch("/api/contacts/{contact_id}")
+        def update_contact(
+            contact_id: int,
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return contact_service.update_contact(contact_id, data, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                detail = str(e)
+                if "not found" in detail:
+                    raise HTTPException(status_code=404, detail=detail)
+                raise HTTPException(status_code=422, detail=detail)
+
+        @api.delete("/api/contacts/{contact_id}")
+        def delete_contact(
+            contact_id: int,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, str]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                contact = contact_service.delete_contact(contact_id, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+            return {"message": f"Deleted contact '{contact['name']}'"}
+
+    # ==========================================================
     # Unified Tags Route
     # ==========================================================
 
@@ -831,6 +912,8 @@ def create_router(
             all_tags.update(acc_service.list_tags(user_id=uid))
         if note_service is not None:
             all_tags.update(note_service.list_tags(user_id=uid))
+        if contact_service is not None:
+            all_tags.update(contact_service.list_tags(user_id=uid))
         return sorted(all_tags)
 
     # ==========================================================

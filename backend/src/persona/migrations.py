@@ -39,11 +39,6 @@ def _bootstrap_schema_version(conn) -> None:
         )
         """
     )
-    conn.execute(
-        "INSERT INTO schema_version (version) VALUES (0) ON CONFLICT DO NOTHING"
-    )
-    # If table was just created but INSERT above didn't fire (table already had rows),
-    # ensure there is exactly one row by inserting only when empty.
     row = conn.execute("SELECT COUNT(*) AS cnt FROM schema_version").fetchone()
     count = row["cnt"] if isinstance(row, dict) else row[0]
     if count == 0:
@@ -53,10 +48,56 @@ def _bootstrap_schema_version(conn) -> None:
 
 def _get_version(conn) -> int:
     """Read current schema version."""
-    row = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
+    row = conn.execute("SELECT MAX(version) AS version FROM schema_version").fetchone()
     if row is None:
         return 0
-    return row["version"] if isinstance(row, dict) else row[0]
+    version = row["version"] if isinstance(row, dict) else row[0]
+    return version if version is not None else 0
+
+
+def _table_exists(conn, name: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = %s",
+        (name,),
+    ).fetchone()
+    return row is not None
+
+
+def _column_exists(conn, table: str, column: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = %s AND column_name = %s",
+        (table, column),
+    ).fetchone()
+    return row is not None
+
+
+def _detect_actual_version(conn) -> int:
+    """Infer the highest applied migration from the DB structure.
+
+    Used to repair schema_version when it lags behind the actual DB state
+    (e.g. after a partial migration failure with autocommit mode).
+    Checked newest-to-oldest; returns the first version whose structural
+    marker is present.
+    """
+    if _table_exists(conn, "contact") and _column_exists(conn, "contact", "user_id"):
+        return 8
+    if _column_exists(conn, "application", "tags"):
+        return 7
+    if _table_exists(conn, "note"):
+        return 6
+    if _table_exists(conn, "users") and _column_exists(
+        conn, "resume_version", "user_id"
+    ):
+        return 4  # v5 is data-only; safe to re-run from v4
+    if _table_exists(conn, "accomplishment"):
+        return 3
+    if _table_exists(conn, "resume_version"):
+        return 2
+    if _table_exists(conn, "experience"):
+        return 1
+    return 0
 
 
 def migrate_v0_to_v1(conn) -> None:
@@ -436,6 +477,46 @@ def migrate_v6_to_v7(conn) -> None:
     conn.commit()
 
 
+def migrate_v7_to_v8(conn) -> None:
+    """Add contact table for networking/relationship contacts."""
+    # The v0→v1 migration creates a singleton 'contact' table with the old
+    # resume-contact schema. If v0→v1 was accidentally re-run (bootstrap bug),
+    # that old table may still exist here. Drop it before creating the new one.
+    conn.execute("DROP TABLE IF EXISTS contact CASCADE")
+    conn.execute(
+        """
+        CREATE TABLE contact (
+            id                    SERIAL PRIMARY KEY,
+            user_id               TEXT NOT NULL,
+            name                  TEXT NOT NULL,
+            email                 TEXT,
+            phone                 TEXT,
+            company               TEXT,
+            title                 TEXT,
+            relationship          TEXT,
+            linkedin_url          TEXT,
+            location              TEXT,
+            last_contacted_date   TEXT,
+            followup_date         TEXT,
+            notes                 TEXT NOT NULL DEFAULT '',
+            tags                  TEXT NOT NULL DEFAULT '[]',
+            created_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_contact_user FOREIGN KEY (user_id)
+                REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute("CREATE INDEX idx_contact_user ON contact(user_id)")
+    conn.execute("CREATE INDEX idx_contact_updated ON contact(updated_at DESC)")
+    conn.execute(
+        "CREATE INDEX idx_contact_followup ON contact(followup_date) "
+        "WHERE followup_date IS NOT NULL"
+    )
+    conn.execute("UPDATE schema_version SET version = %s", (8,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -444,6 +525,7 @@ MIGRATIONS: list = [
     migrate_v4_to_v5,
     migrate_v5_to_v6,
     migrate_v6_to_v7,
+    migrate_v7_to_v8,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)
@@ -453,6 +535,20 @@ def apply_migrations(conn) -> None:
     """Apply pending migrations to bring the database to the current schema version."""
     _bootstrap_schema_version(conn)
     current = _get_version(conn)
+
+    # Repair schema_version if it lags behind the actual DB structure.
+    # This handles the case where autocommit mode caused table DDL to persist
+    # but the schema_version UPDATE at the end of a migration never ran.
+    actual = _detect_actual_version(conn)
+    if actual > current:
+        logger.warning(
+            "schema_version (%d) lags actual DB state (%d) — repairing",
+            current,
+            actual,
+        )
+        conn.execute("UPDATE schema_version SET version = %s", (actual,))
+        conn.commit()
+        current = actual
 
     if current > len(MIGRATIONS):
         raise SchemaVersionError(db_version=current, code_version=len(MIGRATIONS))

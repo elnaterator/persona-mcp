@@ -604,14 +604,14 @@ class TestDeleteApplication:
 
     def test_cascades_contacts_and_communications(self, db_conn) -> None:
         from persona.database import (
+            create_app_contact,
             create_application,
             create_communication,
-            create_contact,
             delete_application,
         )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        create_contact(db_conn, app["id"], {"name": "Alice"})
+        create_app_contact(db_conn, app["id"], {"name": "Alice"})
         create_communication(
             db_conn,
             app["id"],
@@ -639,10 +639,10 @@ class TestDeleteApplication:
 
 
 class TestCreateContact:
-    """Tests for create_contact."""
+    """Tests for create_app_contact."""
 
     def test_creates_with_all_fields(self, db_conn) -> None:
-        from persona.database import create_application, create_contact
+        from persona.database import create_app_contact, create_application
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
         data = {
@@ -652,7 +652,7 @@ class TestCreateContact:
             "phone": "+1-555-0001",
             "notes": "Very helpful",
         }
-        result = create_contact(db_conn, app["id"], data)
+        result = create_app_contact(db_conn, app["id"], data)
 
         assert result["name"] == "Bob Smith"
         assert result["role"] == "Recruiter"
@@ -660,63 +660,75 @@ class TestCreateContact:
         assert result["app_id"] == app["id"]
 
     def test_creates_with_minimal_fields(self, db_conn) -> None:
-        from persona.database import create_application, create_contact
+        from persona.database import create_app_contact, create_application
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        result = create_contact(db_conn, app["id"], {"name": "Alice"})
+        result = create_app_contact(db_conn, app["id"], {"name": "Alice"})
 
         assert result["name"] == "Alice"
         assert result["app_id"] == app["id"]
 
     def test_raises_for_nonexistent_app(self, db_conn) -> None:
-        from persona.database import create_contact
+        from persona.database import create_app_contact
 
         with pytest.raises(ValueError, match="not found"):
-            create_contact(db_conn, 9999, {"name": "Ghost"})
+            create_app_contact(db_conn, 9999, {"name": "Ghost"})
 
 
 class TestLoadContacts:
-    """Tests for load_contacts."""
+    """Tests for load_app_contacts."""
 
     def test_loads_all_contacts_for_app(self, db_conn) -> None:
-        from persona.database import create_application, create_contact, load_contacts
+        from persona.database import (
+            create_app_contact,
+            create_application,
+            load_app_contacts,
+        )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        create_contact(db_conn, app["id"], {"name": "Alice"})
-        create_contact(db_conn, app["id"], {"name": "Bob"})
-        results = load_contacts(db_conn, app["id"])
+        create_app_contact(db_conn, app["id"], {"name": "Alice"})
+        create_app_contact(db_conn, app["id"], {"name": "Bob"})
+        results = load_app_contacts(db_conn, app["id"])
 
         assert len(results) == 2
 
     def test_returns_empty_list_when_no_contacts(self, db_conn) -> None:
-        from persona.database import create_application, load_contacts
+        from persona.database import create_application, load_app_contacts
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        results = load_contacts(db_conn, app["id"])
+        results = load_app_contacts(db_conn, app["id"])
 
         assert results == []
 
     def test_ordered_by_id(self, db_conn) -> None:
-        from persona.database import create_application, create_contact, load_contacts
+        from persona.database import (
+            create_app_contact,
+            create_application,
+            load_app_contacts,
+        )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        c1 = create_contact(db_conn, app["id"], {"name": "First"})
-        c2 = create_contact(db_conn, app["id"], {"name": "Second"})
-        results = load_contacts(db_conn, app["id"])
+        c1 = create_app_contact(db_conn, app["id"], {"name": "First"})
+        c2 = create_app_contact(db_conn, app["id"], {"name": "Second"})
+        results = load_app_contacts(db_conn, app["id"])
 
         assert results[0]["id"] == c1["id"]
         assert results[1]["id"] == c2["id"]
 
 
 class TestUpdateContact:
-    """Tests for update_contact."""
+    """Tests for update_app_contact."""
 
     def test_updates_fields(self, db_conn) -> None:
-        from persona.database import create_application, create_contact, update_contact
+        from persona.database import (
+            create_app_contact,
+            create_application,
+            update_app_contact,
+        )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        contact = create_contact(db_conn, app["id"], {"name": "Alice"})
-        updated = update_contact(
+        contact = create_app_contact(db_conn, app["id"], {"name": "Alice"})
+        updated = update_app_contact(
             db_conn, contact["id"], {"email": "alice@corp.com", "role": "HR"}
         )
 
@@ -725,44 +737,48 @@ class TestUpdateContact:
         assert updated["name"] == "Alice"
 
     def test_raises_for_nonexistent_contact(self, db_conn) -> None:
-        from persona.database import update_contact
+        from persona.database import update_app_contact
 
         with pytest.raises(ValueError, match="not found"):
-            update_contact(db_conn, 9999, {"name": "Ghost"})
+            update_app_contact(db_conn, 9999, {"name": "Ghost"})
 
 
 class TestDeleteContact:
-    """Tests for delete_contact."""
+    """Tests for delete_app_contact."""
 
     def test_deletes_existing_contact(self, db_conn) -> None:
         from persona.database import (
+            create_app_contact,
             create_application,
-            create_contact,
-            delete_contact,
-            load_contacts,
+            delete_app_contact,
+            load_app_contacts,
         )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        contact = create_contact(db_conn, app["id"], {"name": "Alice"})
-        delete_contact(db_conn, contact["id"])
+        contact = create_app_contact(db_conn, app["id"], {"name": "Alice"})
+        delete_app_contact(db_conn, contact["id"])
 
-        results = load_contacts(db_conn, app["id"])
+        results = load_app_contacts(db_conn, app["id"])
         assert all(r["id"] != contact["id"] for r in results)
 
     def test_returns_contact_name(self, db_conn) -> None:
-        from persona.database import create_application, create_contact, delete_contact
+        from persona.database import (
+            create_app_contact,
+            create_application,
+            delete_app_contact,
+        )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        contact = create_contact(db_conn, app["id"], {"name": "Alice"})
-        name = delete_contact(db_conn, contact["id"])
+        contact = create_app_contact(db_conn, app["id"], {"name": "Alice"})
+        name = delete_app_contact(db_conn, contact["id"])
 
         assert name == "Alice"
 
     def test_raises_for_nonexistent_contact(self, db_conn) -> None:
-        from persona.database import delete_contact
+        from persona.database import delete_app_contact
 
         with pytest.raises(ValueError, match="not found"):
-            delete_contact(db_conn, 9999)
+            delete_app_contact(db_conn, 9999)
 
 
 class TestCreateCommunication:
@@ -770,13 +786,13 @@ class TestCreateCommunication:
 
     def test_creates_with_contact_id_auto_populates_name(self, db_conn) -> None:
         from persona.database import (
+            create_app_contact,
             create_application,
             create_communication,
-            create_contact,
         )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        contact = create_contact(db_conn, app["id"], {"name": "Alice"})
+        contact = create_app_contact(db_conn, app["id"], {"name": "Alice"})
         result = create_communication(
             db_conn,
             app["id"],
@@ -896,14 +912,14 @@ class TestUpdateCommunication:
 
     def test_updating_contact_id_updates_contact_name(self, db_conn) -> None:
         from persona.database import (
+            create_app_contact,
             create_application,
             create_communication,
-            create_contact,
             update_communication,
         )
 
         app = create_application(db_conn, {"company": "C", "position": "P"})
-        contact = create_contact(db_conn, app["id"], {"name": "Bob"})
+        contact = create_app_contact(db_conn, app["id"], {"name": "Bob"})
         comm = create_communication(
             db_conn,
             app["id"],

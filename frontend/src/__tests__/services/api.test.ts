@@ -74,7 +74,7 @@ describe('API Client', () => {
     })
   })
 
-  describe('updateContact', () => {
+  describe('updateResumeContact', () => {
     it('should send PUT request with contact data', async () => {
       const updateData: Partial<ContactInfo> = {
         name: 'John Updated',
@@ -88,7 +88,7 @@ describe('API Client', () => {
         json: async () => mockResponse,
       })
 
-      const result = await api.updateContact(updateData)
+      const result = await api.updateResumeContact(updateData)
 
       expect(global.fetch).toHaveBeenCalledWith('/api/resume/contact', {
         method: 'PUT',
@@ -108,7 +108,7 @@ describe('API Client', () => {
         json: async () => ({ detail: 'Invalid email format' }),
       })
 
-      await expect(api.updateContact({ email: 'invalid' })).rejects.toThrow(
+      await expect(api.updateResumeContact({ email: 'invalid' })).rejects.toThrow(
         'Invalid email format'
       )
     })

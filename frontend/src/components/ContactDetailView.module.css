@@ -1,0 +1,322 @@
+.container {
+  padding: 0;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.topBarTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  padding: 0 1rem;
+}
+
+.topBarActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.backButton {
+  background: none;
+  color: var(--text-secondary);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  text-decoration: none;
+}
+
+.backButton:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.editButton {
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+  border: none;
+  padding: 0.375rem 0.45rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.editButton:hover {
+  background-color: var(--bg-active);
+  color: var(--accent-green);
+}
+
+.deleteButton {
+  background-color: rgba(255, 68, 68, 0.08);
+  color: var(--status-error);
+  border: none;
+  padding: 0.375rem 0.45rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+}
+
+.deleteButton:hover {
+  background-color: rgba(255, 68, 68, 0.15);
+}
+
+/* View layout */
+.viewGrid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.viewFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.relationshipBadge {
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  width: fit-content;
+}
+
+.fieldList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fieldItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.fieldIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.fieldLink {
+  color: var(--accent-green);
+  text-decoration: none;
+}
+
+.fieldLink:hover {
+  text-decoration: underline;
+}
+
+.followupText {
+  color: var(--accent-green-dim);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.tagBadge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+  background-color: var(--accent-green-bg);
+  color: var(--accent-green);
+}
+
+.updatedDate {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.placeholderText {
+  margin: 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Edit layout */
+.editGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.editFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fieldLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fieldInput {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fieldInput:focus {
+  outline: none;
+  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
+}
+
+.editNotes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notesTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  resize: none;
+  overflow: hidden;
+  min-height: 8rem;
+  line-height: 1.5;
+}
+
+.notesTextarea:focus {
+  outline: none;
+  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
+}
+
+.titleInput {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  padding: 0.1rem 0.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent-green-dim);
+  font-family: inherit;
+  min-width: 0;
+}
+
+.titleInput:focus {
+  outline: none;
+}
+
+.formError {
+  font-size: 0.875rem;
+  color: var(--status-error);
+  margin: 0 0 0.5rem;
+}
+
+.saveIconButton,
+.cancelIconButton {
+  background-color: var(--bg-hover);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.375rem 0.45rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.saveIconButton {
+  color: var(--text-secondary);
+}
+
+.saveIconButton:hover:not(:disabled) {
+  background-color: var(--bg-active);
+  color: var(--accent-green);
+}
+
+.saveIconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelIconButton {
+  color: var(--text-secondary);
+}
+
+.cancelIconButton:hover {
+  background-color: var(--bg-active);
+  color: var(--status-error);
+}
+
+@media (max-width: 900px) {
+  .viewGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .topBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .topBarTitle {
+    padding: 0;
+  }
+
+  .editGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+}

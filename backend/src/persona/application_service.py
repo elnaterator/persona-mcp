@@ -3,22 +3,22 @@
 from typing import Any
 
 from persona.database import (
+    create_app_contact,
     create_application,
     create_communication,
-    create_contact,
+    delete_app_contact,
     delete_application,
     delete_communication,
-    delete_contact,
+    load_app_contacts,
     load_application,
     load_application_tags,
     load_applications,
     load_communications,
-    load_contacts,
     load_default_resume_version,
     load_resume_version,
+    update_app_contact,
     update_application,
     update_communication,
-    update_contact,
 )
 from persona.db import DBConnection
 from persona.models import APPLICATION_STATUSES
@@ -111,19 +111,19 @@ class ApplicationService:
         """Add a contact to an application."""
         if not data.get("name"):
             raise ValueError("Contact name is required")
-        return create_contact(self._conn, app_id, data)
+        return create_app_contact(self._conn, app_id, data)
 
     def list_contacts(self, app_id: int) -> list[dict[str, Any]]:
         """List contacts for an application."""
-        return load_contacts(self._conn, app_id)
+        return load_app_contacts(self._conn, app_id)
 
     def update_contact(self, contact_id: int, data: dict[str, Any]) -> dict[str, Any]:
         """Update a contact."""
-        return update_contact(self._conn, contact_id, data)
+        return update_app_contact(self._conn, contact_id, data)
 
     def remove_contact(self, contact_id: int) -> str:
         """Remove a contact. Returns contact name."""
-        return delete_contact(self._conn, contact_id)
+        return delete_app_contact(self._conn, contact_id)
 
     # --- Communication CRUD ---
 
@@ -160,7 +160,7 @@ class ApplicationService:
     ) -> dict[str, Any]:
         """Get full context for AI-assisted operations."""
         app = load_application(self._conn, app_id, user_id=user_id)
-        contacts = load_contacts(self._conn, app_id)
+        contacts = load_app_contacts(self._conn, app_id)
         communications = load_communications(self._conn, app_id)
 
         resume_version = None
