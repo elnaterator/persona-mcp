@@ -186,16 +186,6 @@ export default function AccomplishmentDetailView() {
       {editing ? (
         <div className={styles.metaEdit}>
           <div className={styles.metaField}>
-            <label className={styles.metaLabel} htmlFor="edit-date">Date</label>
-            <input
-              id="edit-date"
-              className={styles.metaInput}
-              type="date"
-              value={(editForm.accomplishment_date as string) ?? ''}
-              onChange={(e) => handleEditFieldChange('accomplishment_date', e.target.value)}
-            />
-          </div>
-          <div className={styles.metaField}>
             <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
             <TagInput
               id="edit-tags"
@@ -205,17 +195,29 @@ export default function AccomplishmentDetailView() {
               allowCreate={true}
             />
           </div>
+          <div className={`${styles.metaField} ${styles.metaFieldDate}`}>
+            <label className={styles.metaLabel} htmlFor="edit-date">Date</label>
+            <input
+              id="edit-date"
+              className={styles.metaInput}
+              type="date"
+              value={(editForm.accomplishment_date as string) ?? ''}
+              onChange={(e) => handleEditFieldChange('accomplishment_date', e.target.value)}
+            />
+          </div>
         </div>
       ) : (
         (acc.accomplishment_date || acc.tags.length > 0) && (
           <div className={styles.meta}>
-            {acc.accomplishment_date && <span>{acc.accomplishment_date}</span>}
             {acc.tags.length > 0 && (
               <div className={styles.tagList}>
                 {acc.tags.map((tag) => (
                   <span key={tag} className={styles.tagBadge}>{tag}</span>
                 ))}
               </div>
+            )}
+            {acc.accomplishment_date && (
+              <span className={styles.accomplishmentDate}>Accomplished {acc.accomplishment_date}</span>
             )}
           </div>
         )

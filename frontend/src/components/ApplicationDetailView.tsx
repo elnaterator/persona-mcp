@@ -211,22 +211,6 @@ export default function ApplicationDetailView() {
       </div>
 
       <div className={styles.meta}>
-        <span
-          className={styles.statusBadge}
-          style={{ background: statusStyle.bg, color: statusStyle.color }}
-        >
-          {app.status}
-        </span>
-        {app.url && (
-          <a
-            href={app.url}
-            className={styles.urlLink}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {app.url}
-          </a>
-        )}
         {editingSection === 'tags' ? (
           <div className={styles.tagsEdit}>
             <TagInput
@@ -255,6 +239,9 @@ export default function ApplicationDetailView() {
               <Pencil size={14} />
             </button>
           </div>
+        )}
+        {app.updated_at && (
+          <span className={styles.updatedDate}>Updated {new Date(app.updated_at).toLocaleDateString()}</span>
         )}
       </div>
 

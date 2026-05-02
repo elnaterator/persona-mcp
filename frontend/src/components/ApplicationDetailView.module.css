@@ -286,6 +286,12 @@
   gap: 0.75rem;
 }
 
+.updatedDate {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .tagsRow {
   display: flex;
   align-items: center;
