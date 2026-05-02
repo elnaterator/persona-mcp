@@ -48,9 +48,7 @@ def _bootstrap_schema_version(conn) -> None:
 
 def _get_version(conn) -> int:
     """Read current schema version."""
-    row = conn.execute(
-        "SELECT MAX(version) AS version FROM schema_version"
-    ).fetchone()
+    row = conn.execute("SELECT MAX(version) AS version FROM schema_version").fetchone()
     if row is None:
         return 0
     version = row["version"] if isinstance(row, dict) else row[0]
