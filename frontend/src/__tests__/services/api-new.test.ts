@@ -229,10 +229,10 @@ describe('Application Contacts API', () => {
     vi.clearAllMocks()
   })
 
-  describe('listContacts', () => {
+  describe('listAppContacts', () => {
     it('fetches contacts for an application', async () => {
       mockFetch([])
-      await api.listContacts(1)
+      await api.listAppContacts(1)
       expect(global.fetch).toHaveBeenCalledWith('/api/applications/1/contacts', undefined)
     })
   })

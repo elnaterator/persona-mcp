@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router'
-import { House, FileText, Briefcase, Trophy, StickyNote } from 'lucide-react'
+import { House, FileText, Briefcase, Trophy, StickyNote, Users } from 'lucide-react'
 import styles from './Navigation.module.css'
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -28,6 +28,10 @@ export default function Navigation() {
       <NavLink to="/notes" className={navClass} end={false}>
         <StickyNote size={16} />
         Notes
+      </NavLink>
+      <NavLink to="/contacts" className={navClass} end={false}>
+        <Users size={16} />
+        Contacts
       </NavLink>
     </nav>
   )

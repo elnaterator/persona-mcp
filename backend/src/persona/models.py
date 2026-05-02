@@ -1,5 +1,7 @@
 """Pydantic models for persona resume data."""
 
+import re
+
 from pydantic import BaseModel, field_validator
 
 
@@ -196,6 +198,58 @@ class NoteSummary(BaseModel):
     title: str
     tags: list[str] = []
     created_at: str = ""
+    updated_at: str = ""
+
+
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+class Contact(BaseModel):
+    """A networking or relationship contact."""
+
+    id: int
+    name: str
+    email: str | None = None
+    phone: str | None = None
+    company: str | None = None
+    title: str | None = None
+    relationship: str | None = None
+    linkedin_url: str | None = None
+    location: str | None = None
+    last_contacted_date: str | None = None
+    followup_date: str | None = None
+    notes: str = ""
+    tags: list[str] = []
+    created_at: str = ""
+    updated_at: str = ""
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Name is required and must not be blank")
+        if len(v.strip()) > 255:
+            raise ValueError("Name must not exceed 255 characters")
+        return v.strip()
+
+    @field_validator("last_contacted_date", "followup_date", mode="before")
+    @classmethod
+    def validate_date(cls, v: str | None) -> str | None:
+        if v is not None and v != "" and not _ISO_DATE_RE.match(v):
+            raise ValueError(f"Date must be in YYYY-MM-DD format, got: '{v}'")
+        return v or None
+
+
+class ContactSummary(BaseModel):
+    """Contact summary for list views (notes omitted)."""
+
+    id: int
+    name: str
+    company: str | None = None
+    title: str | None = None
+    relationship: str | None = None
+    followup_date: str | None = None
+    tags: list[str] = []
     updated_at: str = ""
 
 

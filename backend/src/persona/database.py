@@ -511,7 +511,7 @@ def delete_application(
 # --- Application Contact operations ---
 
 
-def create_contact(
+def create_app_contact(
     conn: DBConnection, app_id: int, data: dict[str, Any]
 ) -> dict[str, Any]:
     """Create a contact for an application."""
@@ -537,7 +537,7 @@ def create_contact(
     return dict(result_row)
 
 
-def load_contacts(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
+def load_app_contacts(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
     """Load all contacts for an application."""
     rows = conn.execute(
         "SELECT * FROM application_contact WHERE app_id = %s ORDER BY id",
@@ -546,10 +546,10 @@ def load_contacts(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def update_contact(
+def update_app_contact(
     conn: DBConnection, contact_id: int, data: dict[str, Any]
 ) -> dict[str, Any]:
-    """Update a contact. Returns updated contact."""
+    """Update an application contact. Returns updated contact."""
     row = conn.execute(
         "SELECT * FROM application_contact WHERE id = %s",
         (contact_id,),
@@ -581,8 +581,8 @@ def update_contact(
     )
 
 
-def delete_contact(conn: DBConnection, contact_id: int) -> str:
-    """Delete a contact. Returns contact name."""
+def delete_app_contact(conn: DBConnection, contact_id: int) -> str:
+    """Delete an application contact. Returns contact name."""
     row = conn.execute(
         "SELECT * FROM application_contact WHERE id = %s",
         (contact_id,),
@@ -1041,6 +1041,207 @@ def load_note_tags(
         ).fetchall()
     else:
         rows = conn.execute("SELECT tags FROM note").fetchall()
+    all_tags: set[str] = set()
+    for row in rows:
+        tags = json.loads(row["tags"])
+        all_tags.update(tags)
+    return sorted(all_tags)
+
+
+# --- Contact operations ---
+
+_CONTACT_FIELDS = (
+    "email",
+    "phone",
+    "company",
+    "title",
+    "relationship",
+    "linkedin_url",
+    "location",
+    "last_contacted_date",
+    "followup_date",
+    "notes",
+)
+
+
+def _row_to_contact(row: Any) -> dict[str, Any]:
+    """Full contact with notes."""
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "name": row["name"],
+        "email": row["email"],
+        "phone": row["phone"],
+        "company": row["company"],
+        "title": row["title"],
+        "relationship": row["relationship"],
+        "linkedin_url": row["linkedin_url"],
+        "location": row["location"],
+        "last_contacted_date": row["last_contacted_date"],
+        "followup_date": row["followup_date"],
+        "notes": row["notes"],
+        "tags": json.loads(row["tags"]),
+        "created_at": _dt(row["created_at"]),
+        "updated_at": _dt(row["updated_at"]),
+    }
+
+
+def _row_to_contact_summary(row: Any) -> dict[str, Any]:
+    """Summary for list view (notes omitted)."""
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "company": row["company"],
+        "title": row["title"],
+        "relationship": row["relationship"],
+        "followup_date": row["followup_date"],
+        "tags": json.loads(row["tags"]),
+        "updated_at": _dt(row["updated_at"]),
+    }
+
+
+def create_contact(
+    conn: DBConnection,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Insert a new contact row and return it."""
+    effective_uid = user_id or "legacy"
+    row = conn.execute(
+        "INSERT INTO contact "
+        "(user_id, name, email, phone, company, title, relationship, "
+        "linkedin_url, location, last_contacted_date, followup_date, notes, tags) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        (
+            effective_uid,
+            data["name"],
+            data.get("email"),
+            data.get("phone"),
+            data.get("company"),
+            data.get("title"),
+            data.get("relationship"),
+            data.get("linkedin_url"),
+            data.get("location"),
+            data.get("last_contacted_date"),
+            data.get("followup_date"),
+            data.get("notes", ""),
+            json.dumps(data.get("tags", [])),
+        ),
+    ).fetchone()
+    return load_contact(conn, row["id"])
+
+
+def load_contact(
+    conn: DBConnection,
+    contact_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Load a single contact by ID. Raises ValueError if not found."""
+    row = conn.execute("SELECT * FROM contact WHERE id = %s", (contact_id,)).fetchone()
+    if row is None:
+        raise ValueError(f"Contact {contact_id} not found")
+    if user_id is not None and row["user_id"] != user_id:
+        raise PermissionError(f"Contact {contact_id} belongs to a different user")
+    return _row_to_contact(row)
+
+
+def load_contacts(
+    conn: DBConnection,
+    tags: list[str] | None = None,
+    q: str | None = None,
+    user_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """List contacts as summaries ordered by updated_at DESC."""
+    query = (
+        "SELECT id, name, company, title, relationship, "
+        "followup_date, tags, updated_at FROM contact"
+    )
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if user_id is not None:
+        conditions.append("user_id = %s")
+        params.append(user_id)
+    if tags:
+        for tag in tags:
+            conditions.append("tags ILIKE %s")
+            params.append(f'%"{tag}"%')
+    if q:
+        words = q.strip().split()
+        for word in words:
+            pattern = f"%{word}%"
+            conditions.append(
+                "(name ILIKE %s OR company ILIKE %s "
+                "OR title ILIKE %s OR notes ILIKE %s)"
+            )
+            params.extend([pattern, pattern, pattern, pattern])
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY updated_at DESC"
+
+    rows = conn.execute(query, params).fetchall()
+    return [_row_to_contact_summary(row) for row in rows]
+
+
+def update_contact(
+    conn: DBConnection,
+    contact_id: int,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Patch a contact with provided fields. Raises ValueError if not found."""
+    load_contact(conn, contact_id, user_id=user_id)
+
+    updatable = ("name",) + _CONTACT_FIELDS
+    sets: list[str] = []
+    params: list[Any] = []
+
+    for field in updatable:
+        if field in data:
+            sets.append(f"{field} = %s")
+            params.append(data[field])
+
+    if "tags" in data:
+        sets.append("tags = %s")
+        params.append(json.dumps(data["tags"]))
+
+    if not sets:
+        return load_contact(conn, contact_id)
+
+    sets.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(contact_id)
+
+    conn.execute(
+        f"UPDATE contact SET {', '.join(sets)} WHERE id = %s",
+        params,
+    )
+    return load_contact(conn, contact_id)
+
+
+def delete_contact(
+    conn: DBConnection,
+    contact_id: int,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Delete a contact. Returns the deleted row. ValueError if not found."""
+    contact = load_contact(conn, contact_id, user_id=user_id)
+    conn.execute("DELETE FROM contact WHERE id = %s", (contact_id,))
+    return contact
+
+
+def load_contact_tags(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[str]:
+    """Return a sorted unique list of all tags across all contacts."""
+    if user_id is not None:
+        rows = conn.execute(
+            "SELECT tags FROM contact WHERE user_id = %s", (user_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT tags FROM contact").fetchall()
     all_tags: set[str] = set()
     for row in rows:
         tags = json.loads(row["tags"])

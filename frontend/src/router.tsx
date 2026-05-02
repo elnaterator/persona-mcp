@@ -8,6 +8,8 @@ import AccomplishmentListView from './components/AccomplishmentListView'
 import AccomplishmentDetailView from './components/AccomplishmentDetailView'
 import NoteListView from './components/NoteListView'
 import NoteDetailView from './components/NoteDetailView'
+import ContactListView from './components/ContactListView'
+import ContactDetailView from './components/ContactDetailView'
 
 export default function AppRoutes() {
   return (
@@ -21,6 +23,8 @@ export default function AppRoutes() {
       <Route path="/accomplishments/:id" element={<AccomplishmentDetailView />} />
       <Route path="/notes" element={<NoteListView />} />
       <Route path="/notes/:id" element={<NoteDetailView />} />
+      <Route path="/contacts" element={<ContactListView />} />
+      <Route path="/contacts/:id" element={<ContactDetailView />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

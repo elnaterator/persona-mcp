@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { ApplicationContact } from '../types/resume'
-import { listContacts, addContact, updateAppContact, removeContact } from '../services/api'
+import { listAppContacts, addContact, updateAppContact, removeContact } from '../services/api'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
 import styles from './ContactsPanel.module.css'
@@ -37,7 +37,7 @@ export default function ContactsPanel({ appId }: ContactsPanelProps) {
 
   const load = useCallback(async () => {
     try {
-      const data = await listContacts(appId)
+      const data = await listAppContacts(appId)
       setContacts(data)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to load contacts' })

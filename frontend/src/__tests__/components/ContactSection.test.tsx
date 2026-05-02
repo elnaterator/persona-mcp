@@ -112,7 +112,7 @@ describe('ContactSection (edit mode)', () => {
 
   it('calls updateContact API on save and shows success', async () => {
     const user = userEvent.setup();
-    const updateSpy = vi.spyOn(api, 'updateContact').mockResolvedValue({ message: 'Success' });
+    const updateSpy = vi.spyOn(api, 'updateResumeContact').mockResolvedValue({ message: 'Success' });
     const onUpdate = vi.fn();
 
     render(<ContactSection contact={fullContact} onUpdate={onUpdate} />);
@@ -146,7 +146,7 @@ describe('ContactSection (edit mode)', () => {
 
   it('reverts to view mode on cancel without saving', async () => {
     const user = userEvent.setup();
-    const updateSpy = vi.spyOn(api, 'updateContact');
+    const updateSpy = vi.spyOn(api, 'updateResumeContact');
 
     render(<ContactSection contact={fullContact} onUpdate={() => {}} />);
 
@@ -185,7 +185,7 @@ describe('ContactSection (edit mode)', () => {
 
   it('shows error message when API call fails', async () => {
     const user = userEvent.setup();
-    const updateSpy = vi.spyOn(api, 'updateContact').mockRejectedValue(
+    const updateSpy = vi.spyOn(api, 'updateResumeContact').mockRejectedValue(
       new api.ApiClientError('Server error', 500, 'Internal server error')
     );
 
