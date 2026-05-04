@@ -598,6 +598,13 @@ def delete_app_contact(conn: DBConnection, contact_id: int) -> str:
 # --- Communication operations ---
 
 
+def _row_to_communication(row: Any) -> dict[str, Any]:
+    """Convert a communication row to dict with parsed tags."""
+    d = dict(row)
+    d["tags"] = json.loads(d.get("tags", "[]"))
+    return d
+
+
 def create_communication(
     conn: DBConnection, app_id: int, data: dict[str, Any]
 ) -> dict[str, Any]:
@@ -617,8 +624,8 @@ def create_communication(
     row = conn.execute(
         "INSERT INTO communication "
         "(app_id, contact_id, contact_name, type, direction, "
-        "subject, body, date, status) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        "subject, body, date, status, tags) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (
             app_id,
             contact_id,
@@ -629,13 +636,55 @@ def create_communication(
             data["body"],
             data["date"],
             data.get("status", "sent"),
+            json.dumps(data.get("tags", [])),
         ),
     ).fetchone()
     result_row = conn.execute(
         "SELECT * FROM communication WHERE id = %s",
         (row["id"],),
     ).fetchone()
-    return dict(result_row)
+    return _row_to_communication(result_row)
+
+
+def create_contact_communication(
+    conn: DBConnection,
+    contact_id: int,
+    data: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Create a communication attached to a networking contact."""
+    contact_row = conn.execute(
+        "SELECT id FROM contact WHERE id = %s", (contact_id,)
+    ).fetchone()
+    if contact_row is None:
+        raise ValueError(f"Contact {contact_id} not found")
+    if user_id is not None:
+        owner_row = conn.execute(
+            "SELECT user_id FROM contact WHERE id = %s", (contact_id,)
+        ).fetchone()
+        if owner_row and owner_row["user_id"] != user_id:
+            raise PermissionError(f"Contact {contact_id} belongs to a different user")
+
+    row = conn.execute(
+        "INSERT INTO communication "
+        "(contact_ref_id, type, direction, subject, body, date, status, tags) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        (
+            contact_id,
+            data["type"],
+            data["direction"],
+            data.get("subject", ""),
+            data["body"],
+            data["date"],
+            data.get("status", "sent"),
+            json.dumps(data.get("tags", [])),
+        ),
+    ).fetchone()
+    result_row = conn.execute(
+        "SELECT * FROM communication WHERE id = %s",
+        (row["id"],),
+    ).fetchone()
+    return _row_to_communication(result_row)
 
 
 def load_communications(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
@@ -644,7 +693,19 @@ def load_communications(conn: DBConnection, app_id: int) -> list[dict[str, Any]]
         "SELECT * FROM communication WHERE app_id = %s ORDER BY date DESC, id DESC",
         (app_id,),
     ).fetchall()
-    return [dict(row) for row in rows]
+    return [_row_to_communication(row) for row in rows]
+
+
+def load_contact_communications(
+    conn: DBConnection, contact_id: int
+) -> list[dict[str, Any]]:
+    """Load communications for a networking contact, sorted by date desc."""
+    rows = conn.execute(
+        "SELECT * FROM communication "
+        "WHERE contact_ref_id = %s ORDER BY date DESC, id DESC",
+        (contact_id,),
+    ).fetchall()
+    return [_row_to_communication(row) for row in rows]
 
 
 def update_communication(
@@ -673,6 +734,10 @@ def update_communication(
             sets.append(f"{field} = %s")
             params.append(data[field])
 
+    if "tags" in data:
+        sets.append("tags = %s")
+        params.append(json.dumps(data["tags"]))
+
     if "contact_id" in data and data["contact_id"] is not None:
         contact_row = conn.execute(
             "SELECT name FROM application_contact WHERE id = %s",
@@ -683,16 +748,120 @@ def update_communication(
             params.append(contact_row["name"])
 
     if not sets:
-        return dict(row)
+        return _row_to_communication(row)
 
     params.append(comm_id)
     conn.execute(
         f"UPDATE communication SET {', '.join(sets)} WHERE id = %s",
         params,
     )
-    return dict(
+    return _row_to_communication(
         conn.execute("SELECT * FROM communication WHERE id = %s", (comm_id,)).fetchone()
     )
+
+
+def delete_communication_owned(
+    conn: DBConnection, comm_id: int, user_id: str | None = None
+) -> str:
+    """Delete a communication with ownership check. Returns subject."""
+    row = conn.execute(
+        "SELECT c.*, a.user_id AS app_user_id, ct.user_id AS contact_user_id "
+        "FROM communication c "
+        "LEFT JOIN application a ON c.app_id = a.id "
+        "LEFT JOIN contact ct ON c.contact_ref_id = ct.id "
+        "WHERE c.id = %s",
+        (comm_id,),
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"Communication {comm_id} not found")
+    if user_id is not None:
+        owner_id = row["app_user_id"] or row["contact_user_id"]
+        if owner_id != user_id:
+            raise PermissionError(
+                f"Communication {comm_id} belongs to a different user"
+            )
+    subject = row["subject"] or "(no subject)"
+    conn.execute("DELETE FROM communication WHERE id = %s", (comm_id,))
+    return subject
+
+
+def search_communications(
+    conn: DBConnection,
+    q: str | None = None,
+    tags: list[str] | None = None,
+    parent: str | None = None,
+    user_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """Search communications across application and contact parents."""
+    query = (
+        "SELECT c.id, c.app_id, c.contact_ref_id, c.contact_id, c.contact_name, "
+        "c.type, c.direction, c.subject, c.body, c.date, c.status, c.tags, "
+        "c.created_at, "
+        "CASE WHEN c.app_id IS NOT NULL THEN 'application' ELSE 'contact' END "
+        "  AS parent_type, "
+        "COALESCE(c.app_id, c.contact_ref_id) AS parent_id, "
+        "COALESCE(a.company || ' – ' || a.position, ct.name) AS parent_name "
+        "FROM communication c "
+        "LEFT JOIN application a ON c.app_id = a.id "
+        "LEFT JOIN contact ct ON c.contact_ref_id = ct.id"
+    )
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if user_id is not None:
+        conditions.append("(a.user_id = %s OR ct.user_id = %s)")
+        params.extend([user_id, user_id])
+
+    if parent == "application":
+        conditions.append("c.app_id IS NOT NULL")
+    elif parent == "contact":
+        conditions.append("c.contact_ref_id IS NOT NULL")
+
+    if q:
+        pattern = f"%{q}%"
+        conditions.append(
+            "(c.subject ILIKE %s OR c.body ILIKE %s "
+            "OR c.contact_name ILIKE %s OR ct.name ILIKE %s)"
+        )
+        params.extend([pattern, pattern, pattern, pattern])
+
+    for tag in tags or []:
+        conditions.append("c.tags ILIKE %s")
+        params.append(f'%"{tag}"%')
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY c.date DESC, c.id DESC LIMIT 200"
+
+    rows = conn.execute(query, params).fetchall()
+    results = []
+    for row in rows:
+        d = dict(row)
+        d["tags"] = json.loads(d.get("tags", "[]"))
+        results.append(d)
+    return results
+
+
+def load_communication_tags(
+    conn: DBConnection,
+    user_id: str | None = None,
+) -> list[str]:
+    """Return sorted unique tags across all communications for a user."""
+    if user_id is not None:
+        rows = conn.execute(
+            "SELECT c.tags FROM communication c "
+            "LEFT JOIN application a ON c.app_id = a.id "
+            "LEFT JOIN contact ct ON c.contact_ref_id = ct.id "
+            "WHERE (a.user_id = %s OR ct.user_id = %s)",
+            (user_id, user_id),
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT tags FROM communication").fetchall()
+    all_tags: set[str] = set()
+    for row in rows:
+        all_tags.update(json.loads(row["tags"]))
+    return sorted(all_tags)
 
 
 # --- Accomplishment operations ---

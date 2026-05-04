@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from persona.accomplishment_service import AccomplishmentService
 from persona.application_service import ApplicationService
 from persona.auth import UserContext
+from persona.communication_service import ContactCommunicationService
 from persona.contact_service import ContactService
 from persona.models import Resume
 from persona.note_service import NoteService
@@ -36,6 +37,7 @@ def create_router(
     acc_service: AccomplishmentService | None = None,
     note_service: NoteService | None = None,
     contact_service: ContactService | None = None,
+    comm_service: ContactCommunicationService | None = None,
     get_current_user: Callable | None = None,
 ) -> APIRouter:
     """Create an APIRouter with all endpoints.
@@ -896,6 +898,87 @@ def create_router(
             return {"message": f"Deleted contact '{contact['name']}'"}
 
     # ==========================================================
+    # Contact Communication Routes
+    # ==========================================================
+
+    if comm_service is not None:
+
+        @api.get("/api/contacts/{cid}/communications")
+        def list_contact_communications(
+            cid: int,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[dict[str, Any]]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return comm_service.list_for_contact(cid, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @api.post("/api/contacts/{cid}/communications", status_code=201)
+        def add_contact_communication(
+            cid: int,
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return comm_service.add_for_contact(cid, data, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                detail = str(e)
+                if "not found" in detail:
+                    raise HTTPException(status_code=404, detail=detail)
+                raise HTTPException(status_code=422, detail=detail)
+
+        @api.patch("/api/contacts/{cid}/communications/{cmid}")
+        def update_contact_communication(
+            cid: int,
+            cmid: int,
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, Any]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                return comm_service.update(cmid, data, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                detail = str(e)
+                if "not found" in detail:
+                    raise HTTPException(status_code=404, detail=detail)
+                raise HTTPException(status_code=422, detail=detail)
+
+        @api.delete("/api/contacts/{cid}/communications/{cmid}")
+        def delete_contact_communication(
+            cid: int,
+            cmid: int,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, str]:
+            uid = current_user.id if current_user is not None else None
+            try:
+                subject = comm_service.remove(cmid, user_id=uid)
+            except PermissionError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+            return {"message": f"Removed communication '{subject}'"}
+
+        # NOTE: /search MUST be registered before /{cid} path params to avoid
+        # FastAPI matching the literal string "search".
+        @api.get("/api/communications")
+        def search_communications(
+            q: str | None = None,
+            tag: list[str] | None = Query(default=None),
+            parent: str | None = None,
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> list[dict[str, Any]]:
+            uid = current_user.id if current_user is not None else None
+            return comm_service.search(q=q, tags=tag, parent=parent, user_id=uid)
+
+    # ==========================================================
     # Unified Tags Route
     # ==========================================================
 
@@ -914,6 +997,10 @@ def create_router(
             all_tags.update(note_service.list_tags(user_id=uid))
         if contact_service is not None:
             all_tags.update(contact_service.list_tags(user_id=uid))
+        if comm_service is not None:
+            from persona.database import load_communication_tags
+
+            all_tags.update(load_communication_tags(comm_service._conn, user_id=uid))
         return sorted(all_tags)
 
     # ==========================================================

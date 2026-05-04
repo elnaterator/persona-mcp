@@ -41,6 +41,7 @@ describe('ContactDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.listAllTags).mockResolvedValue([])
+    vi.mocked(api.listContactCommunications).mockResolvedValue([])
   })
 
   it('renders contact name', async () => {

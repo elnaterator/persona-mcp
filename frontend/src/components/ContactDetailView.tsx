@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X, Mail, Phone, Building2, Briefcase, MapPin, Linkedin, Calendar } from 'lucide-react'
 import type { Contact } from '../types/resume'
 import { getContact, updateContact, deleteContact, listAllTags } from '../services/api'
@@ -11,6 +11,7 @@ import { StatusMessage } from './StatusMessage'
 import { SectionCard } from './SectionCard'
 import { MarkdownContent } from './MarkdownContent'
 import { AutoResizeTextarea } from './AutoResizeTextarea'
+import CommunicationsPanel from './CommunicationsPanel'
 import styles from './ContactDetailView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -26,6 +27,8 @@ const RELATIONSHIP_SUGGESTIONS = [
 export default function ContactDetailView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const expandCommId = (location.state as { expandCommId?: number } | null)?.expandCommId
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
@@ -320,82 +323,85 @@ export default function ContactDetailView() {
           </div>
         </div>
       ) : (
-        <div className={styles.viewGrid}>
-          <div className={styles.viewFields}>
-            {contact.relationship && (
-              <div className={styles.relationshipBadge}>{contact.relationship}</div>
-            )}
-            <div className={styles.fieldList}>
-              {contact.email && (
-                <div className={styles.fieldItem}>
-                  <Mail size={14} className={styles.fieldIcon} />
-                  <a href={`mailto:${contact.email}`} className={styles.fieldLink}>{contact.email}</a>
+        <>
+          <div className={styles.viewGrid}>
+            <div className={styles.viewFields}>
+              {contact.relationship && (
+                <div className={styles.relationshipBadge}>{contact.relationship}</div>
+              )}
+              <div className={styles.fieldList}>
+                {contact.email && (
+                  <div className={styles.fieldItem}>
+                    <Mail size={14} className={styles.fieldIcon} />
+                    <a href={`mailto:${contact.email}`} className={styles.fieldLink}>{contact.email}</a>
+                  </div>
+                )}
+                {contact.phone && (
+                  <div className={styles.fieldItem}>
+                    <Phone size={14} className={styles.fieldIcon} />
+                    <span>{contact.phone}</span>
+                  </div>
+                )}
+                {contact.company && (
+                  <div className={styles.fieldItem}>
+                    <Building2 size={14} className={styles.fieldIcon} />
+                    <span>{contact.company}</span>
+                  </div>
+                )}
+                {contact.title && (
+                  <div className={styles.fieldItem}>
+                    <Briefcase size={14} className={styles.fieldIcon} />
+                    <span>{contact.title}</span>
+                  </div>
+                )}
+                {contact.location && (
+                  <div className={styles.fieldItem}>
+                    <MapPin size={14} className={styles.fieldIcon} />
+                    <span>{contact.location}</span>
+                  </div>
+                )}
+                {contact.linkedin_url && (
+                  <div className={styles.fieldItem}>
+                    <Linkedin size={14} className={styles.fieldIcon} />
+                    <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className={styles.fieldLink}>
+                      {contact.linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '')}
+                    </a>
+                  </div>
+                )}
+                {contact.last_contacted_date && (
+                  <div className={styles.fieldItem}>
+                    <Calendar size={14} className={styles.fieldIcon} />
+                    <span>Last contacted: {contact.last_contacted_date}</span>
+                  </div>
+                )}
+                {contact.followup_date && (
+                  <div className={styles.fieldItem}>
+                    <Calendar size={14} className={styles.fieldIcon} />
+                    <span className={styles.followupText}>Follow up: {contact.followup_date}</span>
+                  </div>
+                )}
+              </div>
+              {contact.tags.length > 0 && (
+                <div className={styles.tagList}>
+                  {contact.tags.map((tag) => (
+                    <span key={tag} className={styles.tagBadge}>{tag}</span>
+                  ))}
                 </div>
               )}
-              {contact.phone && (
-                <div className={styles.fieldItem}>
-                  <Phone size={14} className={styles.fieldIcon} />
-                  <span>{contact.phone}</span>
-                </div>
-              )}
-              {contact.company && (
-                <div className={styles.fieldItem}>
-                  <Building2 size={14} className={styles.fieldIcon} />
-                  <span>{contact.company}</span>
-                </div>
-              )}
-              {contact.title && (
-                <div className={styles.fieldItem}>
-                  <Briefcase size={14} className={styles.fieldIcon} />
-                  <span>{contact.title}</span>
-                </div>
-              )}
-              {contact.location && (
-                <div className={styles.fieldItem}>
-                  <MapPin size={14} className={styles.fieldIcon} />
-                  <span>{contact.location}</span>
-                </div>
-              )}
-              {contact.linkedin_url && (
-                <div className={styles.fieldItem}>
-                  <Linkedin size={14} className={styles.fieldIcon} />
-                  <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className={styles.fieldLink}>
-                    {contact.linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '')}
-                  </a>
-                </div>
-              )}
-              {contact.last_contacted_date && (
-                <div className={styles.fieldItem}>
-                  <Calendar size={14} className={styles.fieldIcon} />
-                  <span>Last contacted: {contact.last_contacted_date}</span>
-                </div>
-              )}
-              {contact.followup_date && (
-                <div className={styles.fieldItem}>
-                  <Calendar size={14} className={styles.fieldIcon} />
-                  <span className={styles.followupText}>Follow up: {contact.followup_date}</span>
-                </div>
+              {contact.updated_at && (
+                <span className={styles.updatedDate}>Updated {new Date(contact.updated_at).toLocaleDateString()}</span>
               )}
             </div>
-            {contact.tags.length > 0 && (
-              <div className={styles.tagList}>
-                {contact.tags.map((tag) => (
-                  <span key={tag} className={styles.tagBadge}>{tag}</span>
-                ))}
-              </div>
-            )}
-            {contact.updated_at && (
-              <span className={styles.updatedDate}>Updated {new Date(contact.updated_at).toLocaleDateString()}</span>
-            )}
+            <SectionCard>
+              {contact.notes ? (
+                <MarkdownContent>{contact.notes}</MarkdownContent>
+              ) : (
+                <p className={styles.placeholderText}>No notes yet.</p>
+              )}
+            </SectionCard>
           </div>
-          <SectionCard>
-            {contact.notes ? (
-              <MarkdownContent>{contact.notes}</MarkdownContent>
-            ) : (
-              <p className={styles.placeholderText}>No notes yet.</p>
-            )}
-          </SectionCard>
-        </div>
+          <CommunicationsPanel parentType="contact" parentId={contact.id} initialExpandId={expandCommId} />
+        </>
       )}
 
       {confirmDelete && (

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router'
-import type { ContactSummary } from '../types/resume'
-import { listContacts, createContact, listAllTags } from '../services/api'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Link, useNavigate } from 'react-router'
+import type { ContactSummary, CommunicationSearchResult } from '../types/resume'
+import { listContacts, createContact, listAllTags, searchCommunications } from '../services/api'
 import { TagInput } from './TagInput'
 import styles from './ContactListView.module.css'
 
@@ -31,7 +31,10 @@ const EMPTY_FORM: FormState = {
   tags: [],
 }
 
+type ParentFilter = 'all' | 'application' | 'contact'
+
 export default function ContactListView() {
+  const navigate = useNavigate()
   const [contacts, setContacts] = useState<ContactSummary[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
@@ -40,6 +43,15 @@ export default function ContactListView() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Comm search state
+  const [showCommSearch, setShowCommSearch] = useState(false)
+  const [commQ, setCommQ] = useState('')
+  const [commTags, setCommTags] = useState<string[]>([])
+  const [commParent, setCommParent] = useState<ParentFilter>('all')
+  const [commResults, setCommResults] = useState<CommunicationSearchResult[]>([])
+  const [commSearching, setCommSearching] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const loadData = useCallback(async () => {
     const [contactList, tags] = await Promise.all([
@@ -53,6 +65,37 @@ export default function ContactListView() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const runCommSearch = useCallback(async (q: string, tags: string[], parent: ParentFilter) => {
+    if (!q && tags.length === 0) {
+      setCommResults([])
+      return
+    }
+    setCommSearching(true)
+    try {
+      const results = await searchCommunications({
+        q: q || undefined,
+        tags: tags.length ? tags : undefined,
+        parent: parent === 'all' ? undefined : parent,
+      })
+      setCommResults(results)
+    } catch {
+      setCommResults([])
+    } finally {
+      setCommSearching(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showCommSearch) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      runCommSearch(commQ, commTags, commParent)
+    }, 300)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [commQ, commTags, commParent, showCommSearch, runCommSearch])
 
   const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -81,6 +124,14 @@ export default function ContactListView() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCommResultClick = (result: CommunicationSearchResult) => {
+    const path =
+      result.parentType === 'application'
+        ? `/applications/${result.parentId}`
+        : `/contacts/${result.parentId}`
+    navigate(path, { state: { expandCommId: result.id } })
   }
 
   return (
@@ -192,6 +243,72 @@ export default function ContactListView() {
           </div>
         </div>
       )}
+
+      {/* Communication Search Panel */}
+      <div className={styles.commSearchCard}>
+        <button
+          className={styles.commSearchToggle}
+          onClick={() => setShowCommSearch((v) => !v)}
+        >
+          {showCommSearch ? '▾' : '▸'} Search Communications
+        </button>
+        {showCommSearch && (
+          <div className={styles.commSearchBody}>
+            <div className={styles.commSearchRow}>
+              <input
+                className={styles.commSearchInput}
+                type="text"
+                value={commQ}
+                onChange={(e) => setCommQ(e.target.value)}
+                placeholder="Search subject, body, contact..."
+              />
+              <div className={styles.parentToggle}>
+                {(['all', 'application', 'contact'] as ParentFilter[]).map((p) => (
+                  <button
+                    key={p}
+                    className={`${styles.parentBtn} ${commParent === p ? styles.parentBtnActive : ''}`}
+                    onClick={() => setCommParent(p)}
+                  >
+                    {p === 'all' ? 'All' : p === 'application' ? 'Applications' : 'Contacts'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <TagInput
+              value={commTags}
+              onChange={setCommTags}
+              availableTags={allTags}
+              allowCreate={false}
+              placeholder="Filter by tag..."
+            />
+            {commSearching && <p className={styles.commSearchHint}>Searching...</p>}
+            {!commSearching && commResults.length === 0 && (commQ || commTags.length > 0) && (
+              <p className={styles.commSearchHint}>No results found.</p>
+            )}
+            {!commSearching && !commQ && commTags.length === 0 && (
+              <p className={styles.commSearchHint}>Enter a search term or tag to find communications.</p>
+            )}
+            {commResults.length > 0 && (
+              <ul className={styles.commResultList}>
+                {commResults.map((r) => (
+                  <li key={r.id} className={styles.commResultItem} onClick={() => handleCommResultClick(r)}>
+                    <div className={styles.commResultHeader}>
+                      <span className={styles.commResultDate}>{r.date.slice(0, 10)}</span>
+                      <span className={styles.commResultType}>{r.type}</span>
+                      <span className={styles.commResultDir}>{r.direction}</span>
+                      <span className={`${styles.parentBadge} ${styles[`parent_${r.parentType}`]}`}>
+                        {r.parentType}
+                      </span>
+                    </div>
+                    <div className={styles.commResultParent}>{r.parentName}</div>
+                    {r.subject && <div className={styles.commResultSubject}>{r.subject}</div>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className={styles.filters}>
         <TagInput

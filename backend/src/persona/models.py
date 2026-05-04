@@ -254,10 +254,11 @@ class ContactSummary(BaseModel):
 
 
 class Communication(BaseModel):
-    """A communication entry for a job application."""
+    """A communication entry attached to an application or contact."""
 
     id: int
-    app_id: int
+    app_id: int | None = None
+    contact_ref_id: int | None = None
     contact_id: int | None = None
     contact_name: str | None = None
     type: str
@@ -266,6 +267,7 @@ class Communication(BaseModel):
     body: str
     date: str
     status: str = "sent"
+    tags: list[str] = []
     created_at: str = ""
 
     @field_validator("type")
@@ -292,3 +294,23 @@ class Communication(BaseModel):
             valid = ", ".join(COMMUNICATION_STATUSES)
             raise ValueError(f"Invalid status: '{v}'. Must be one of: {valid}")
         return v
+
+
+class CommunicationSearchResult(BaseModel):
+    """Communication with parent context for cross-resource search results."""
+
+    id: int
+    parent_type: str
+    parent_id: int
+    parent_name: str
+    app_id: int | None = None
+    contact_ref_id: int | None = None
+    contact_name: str | None = None
+    type: str
+    direction: str
+    subject: str = ""
+    body: str
+    date: str
+    status: str = "sent"
+    tags: list[str] = []
+    created_at: str = ""

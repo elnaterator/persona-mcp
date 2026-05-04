@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Application, ResumeVersionSummary } from '../types/resume'
 import {
@@ -49,6 +49,8 @@ type EditSection = 'details' | 'description' | 'notes' | 'resume' | 'tags' | nul
 export default function ApplicationDetailView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const expandCommId = (location.state as { expandCommId?: number } | null)?.expandCommId
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
@@ -483,7 +485,7 @@ export default function ApplicationDetailView() {
 
       <div className={styles.panels}>
         <ContactsPanel appId={numericId} />
-        <CommunicationsPanel appId={numericId} />
+        <CommunicationsPanel parentType="application" parentId={numericId} initialExpandId={expandCommId} />
       </div>
 
       {showDeleteConfirm && (

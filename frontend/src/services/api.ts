@@ -8,10 +8,12 @@ import type {
   Accomplishment,
   AccomplishmentSummary,
   ApiError,
+  ApiValidationError,
   ApiSuccessResponse,
   Application,
   ApplicationContact,
   Communication,
+  CommunicationSearchResult,
   Contact,
   ContactInfo,
   ContactSummary,
@@ -57,7 +59,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
     try {
       const errorData = (await response.json()) as ApiError
       if (errorData.detail) {
-        detail = errorData.detail
+        if (Array.isArray(errorData.detail)) {
+          detail = (errorData.detail as ApiValidationError[])
+            .map((e) => {
+              const field = e.loc?.filter((s) => s !== 'body').slice(-1)[0]
+              return field ? `${field}: ${e.msg}` : e.msg
+            })
+            .join('; ')
+        } else {
+          detail = errorData.detail
+        }
       }
     } catch {
       // If JSON parsing fails, use the status text
@@ -568,6 +579,92 @@ export async function removeCommunication(
     { method: 'DELETE' }
   )
   return handleResponse<ApiSuccessResponse>(response)
+}
+
+// ─── Contact Communications API ───────────────────────────────────────────────
+
+function _mapComm(raw: Record<string, unknown>): Communication {
+  return {
+    ...(raw as unknown as Communication),
+    app_id: raw.app_id as number | null | undefined,
+    contact_ref_id: raw.contact_ref_id as number | null | undefined,
+    tags: (raw.tags as string[]) ?? [],
+  }
+}
+
+export async function listContactCommunications(
+  contactId: number
+): Promise<Communication[]> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/contacts/${contactId}/communications`
+  )
+  const data = await handleResponse<unknown[]>(response)
+  return data.map((r) => _mapComm(r as Record<string, unknown>))
+}
+
+export async function addContactCommunication(
+  contactId: number,
+  data: Partial<Communication>
+): Promise<Communication> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/contacts/${contactId}/communications`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  const raw = await handleResponse<Record<string, unknown>>(response)
+  return _mapComm(raw)
+}
+
+export async function updateContactCommunication(
+  contactId: number,
+  commId: number,
+  data: Partial<Communication>
+): Promise<Communication> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/contacts/${contactId}/communications/${commId}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  const raw = await handleResponse<Record<string, unknown>>(response)
+  return _mapComm(raw)
+}
+
+export async function removeContactCommunication(
+  contactId: number,
+  commId: number
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/contacts/${contactId}/communications/${commId}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+export async function searchCommunications(params: {
+  q?: string
+  tags?: string[]
+  parent?: 'application' | 'contact' | 'all'
+}): Promise<CommunicationSearchResult[]> {
+  const qs = new URLSearchParams()
+  if (params.q) qs.set('q', params.q)
+  if (params.tags?.length) params.tags.forEach((t) => qs.append('tag', t))
+  if (params.parent && params.parent !== 'all') qs.set('parent', params.parent)
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/communications${qs.toString() ? `?${qs}` : ''}`
+  )
+  const data = await handleResponse<Record<string, unknown>[]>(response)
+  return data.map((r) => ({
+    ...(_mapComm(r) as CommunicationSearchResult),
+    parentType: r.parent_type as 'application' | 'contact',
+    parentId: r.parent_id as number,
+    parentName: r.parent_name as string,
+  }))
 }
 
 // ─── Accomplishments API ──────────────────────────────────────────────────────

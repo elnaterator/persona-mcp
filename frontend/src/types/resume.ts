@@ -50,8 +50,14 @@ export interface Resume {
 /**
  * API error response format
  */
+export interface ApiValidationError {
+  loc: string[]
+  msg: string
+  type: string
+}
+
 export interface ApiError {
-  detail: string
+  detail: string | ApiValidationError[]
 }
 
 /**
@@ -189,14 +195,22 @@ export interface ContactSummary {
 
 export interface Communication {
   id: number
-  app_id: number
-  contact_id: number | null
-  contact_name: string | null
+  app_id?: number | null
+  contact_ref_id?: number | null
+  contact_id?: number | null
+  contact_name?: string | null
   type: string
   direction: string
   subject: string
   body: string
   date: string
   status: string
+  tags: string[]
   created_at: string
+}
+
+export interface CommunicationSearchResult extends Communication {
+  parentType: 'application' | 'contact'
+  parentId: number
+  parentName: string
 }

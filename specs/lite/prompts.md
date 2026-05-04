@@ -7,7 +7,7 @@ You are staff software engineer, value clean code, high quality UI/UX. Read next
 
 ## Implement
 
-You are staff software engineer, value clean code, high quality UI/UX, if refactor recommended, do if small, ask if big. Use TDD if possible. Never deploy code or apply infra changes, local only. Ask if clarification needed. Read plan specs/lite/<SEQUENCE_NUMBER>-*.md and implement all tasks, mark complete as you go. When done run `make check`, if passes mark corresponding roadmap item as done in specs/lite/roadmap.md. Plan sequence number: 
+You are staff software engineer, value clean code, high quality UI/UX, if refactor recommended, do if small, ask if big. Use TDD if possible. Never deploy code or apply infra changes, local only. Ask if clarification needed. Read plan specs/lite/<SEQUENCE_NUMBER>-*.md and implement all tasks, mark tasks complete as you go in plan. When done run `make check`, if passes mark corresponding roadmap item as done in specs/lite/roadmap.md. Plan sequence number: 
 
 
 ## Commit and PR
