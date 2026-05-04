@@ -81,6 +81,8 @@ def _detect_actual_version(conn) -> int:
     Checked newest-to-oldest; returns the first version whose structural
     marker is present.
     """
+    if _column_exists(conn, "communication", "contact_ref_id"):
+        return 9
     if _table_exists(conn, "contact") and _column_exists(conn, "contact", "user_id"):
         return 8
     if _column_exists(conn, "application", "tags"):
@@ -517,6 +519,27 @@ def migrate_v7_to_v8(conn) -> None:
     conn.commit()
 
 
+def migrate_v8_to_v9(conn) -> None:
+    """Generalize communication table: nullable app_id, add contact_ref_id + tags."""
+    conn.execute("ALTER TABLE communication ALTER COLUMN app_id DROP NOT NULL")
+    conn.execute(
+        "ALTER TABLE communication ADD COLUMN contact_ref_id INTEGER "
+        "REFERENCES contact(id) ON DELETE CASCADE"
+    )
+    conn.execute("ALTER TABLE communication ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
+    conn.execute(
+        "ALTER TABLE communication ADD CONSTRAINT communication_parent_xor CHECK ("
+        "(app_id IS NOT NULL AND contact_ref_id IS NULL) OR "
+        "(app_id IS NULL AND contact_ref_id IS NOT NULL)"
+        ")"
+    )
+    conn.execute(
+        "CREATE INDEX idx_communication_contact_ref ON communication(contact_ref_id)"
+    )
+    conn.execute("UPDATE schema_version SET version = %s", (9,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -526,6 +549,7 @@ MIGRATIONS: list = [
     migrate_v5_to_v6,
     migrate_v6_to_v7,
     migrate_v7_to_v8,
+    migrate_v8_to_v9,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)

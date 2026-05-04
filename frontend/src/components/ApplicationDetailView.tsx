@@ -483,7 +483,7 @@ export default function ApplicationDetailView() {
 
       <div className={styles.panels}>
         <ContactsPanel appId={numericId} />
-        <CommunicationsPanel appId={numericId} />
+        <CommunicationsPanel parentType="application" parentId={numericId} />
       </div>
 
       {showDeleteConfirm && (

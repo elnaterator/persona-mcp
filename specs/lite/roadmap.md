@@ -16,7 +16,7 @@ Rather then separate tags for accomplishments and notes, make it common across a
 I want a new section for "Contacts". Should have another page for contacts, allow CRUD operations on contacts, include updates to REST API, MCP tools, and UI.  Should include typical contact information as well as fields to help with work relationships and networking during job search.  Possible examples: communication preferences, interests, role, team/domain, what they care about, current priorities, collaboration opportunities, etc.  Suggest any fields that make sense for work or career related contacts without making it overly complicated, help me with this design. Think carefully about best data model.  Contacts should be taggable as well. 
 
 
-## Keep communication history for each contact
+## Keep communication history for each contact - DONE
 
 CRUD operations for comms on contacts, and in the UI see and manage (add/edit/delete) communications. Should appear in communication section below contact details.  Support tags on communications.  Need feature to search all communication across contacts (by tag or text search), dedicated page not needed, can be feature integrated into the contacts page.
 
