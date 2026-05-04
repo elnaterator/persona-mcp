@@ -175,6 +175,7 @@
   border-radius: var(--radius);
   background-color: var(--bg-secondary);
   transition: background-color 0.15s;
+  scroll-margin-top: calc(var(--header-h, 64px) + 1rem);
 }
 
 .timelineItem:hover {

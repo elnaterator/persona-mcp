@@ -93,8 +93,11 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
       setCommunications(sorted)
       setAllTags(tags)
       if (initialExpandId !== undefined) {
+        // Double rAF: first frame commits React DOM, second ensures layout is stable
         requestAnimationFrame(() => {
-          document.getElementById('communications')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          requestAnimationFrame(() => {
+            document.getElementById(`comm-${initialExpandId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          })
         })
       }
     } catch (err) {
@@ -253,7 +256,7 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
       ) : (
         <ul className={styles.timeline}>
           {communications.map((comm) => (
-            <li key={comm.id} className={styles.timelineItem}>
+            <li key={comm.id} id={`comm-${comm.id}`} className={styles.timelineItem}>
               {editTarget?.id === comm.id ? (
                 <form className={styles.form} onSubmit={handleEditSave}>
                   <div className={styles.formHeader}>
