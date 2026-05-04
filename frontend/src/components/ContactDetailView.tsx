@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X, Mail, Phone, Building2, Briefcase, MapPin, Linkedin, Calendar } from 'lucide-react'
 import type { Contact } from '../types/resume'
 import { getContact, updateContact, deleteContact, listAllTags } from '../services/api'
@@ -27,6 +27,8 @@ const RELATIONSHIP_SUGGESTIONS = [
 export default function ContactDetailView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const expandCommId = (location.state as { expandCommId?: number } | null)?.expandCommId
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
@@ -398,7 +400,7 @@ export default function ContactDetailView() {
               )}
             </SectionCard>
           </div>
-          <CommunicationsPanel parentType="contact" parentId={contact.id} />
+          <CommunicationsPanel parentType="contact" parentId={contact.id} initialExpandId={expandCommId} />
         </>
       )}
 

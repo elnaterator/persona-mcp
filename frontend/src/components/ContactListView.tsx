@@ -131,7 +131,7 @@ export default function ContactListView() {
       result.parentType === 'application'
         ? `/applications/${result.parentId}`
         : `/contacts/${result.parentId}`
-    navigate(`${path}#communications`)
+    navigate(path, { state: { expandCommId: result.id } })
   }
 
   return (

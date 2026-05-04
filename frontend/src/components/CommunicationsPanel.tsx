@@ -34,6 +34,7 @@ const STATUS_CLASS: Record<string, string> = {
 export interface CommunicationsPanelProps {
   parentType: 'application' | 'contact'
   parentId: number
+  initialExpandId?: number
 }
 
 interface CommForm {
@@ -58,13 +59,15 @@ const emptyForm: CommForm = {
   tags: [],
 }
 
-export default function CommunicationsPanel({ parentType, parentId }: CommunicationsPanelProps) {
+export default function CommunicationsPanel({ parentType, parentId, initialExpandId }: CommunicationsPanelProps) {
   const [communications, setCommunications] = useState<Communication[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editTarget, setEditTarget] = useState<Communication | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(
+    initialExpandId !== undefined ? new Set([initialExpandId]) : new Set()
+  )
   const [form, setForm] = useState<CommForm>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -89,11 +92,16 @@ export default function CommunicationsPanel({ parentType, parentId }: Communicat
       )
       setCommunications(sorted)
       setAllTags(tags)
+      if (initialExpandId !== undefined) {
+        requestAnimationFrame(() => {
+          document.getElementById('communications')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+      }
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to load communications'
       setStatusMessage({ type: 'error', message: msg })
     }
-  }, [parentType, parentId])
+  }, [parentType, parentId, initialExpandId])
 
   useEffect(() => {
     load()
