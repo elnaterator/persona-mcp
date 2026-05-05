@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { Link2 } from 'lucide-react'
 import type { ResumeVersionSummary } from '../types/resume'
 import { listResumes, createResume, listAllTags } from '../services/api'
 import { LoadingSpinner } from './LoadingSpinner'
@@ -98,6 +99,9 @@ export default function ResumeListView() {
                   <span className={styles.metaItem}>
                     {resume.app_count} application{resume.app_count !== 1 ? 's' : ''}
                   </span>
+                  {!!resume.link_count && (
+                    <span className={`${styles.metaItem} ${styles.linkCount}`}><Link2 size={11} />{resume.link_count}</span>
+                  )}
                   <span className={styles.metaItem}>
                     Created {formatDate(resume.created_at)}
                   </span>

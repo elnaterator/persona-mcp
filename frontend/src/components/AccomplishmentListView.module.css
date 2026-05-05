@@ -232,6 +232,14 @@
   margin-bottom: 0.375rem;
 }
 
+.linkCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 .itemTags {
   display: flex;
   flex-wrap: wrap;

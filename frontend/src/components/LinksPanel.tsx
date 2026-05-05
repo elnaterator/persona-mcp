@@ -1,0 +1,164 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router'
+import {
+  Briefcase,
+  Trophy,
+  FileText,
+  StickyNote,
+  User,
+  Plus,
+  X,
+} from 'lucide-react'
+import type { GroupedLinks, ResourceRef, ResourceType } from '../types/resume'
+import { linkResources, unlinkResources } from '../services/api'
+import { LinkPickerModal } from './LinkPickerModal'
+import styles from './LinksPanel.module.css'
+
+const TYPE_ICON: Record<ResourceType, React.ReactNode> = {
+  application: <Briefcase size={12} />,
+  accomplishment: <Trophy size={12} />,
+  resume: <FileText size={12} />,
+  note: <StickyNote size={12} />,
+  contact: <User size={12} />,
+}
+
+const TYPE_LABEL: Record<ResourceType, string> = {
+  application: 'Applications',
+  accomplishment: 'Accomplishments',
+  resume: 'Resumes',
+  note: 'Notes',
+  contact: 'Contacts',
+}
+
+const TYPE_ROUTE: Record<ResourceType, string> = {
+  application: 'applications',
+  accomplishment: 'accomplishments',
+  resume: 'resumes',
+  note: 'notes',
+  contact: 'contacts',
+}
+
+interface LinksPanelProps {
+  resourceType: ResourceType
+  resourceId: number
+  links: GroupedLinks
+  onChange: () => void
+}
+
+function totalLinkCount(links: GroupedLinks): number {
+  return Object.values(links).reduce((acc, refs) => acc + (refs?.length ?? 0), 0)
+}
+
+function buildSelfRef(resourceType: ResourceType, resourceId: number): ResourceRef {
+  return { type: resourceType, id: resourceId, name: '' }
+}
+
+function buildExcludeRefs(links: GroupedLinks, selfRef: ResourceRef): ResourceRef[] {
+  const refs: ResourceRef[] = [selfRef]
+  for (const items of Object.values(links)) {
+    if (items) refs.push(...items)
+  }
+  return refs
+}
+
+export function LinksPanel({
+  resourceType,
+  resourceId,
+  links = {},
+  onChange,
+}: LinksPanelProps) {
+  const navigate = useNavigate()
+  const [showPicker, setShowPicker] = useState(false)
+  const [unlinking, setUnlinking] = useState<string | null>(null)
+
+  const count = totalLinkCount(links)
+  const selfRef = buildSelfRef(resourceType, resourceId)
+  const excludeRefs = buildExcludeRefs(links, selfRef)
+
+  const handlePick = async (ref: ResourceRef) => {
+    setShowPicker(false)
+    try {
+      await linkResources(resourceType, resourceId, ref.type, ref.id)
+      onChange()
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleUnlink = async (ref: ResourceRef) => {
+    const key = `${ref.type}/${ref.id}`
+    setUnlinking(key)
+    try {
+      await unlinkResources(resourceType, resourceId, ref.type, ref.id)
+      onChange()
+    } catch {
+      // ignore
+    } finally {
+      setUnlinking(null)
+    }
+  }
+
+  const navigateTo = (ref: ResourceRef) => {
+    navigate(`/${TYPE_ROUTE[ref.type]}/${ref.id}`)
+  }
+
+  const nonEmptyTypes = (Object.keys(links) as ResourceType[]).filter(
+    (t) => links[t] && links[t]!.length > 0
+  )
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.header}>
+        <h4 className={styles.title}>Links ({count})</h4>
+        <button className={styles.addButton} onClick={() => setShowPicker(true)}>
+          <Plus size={12} />
+          Link
+        </button>
+      </div>
+
+      {nonEmptyTypes.length === 0 ? (
+        <p className={styles.empty}>No links yet.</p>
+      ) : (
+        nonEmptyTypes.map((type) => (
+          <div key={type} className={styles.typeGroup}>
+            <div className={styles.typeLabel}>
+              {TYPE_ICON[type]}
+              {TYPE_LABEL[type]}
+            </div>
+            <ul className={styles.linkList}>
+              {links[type]!.map((ref) => {
+                const key = `${ref.type}/${ref.id}`
+                return (
+                  <li key={key} className={styles.linkRow}>
+                    <button
+                      className={styles.linkName}
+                      onClick={() => navigateTo(ref)}
+                    >
+                      {ref.name}
+                    </button>
+                    <button
+                      className={styles.unlinkButton}
+                      onClick={() => handleUnlink(ref)}
+                      disabled={unlinking === key}
+                      aria-label={`Unlink ${ref.name}`}
+                    >
+                      <X size={12} />
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))
+      )}
+
+      {showPicker && (
+        <LinkPickerModal
+          excludeRefs={excludeRefs}
+          onPick={handlePick}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+    </div>
+  )
+}

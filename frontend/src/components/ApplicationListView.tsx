@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { Link2 } from 'lucide-react'
 import type { Application } from '../types/resume'
 import { listApplications, createApplication, listAllTags } from '../services/api'
 import { TagInput } from './TagInput'
@@ -266,6 +267,9 @@ export default function ApplicationListView() {
                 </div>
                 <div className={styles.itemMeta}>
                   <span className={styles.metaDate}>Updated {formatDate(app.updated_at)}</span>
+                  {!!app.link_count && (
+                    <span className={styles.linkCount}><Link2 size={11} />{app.link_count}</span>
+                  )}
                   {app.tags && app.tags.length > 0 && (
                     <div className={styles.tagList}>
                       {app.tags.map((tag) => (

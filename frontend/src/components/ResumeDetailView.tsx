@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Trash2, Pencil, Check, X } from 'lucide-react'
 import type { ResumeVersion } from '../types/resume'
-import { getResumeVersion, updateResumeLabel, deleteResume, setDefaultResume, listAllTags } from '../services/api'
+import { getResumeVersion, updateResumeLabel, deleteResume, setDefaultResume, listAllTags, mapGroupedLinks } from '../services/api'
 import { TagInput } from './TagInput'
 import ContactSection from './ContactSection'
 import SummarySection from './SummarySection'
@@ -14,6 +14,7 @@ import NotFound from './NotFound'
 import { LoadingSpinner } from './LoadingSpinner'
 import { StatusMessage } from './StatusMessage'
 import { ConfirmDialog } from './ConfirmDialog'
+import { LinksPanel } from './LinksPanel'
 import styles from './ResumeDetailView.module.css'
 
 export default function ResumeDetailView() {
@@ -259,6 +260,13 @@ export default function ResumeDetailView() {
           versionId={numericId}
         />
       </div>
+
+      <LinksPanel
+        resourceType="resume"
+        resourceId={numericId}
+        links={mapGroupedLinks(version.links as Record<string, unknown[]>)}
+        onChange={() => load(true)}
+      />
 
       {confirmDelete && (
         <ConfirmDialog

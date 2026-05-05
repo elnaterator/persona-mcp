@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router'
+import { Link2 } from 'lucide-react'
 import type { AccomplishmentSummary } from '../types/resume'
 import {
   listAccomplishments,
@@ -225,9 +226,14 @@ export default function AccomplishmentListView() {
             <li key={acc.id} className={styles.item}>
               <Link to={`/accomplishments/${acc.id}`} className={styles.itemLink}>
                 <div className={styles.itemTitle}>{acc.title}</div>
-                {acc.accomplishment_date && (
-                  <div className={styles.itemMeta}>{acc.accomplishment_date}</div>
-                )}
+                <div className={styles.itemMeta}>
+                  {acc.accomplishment_date && (
+                    <span>{acc.accomplishment_date}</span>
+                  )}
+                  {!!acc.link_count && (
+                    <span className={styles.linkCount}><Link2 size={11} />{acc.link_count}</span>
+                  )}
+                </div>
                 {acc.tags.length > 0 && (
                   <div className={styles.itemTags}>
                     {acc.tags.map((tag) => (

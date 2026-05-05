@@ -116,6 +116,13 @@
   white-space: nowrap;
 }
 
+.linkCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-secondary);
+}
+
 .tagList {
   display: flex;
   flex-wrap: wrap;

@@ -76,6 +76,7 @@ export interface ResumeVersion {
   tags: string[]
   created_at: string
   updated_at: string
+  links: GroupedLinks
 }
 
 export interface ResumeVersionSummary {
@@ -86,6 +87,7 @@ export interface ResumeVersionSummary {
   tags: string[]
   created_at: string
   updated_at: string
+  link_count?: number
 }
 
 export interface Application {
@@ -100,6 +102,8 @@ export interface Application {
   tags: string[]
   created_at: string
   updated_at: string
+  links: GroupedLinks
+  link_count?: number
 }
 
 export interface ApplicationSummary {
@@ -112,6 +116,7 @@ export interface ApplicationSummary {
   tags: string[]
   created_at: string
   updated_at: string
+  link_count?: number
 }
 
 export interface ApplicationContact {
@@ -136,6 +141,7 @@ export interface Accomplishment {
   tags: string[]
   created_at: string
   updated_at: string
+  links: GroupedLinks
 }
 
 export interface AccomplishmentSummary {
@@ -145,6 +151,7 @@ export interface AccomplishmentSummary {
   tags: string[]
   created_at: string
   updated_at: string
+  link_count?: number
 }
 
 export interface Note {
@@ -154,6 +161,7 @@ export interface Note {
   tags: string[]
   created_at: string
   updated_at: string
+  links: GroupedLinks
 }
 
 export interface NoteSummary {
@@ -162,6 +170,7 @@ export interface NoteSummary {
   tags: string[]
   created_at: string
   updated_at: string
+  link_count?: number
 }
 
 export interface Contact {
@@ -180,6 +189,7 @@ export interface Contact {
   tags: string[]
   created_at: string
   updated_at: string
+  links: GroupedLinks
 }
 
 export interface ContactSummary {
@@ -191,6 +201,7 @@ export interface ContactSummary {
   followup_date?: string | null
   tags: string[]
   updated_at: string
+  link_count?: number
 }
 
 export interface Communication {
@@ -214,3 +225,14 @@ export interface CommunicationSearchResult extends Communication {
   parentId: number
   parentName: string
 }
+
+export type ResourceType = 'application' | 'accomplishment' | 'resume' | 'note' | 'contact'
+
+export interface ResourceRef {
+  type: ResourceType
+  id: number
+  name: string
+  updatedAt?: string | null
+}
+
+export type GroupedLinks = Partial<Record<ResourceType, ResourceRef[]>>

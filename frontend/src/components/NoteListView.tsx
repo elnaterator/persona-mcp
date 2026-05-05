@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router'
+import { Link2 } from 'lucide-react'
 import type { NoteSummary } from '../types/resume'
 import {
   listNotes,
@@ -176,6 +177,9 @@ export default function NoteListView() {
                 <div className={styles.itemTitle}>{note.title}</div>
                 <div className={styles.itemMeta}>
                   <span>{new Date(note.updated_at).toLocaleDateString()}</span>
+                  {!!note.link_count && (
+                    <span className={styles.linkCount}><Link2 size={11} />{note.link_count}</span>
+                  )}
                 </div>
                 {note.tags.length > 0 && (
                   <div className={styles.itemTags}>

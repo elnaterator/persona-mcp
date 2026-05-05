@@ -8,9 +8,11 @@ from persona.database import (
     load_note,
     load_note_tags,
     load_notes,
+    unlink_all_for,
     update_note,
 )
 from persona.db import DBConnection
+from persona.link_service import LinkService
 
 
 def _normalize_tags(tags: list[str]) -> list[str]:
@@ -32,6 +34,7 @@ class NoteService:
 
     def __init__(self, conn: DBConnection) -> None:
         self._conn = conn
+        self._links = LinkService(conn)
 
     def list_notes(
         self,
@@ -41,7 +44,14 @@ class NoteService:
     ) -> list[dict[str, Any]]:
         """Return NoteSummary dicts, ordered by updated_at DESC."""
         normalized = [t.strip().lower() for t in (tags or []) if t.strip()]
-        return load_notes(self._conn, tags=normalized, q=q, user_id=user_id)
+        notes = load_notes(self._conn, tags=normalized, q=q, user_id=user_id)
+        if notes:
+            uid = user_id or "legacy"
+            ids = [n["id"] for n in notes]
+            counts = self._links.count_links("note", ids, uid)
+            for n in notes:
+                n["link_count"] = counts.get(n["id"], 0)
+        return notes
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
@@ -49,7 +59,9 @@ class NoteService:
 
     def get_note(self, note_id: int, user_id: str | None = None) -> dict[str, Any]:
         """Return full Note dict. Raises ValueError if not found."""
-        return load_note(self._conn, note_id, user_id=user_id)
+        note = load_note(self._conn, note_id, user_id=user_id)
+        note["links"] = self._links.list_links("note", note_id, user_id or "legacy")
+        return note
 
     def create_note(
         self, data: dict[str, Any], user_id: str | None = None
@@ -103,4 +115,5 @@ class NoteService:
 
     def delete_note(self, note_id: int, user_id: str | None = None) -> dict[str, Any]:
         """Delete. Raises ValueError if not found."""
+        unlink_all_for(self._conn, "note", note_id, user_id or "legacy")
         return delete_note(self._conn, note_id, user_id=user_id)

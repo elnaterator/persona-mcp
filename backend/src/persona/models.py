@@ -1,8 +1,25 @@
 """Pydantic models for persona resume data."""
 
 import re
+from typing import Literal
 
 from pydantic import BaseModel, field_validator
+
+RESOURCE_TYPES_LITERAL = Literal[
+    "application", "accomplishment", "resume", "note", "contact"
+]
+
+
+class ResourceRef(BaseModel):
+    """A reference to any linkable resource."""
+
+    type: RESOURCE_TYPES_LITERAL
+    id: int
+    name: str
+    updated_at: str | None = None
+
+
+GroupedLinks = dict[str, list[ResourceRef]]
 
 
 class ContactInfo(BaseModel):
@@ -74,6 +91,7 @@ class ResumeVersion(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    links: GroupedLinks = {}
 
 
 class ResumeVersionSummary(BaseModel):
@@ -86,6 +104,7 @@ class ResumeVersionSummary(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    link_count: int = 0
 
 
 APPLICATION_STATUSES = (
@@ -118,6 +137,7 @@ class Application(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    links: GroupedLinks = {}
 
     @field_validator("status")
     @classmethod
@@ -140,6 +160,7 @@ class ApplicationSummary(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    link_count: int = 0
 
 
 class ApplicationContact(BaseModel):
@@ -167,6 +188,7 @@ class Accomplishment(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    links: GroupedLinks = {}
 
 
 class AccomplishmentSummary(BaseModel):
@@ -178,6 +200,7 @@ class AccomplishmentSummary(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    link_count: int = 0
 
 
 class Note(BaseModel):
@@ -189,6 +212,7 @@ class Note(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    links: GroupedLinks = {}
 
 
 class NoteSummary(BaseModel):
@@ -199,6 +223,7 @@ class NoteSummary(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    link_count: int = 0
 
 
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -222,6 +247,7 @@ class Contact(BaseModel):
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
+    links: GroupedLinks = {}
 
     @field_validator("name")
     @classmethod
@@ -251,6 +277,7 @@ class ContactSummary(BaseModel):
     followup_date: str | None = None
     tags: list[str] = []
     updated_at: str = ""
+    link_count: int = 0
 
 
 class Communication(BaseModel):

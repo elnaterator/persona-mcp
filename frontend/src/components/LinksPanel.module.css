@@ -1,0 +1,116 @@
+.panel {
+  margin-top: 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.addButton:hover {
+  color: var(--accent-green);
+}
+
+.empty {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.typeGroup {
+  margin-bottom: 0.75rem;
+}
+
+.typeLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.linkList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius);
+  gap: 0.5rem;
+  transition: background-color 0.1s;
+}
+
+.linkRow:hover {
+  background: var(--bg-hover);
+}
+
+.linkName {
+  font-size: 0.875rem;
+  color: var(--accent-green);
+  cursor: pointer;
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-mono);
+}
+
+.linkName:hover {
+  text-decoration: underline;
+}
+
+.unlinkButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  transition: color 0.1s;
+  opacity: 0;
+}
+
+.linkRow:hover .unlinkButton {
+  opacity: 1;
+}
+
+.unlinkButton:hover {
+  color: var(--status-error);
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { Link2 } from 'lucide-react'
 import type { ContactSummary, CommunicationSearchResult } from '../types/resume'
 import { listContacts, createContact, listAllTags, searchCommunications } from '../services/api'
 import { TagInput } from './TagInput'
@@ -352,6 +353,9 @@ export default function ContactListView() {
                     </span>
                   )}
                   <span>{new Date(contact.updated_at).toLocaleDateString()}</span>
+                  {!!contact.link_count && (
+                    <span className={styles.linkCount}><Link2 size={11} />{contact.link_count}</span>
+                  )}
                 </div>
                 {contact.tags.length > 0 && (
                   <div className={styles.itemTags}>

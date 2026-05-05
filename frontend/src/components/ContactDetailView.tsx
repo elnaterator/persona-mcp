@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X, Mail, Phone, Building2, Briefcase, MapPin, Linkedin, Calendar } from 'lucide-react'
 import type { Contact } from '../types/resume'
-import { getContact, updateContact, deleteContact, listAllTags } from '../services/api'
+import { getContact, updateContact, deleteContact, listAllTags, mapGroupedLinks } from '../services/api'
 import { TagInput } from './TagInput'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
@@ -12,6 +12,7 @@ import { SectionCard } from './SectionCard'
 import { MarkdownContent } from './MarkdownContent'
 import { AutoResizeTextarea } from './AutoResizeTextarea'
 import CommunicationsPanel from './CommunicationsPanel'
+import { LinksPanel } from './LinksPanel'
 import styles from './ContactDetailView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -403,6 +404,13 @@ export default function ContactDetailView() {
           <CommunicationsPanel parentType="contact" parentId={contact.id} initialExpandId={expandCommId} />
         </>
       )}
+
+      <LinksPanel
+        resourceType="contact"
+        resourceId={numericId}
+        links={mapGroupedLinks(contact.links as Record<string, unknown[]>)}
+        onChange={() => getContact(numericId).then(setContact)}
+      />
 
       {confirmDelete && (
         <ConfirmDialog

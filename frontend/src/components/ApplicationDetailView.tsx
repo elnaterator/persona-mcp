@@ -8,10 +8,12 @@ import {
   deleteApplication,
   listResumes,
   listAllTags,
+  mapGroupedLinks,
 } from '../services/api'
 import { TagInput } from './TagInput'
 import ContactsPanel from './ContactsPanel'
 import CommunicationsPanel from './CommunicationsPanel'
+import { LinksPanel } from './LinksPanel'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -486,6 +488,12 @@ export default function ApplicationDetailView() {
       <div className={styles.panels}>
         <ContactsPanel appId={numericId} />
         <CommunicationsPanel parentType="application" parentId={numericId} initialExpandId={expandCommId} />
+        <LinksPanel
+          resourceType="application"
+          resourceId={numericId}
+          links={mapGroupedLinks(app.links as Record<string, unknown[]>)}
+          onChange={() => getApplication(numericId).then(setApp)}
+        />
       </div>
 
       {showDeleteConfirm && (

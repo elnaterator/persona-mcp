@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Note } from '../types/resume'
-import { getNote, updateNote, deleteNote, listAllTags } from '../services/api'
+import { getNote, updateNote, deleteNote, listAllTags, mapGroupedLinks } from '../services/api'
 import { TagInput } from './TagInput'
+import { LinksPanel } from './LinksPanel'
 import Breadcrumb from './Breadcrumb'
 import NotFound from './NotFound'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -217,6 +218,13 @@ export default function NoteDetailView() {
           )
         )}
       </SectionCard>
+
+      <LinksPanel
+        resourceType="note"
+        resourceId={numericId}
+        links={mapGroupedLinks(note.links as Record<string, unknown[]>)}
+        onChange={() => getNote(numericId).then(setNote)}
+      />
 
       {confirmDelete && (
         <ConfirmDialog
