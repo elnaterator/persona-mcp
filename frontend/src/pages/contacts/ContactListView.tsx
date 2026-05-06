@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { ContactSummary, CommunicationSearchResult } from '../types/resume'
-import { listContacts, createContact, listAllTags, searchCommunications } from '../services/api'
-import { TagInput } from './TagInput'
+import type { ContactSummary, CommunicationSearchResult } from '../../types'
+import { listContacts, createContact, listAllTags, searchCommunications } from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import { useResourceList } from '../../hooks/useResourceList'
 import styles from './ContactListView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -36,7 +37,6 @@ type ParentFilter = 'all' | 'application' | 'contact'
 
 export default function ContactListView() {
   const navigate = useNavigate()
-  const [contacts, setContacts] = useState<ContactSummary[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -54,18 +54,16 @@ export default function ContactListView() {
   const [commSearching, setCommSearching] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const loadData = useCallback(async () => {
+  const fetcher = useCallback(async () => {
     const [contactList, tags] = await Promise.all([
       listContacts(tagFilter.length ? tagFilter : undefined, searchQuery || undefined),
       listAllTags(),
     ])
-    setContacts(contactList)
     setAllTags(tags)
+    return contactList
   }, [tagFilter, searchQuery])
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  const { items: contacts, refresh: loadData } = useResourceList<ContactSummary>(fetcher)
 
   const runCommSearch = useCallback(async (q: string, tags: string[], parent: ParentFilter) => {
     if (!q && tags.length === 0) {

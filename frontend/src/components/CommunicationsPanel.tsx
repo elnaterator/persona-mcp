@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
-import type { Communication } from '../types/resume'
+import type { Communication } from '../types'
 import {
   listCommunications,
   addCommunication,

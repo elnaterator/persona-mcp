@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { Application, ResumeVersionSummary } from '../types/resume'
+import type { Application, ResumeVersionSummary } from '../../types'
 import {
   getApplication,
   updateApplication,
@@ -9,19 +9,19 @@ import {
   listResumes,
   listAllTags,
   mapGroupedLinks,
-} from '../services/api'
-import { TagInput } from './TagInput'
-import ContactsPanel from './ContactsPanel'
-import CommunicationsPanel from './CommunicationsPanel'
-import { LinksPanel } from './LinksPanel'
-import Breadcrumb from './Breadcrumb'
-import NotFound from './NotFound'
-import { ConfirmDialog } from './ConfirmDialog'
-import { StatusMessage } from './StatusMessage'
-import { LoadingSpinner } from './LoadingSpinner'
-import { SectionCard } from './SectionCard'
-import { MarkdownContent } from './MarkdownContent'
-import { AutoResizeTextarea } from './AutoResizeTextarea'
+} from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import ContactsPanel from '../../components/ContactsPanel'
+import CommunicationsPanel from '../../components/CommunicationsPanel'
+import { LinksPanel } from '../../components/LinksPanel'
+import Breadcrumb from '../../components/Breadcrumb'
+import NotFound from '../../components/NotFound'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { StatusMessage } from '../../components/StatusMessage'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { SectionCard } from '../../components/SectionCard'
+import { MarkdownContent } from '../../components/MarkdownContent'
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
 import styles from './ApplicationDetailView.module.css'
 
 const ALL_STATUSES = [

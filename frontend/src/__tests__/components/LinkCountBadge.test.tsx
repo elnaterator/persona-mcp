@@ -4,9 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import NoteListView from '../../components/NoteListView'
+import NoteListView from '../../pages/notes/NoteListView'
 import * as api from '../../services/api'
-import type { NoteSummary } from '../../types/resume'
+import type { NoteSummary } from '../../types'
 
 vi.mock('../../services/api')
 
@@ -40,7 +40,7 @@ describe('link_count badge', () => {
     await waitFor(() => {
       expect(screen.getByText('Linked Note')).toBeInTheDocument()
     })
-    expect(screen.getByText(/🔗 3/)).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
   })
 
   it('hides badge when link_count is 0 or absent', async () => {
@@ -59,6 +59,6 @@ describe('link_count badge', () => {
     await waitFor(() => {
       expect(screen.getByText('Lonely Note')).toBeInTheDocument()
     })
-    expect(screen.queryByText(/🔗/)).not.toBeInTheDocument()
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 })

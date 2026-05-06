@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import ApplicationListView from '../../components/ApplicationListView'
+import ApplicationListView from '../../pages/applications/ApplicationListView'
 import * as api from '../../services/api'
-import type { Application } from '../../types/resume'
+import type { Application } from '../../types'
 
 vi.mock('../../services/api')
 

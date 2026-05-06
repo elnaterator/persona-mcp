@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import type { Skill } from '../types/resume'
-import { EntryForm, type FieldConfig } from './EntryForm'
-import { ConfirmDialog } from './ConfirmDialog'
-import { StatusMessage } from './StatusMessage'
-import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../services/api'
+import type { Skill } from '../../types'
+import { EntryForm, type FieldConfig } from '../../components/EntryForm'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { StatusMessage } from '../../components/StatusMessage'
+import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
 import styles from './SkillsSection.module.css'
 
 interface SkillsSectionProps {

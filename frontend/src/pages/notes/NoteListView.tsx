@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { NoteSummary } from '../types/resume'
+import type { NoteSummary } from '../../types'
 import {
   listNotes,
   createNote,
   listAllTags,
-} from '../services/api'
-import { TagInput } from './TagInput'
+} from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import { useResourceList } from '../../hooks/useResourceList'
 import styles from './NoteListView.module.css'
 
 interface FormState {
@@ -23,7 +24,6 @@ const EMPTY_FORM: FormState = {
 }
 
 export default function NoteListView() {
-  const [notes, setNotes] = useState<NoteSummary[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -32,18 +32,16 @@ export default function NoteListView() {
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const loadData = useCallback(async () => {
+  const fetcher = useCallback(async () => {
     const [noteList, tags] = await Promise.all([
       listNotes(tagFilter.length ? tagFilter : undefined, searchQuery || undefined),
       listAllTags(),
     ])
-    setNotes(noteList)
     setAllTags(tags)
+    return noteList
   }, [tagFilter, searchQuery])
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  const { items: notes, refresh: loadData } = useResourceList<NoteSummary>(fetcher)
 
   const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))

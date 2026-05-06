@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { Note } from '../types/resume'
-import { getNote, updateNote, deleteNote, listAllTags, mapGroupedLinks } from '../services/api'
-import { TagInput } from './TagInput'
-import { LinksPanel } from './LinksPanel'
-import Breadcrumb from './Breadcrumb'
-import NotFound from './NotFound'
-import { ConfirmDialog } from './ConfirmDialog'
-import { StatusMessage } from './StatusMessage'
-import { SectionCard } from './SectionCard'
-import { MarkdownContent } from './MarkdownContent'
-import { AutoResizeTextarea } from './AutoResizeTextarea'
+import type { Note } from '../../types'
+import { getNote, updateNote, deleteNote, listAllTags, mapGroupedLinks } from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import { LinksPanel } from '../../components/LinksPanel'
+import Breadcrumb from '../../components/Breadcrumb'
+import NotFound from '../../components/NotFound'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { StatusMessage } from '../../components/StatusMessage'
+import { SectionCard } from '../../components/SectionCard'
+import { MarkdownContent } from '../../components/MarkdownContent'
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
+import { useResourceDetail } from '../../hooks/useResourceDetail'
 import styles from './NoteDetailView.module.css'
 
 export default function NoteDetailView() {
@@ -20,7 +21,6 @@ export default function NoteDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [note, setNote] = useState<Note | null>(null)
   const [allTags, setAllTags] = useState<string[]>([])
   const [notFound, setNotFound] = useState(false)
   const [forbidden, setForbidden] = useState(false)
@@ -32,27 +32,26 @@ export default function NoteDetailView() {
   const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
+  const noteFetcher = useCallback(async (strId: string) => {
+    try {
+      return await getNote(Number(strId))
+    } catch (err) {
+      const status = (err as { status?: number })?.status
+      if (status === 404) setNotFound(true)
+      else if (status === 403) setForbidden(true)
+      throw err
+    }
+  }, [])
+
+  const { item: note, setItem: setNote, refresh: reloadNote } = useResourceDetail<Note>(id, noteFetcher)
+
   useEffect(() => {
     if (numericId === null) {
       navigate('/notes', { replace: true })
       return
     }
-    Promise.all([
-      getNote(numericId),
-      listAllTags(),
-    ]).then(([noteData, tags]) => {
-      setNote(noteData)
-      setAllTags(tags)
-    }).catch((err: unknown) => {
-      const status = (err as { status?: number })?.status
-      if (status === 404) {
-        setNotFound(true)
-      } else if (status === 403) {
-        setForbidden(true)
-      }
-    })
+    listAllTags().then(setAllTags).catch(() => {})
   }, [numericId, navigate])
-
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Note" backTo="/notes" backLabel="Back to Notes" />
@@ -223,7 +222,7 @@ export default function NoteDetailView() {
         resourceType="note"
         resourceId={numericId}
         links={mapGroupedLinks(note.links as Record<string, unknown[]>)}
-        onChange={() => getNote(numericId).then(setNote)}
+        onChange={reloadNote}
       />
 
       {confirmDelete && (

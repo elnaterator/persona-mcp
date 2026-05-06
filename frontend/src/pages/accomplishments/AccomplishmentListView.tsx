@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { AccomplishmentSummary } from '../types/resume'
+import type { AccomplishmentSummary } from '../../types'
 import {
   listAccomplishments,
   createAccomplishment,
   listAllTags,
-} from '../services/api'
-import { TagInput } from './TagInput'
+} from '../../services/api'
+import { TagInput } from '../../components/TagInput'
 import styles from './AccomplishmentListView.module.css'
 
 interface FormState {

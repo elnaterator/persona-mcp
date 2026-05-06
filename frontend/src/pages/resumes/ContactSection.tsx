@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { ContactInfo } from '../types/resume';
-import { EditableSection } from './EditableSection';
-import { updateResumeContact, updateVersionContact } from '../services/api';
+import type { ContactInfo } from '../../types';
+import { EditableSection } from '../../components/EditableSection';
+import { updateResumeContact, updateVersionContact } from '../../services/api';
 import styles from './ContactSection.module.css';
 
 interface ContactSectionProps {

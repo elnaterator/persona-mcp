@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { X } from 'lucide-react'
-import type { ResourceRef, ResourceType } from '../types/resume'
+import type { ResourceRef, ResourceType } from '../types'
 import {
   listApplications,
   listAccomplishments,

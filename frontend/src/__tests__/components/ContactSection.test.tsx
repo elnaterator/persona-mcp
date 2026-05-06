@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ContactSection from '../../components/ContactSection';
-import type { ContactInfo } from '../../types/resume';
+import ContactSection from '../../pages/resumes/ContactSection';
+import type { ContactInfo } from '../../types';
 import * as api from '../../services/api';
 
 const fullContact: ContactInfo = {

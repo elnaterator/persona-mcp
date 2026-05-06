@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { LinksPanel } from '../../components/LinksPanel'
 import * as api from '../../services/api'
-import type { GroupedLinks } from '../../types/resume'
+import type { GroupedLinks } from '../../types'
 
 vi.mock('../../services/api')
 

@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as api from '../../services/api'
-import type { ContactInfo, WorkExperience, Education, Skill } from '../../types/resume'
+import type { ContactInfo, WorkExperience, Education, Skill } from '../../types'
 
 // Mock fetch globally
 global.fetch = vi.fn()

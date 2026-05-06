@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { EditableSection } from './EditableSection';
-import { updateSummary, updateVersionSummary } from '../services/api';
-import { MarkdownContent } from './MarkdownContent';
-import { AutoResizeTextarea } from './AutoResizeTextarea';
+import { EditableSection } from '../../components/EditableSection';
+import { updateSummary, updateVersionSummary } from '../../services/api';
+import { MarkdownContent } from '../../components/MarkdownContent';
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea';
 import styles from './SummarySection.module.css';
 
 interface SummarySectionProps {

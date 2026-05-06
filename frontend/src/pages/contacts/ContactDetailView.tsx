@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X, Mail, Phone, Building2, Briefcase, MapPin, Linkedin, Calendar } from 'lucide-react'
-import type { Contact } from '../types/resume'
-import { getContact, updateContact, deleteContact, listAllTags, mapGroupedLinks } from '../services/api'
-import { TagInput } from './TagInput'
-import Breadcrumb from './Breadcrumb'
-import NotFound from './NotFound'
-import { ConfirmDialog } from './ConfirmDialog'
-import { StatusMessage } from './StatusMessage'
-import { SectionCard } from './SectionCard'
-import { MarkdownContent } from './MarkdownContent'
-import { AutoResizeTextarea } from './AutoResizeTextarea'
-import CommunicationsPanel from './CommunicationsPanel'
-import { LinksPanel } from './LinksPanel'
+import type { Contact } from '../../types'
+import { getContact, updateContact, deleteContact, listAllTags, mapGroupedLinks } from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import Breadcrumb from '../../components/Breadcrumb'
+import NotFound from '../../components/NotFound'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { StatusMessage } from '../../components/StatusMessage'
+import { SectionCard } from '../../components/SectionCard'
+import { MarkdownContent } from '../../components/MarkdownContent'
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
+import CommunicationsPanel from '../../components/CommunicationsPanel'
+import { LinksPanel } from '../../components/LinksPanel'
+import { useResourceDetail } from '../../hooks/useResourceDetail'
 import styles from './ContactDetailView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -33,7 +34,6 @@ export default function ContactDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [contact, setContact] = useState<Contact | null>(null)
   const [allTags, setAllTags] = useState<string[]>([])
   const [notFound, setNotFound] = useState(false)
   const [forbidden, setForbidden] = useState(false)
@@ -45,24 +45,25 @@ export default function ContactDetailView() {
   const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
+  const contactFetcher = useCallback(async (strId: string) => {
+    try {
+      return await getContact(Number(strId))
+    } catch (err) {
+      const status = (err as { status?: number })?.status
+      if (status === 404) setNotFound(true)
+      else if (status === 403) setForbidden(true)
+      throw err
+    }
+  }, [])
+
+  const { item: contact, setItem: setContact, refresh: reloadContact } = useResourceDetail<Contact>(id, contactFetcher)
+
   useEffect(() => {
     if (numericId === null) {
       navigate('/contacts', { replace: true })
       return
     }
-    Promise.all([getContact(numericId), listAllTags()])
-      .then(([contactData, tags]) => {
-        setContact(contactData)
-        setAllTags(tags)
-      })
-      .catch((err: unknown) => {
-        const status = (err as { status?: number })?.status
-        if (status === 404) {
-          setNotFound(true)
-        } else if (status === 403) {
-          setForbidden(true)
-        }
-      })
+    listAllTags().then(setAllTags).catch(() => {})
   }, [numericId, navigate])
 
   if (numericId === null) return null
@@ -409,7 +410,7 @@ export default function ContactDetailView() {
         resourceType="contact"
         resourceId={numericId}
         links={mapGroupedLinks(contact.links as Record<string, unknown[]>)}
-        onChange={() => getContact(numericId).then(setContact)}
+        onChange={reloadContact}
       />
 
       {confirmDelete && (

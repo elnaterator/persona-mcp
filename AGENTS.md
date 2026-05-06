@@ -40,12 +40,24 @@ make test       # npm run test (Vitest)
 ```
 frontend/                 # React SPA
   src/
-    components/           # React components (view + edit modes)
-    services/             # API client (fetch wrapper)
-    types/                # TypeScript type definitions
+    pages/                # Route-level page modules
+      home/               # HomeView
+      resumes/            # ListView, DetailView, ResumeView, *Section components
+      applications/       # ListView, DetailView
+      accomplishments/    # ListView, DetailView
+      notes/              # ListView, DetailView
+      contacts/           # ListView, DetailView
+    components/           # Shared components (used across ≥2 pages)
+    hooks/                # Reusable state hooks (useResourceList, useResourceDetail, etc.)
+    services/
+      api/                # Per-resource API modules + shared client
+        client.ts         # fetch wrapper, auth, error handling
+        index.ts          # barrel export
+    types/                # Per-resource type definitions + barrel index.ts
     __tests__/            # Vitest component tests
     App.tsx               # Root component
     main.tsx              # Entry point
+    router.tsx            # Route definitions
     index.css             # Global styles
   public/                 # Static assets
   dist/                   # Build output (served by backend)
@@ -80,6 +92,8 @@ specs/                    # Feature specifications
 .specify/                 # Spec-kit configuration
 .github/                  # GitHub Actions CI
 ```
+
+**Frontend Organization:** A component used in exactly one page lives in `pages/<name>/`. A component reused across ≥2 pages, or a UI primitive (dialog, form input, badge), lives in `components/`. Types live in `types/` with a barrel `index.ts`. Services are split per resource in `services/api/` with a barrel `index.ts`. Hooks in `hooks/` extract shared state patterns (list loading, detail loading, status messages).
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

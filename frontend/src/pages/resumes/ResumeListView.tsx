@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { ResumeVersionSummary } from '../types/resume'
-import { listResumes, createResume, listAllTags } from '../services/api'
-import { LoadingSpinner } from './LoadingSpinner'
-import { StatusMessage } from './StatusMessage'
-import { InlineCreateForm } from './InlineCreateForm'
+import type { ResumeVersionSummary } from '../../types'
+import { listResumes, createResume, listAllTags } from '../../services/api'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { StatusMessage } from '../../components/StatusMessage'
+import { InlineCreateForm } from '../../components/InlineCreateForm'
 import styles from './ResumeListView.module.css'
 
 export default function ResumeListView() {

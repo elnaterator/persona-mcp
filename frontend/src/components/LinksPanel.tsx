@@ -9,7 +9,7 @@ import {
   Plus,
   X,
 } from 'lucide-react'
-import type { GroupedLinks, ResourceRef, ResourceType } from '../types/resume'
+import type { GroupedLinks, ResourceRef, ResourceType } from '../types'
 import { linkResources, unlinkResources } from '../services/api'
 import { LinkPickerModal } from './LinkPickerModal'
 import styles from './LinksPanel.module.css'

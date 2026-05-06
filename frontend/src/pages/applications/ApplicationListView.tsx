@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { Application } from '../types/resume'
-import { listApplications, createApplication, listAllTags } from '../services/api'
-import { TagInput } from './TagInput'
-import { LoadingSpinner } from './LoadingSpinner'
-import { StatusMessage } from './StatusMessage'
+import type { Application } from '../../types'
+import { listApplications, createApplication, listAllTags } from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { StatusMessage } from '../../components/StatusMessage'
 import styles from './ApplicationListView.module.css'
 
 const ALL_STATUSES = [

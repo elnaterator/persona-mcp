@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { getResume } from '../services/api';
-import type { Resume } from '../types/resume';
+import { getResume } from '../../services/api';
+import type { Resume } from '../../types';
 import ContactSection from './ContactSection';
 import SummarySection from './SummarySection';
 import ExperienceSection from './ExperienceSection';
 import EducationSection from './EducationSection';
 import SkillsSection from './SkillsSection';
-import { LoadingSpinner } from './LoadingSpinner';
-import { StatusMessage } from './StatusMessage';
+import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { StatusMessage } from '../../components/StatusMessage';
 import styles from './ResumeView.module.css';
 
 export default function ResumeView() {
