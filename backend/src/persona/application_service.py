@@ -16,11 +16,13 @@ from persona.database import (
     load_communications,
     load_default_resume_version,
     load_resume_version,
+    unlink_all_for,
     update_app_contact,
     update_application,
     update_communication,
 )
 from persona.db import DBConnection
+from persona.link_service import LinkService
 from persona.models import APPLICATION_STATUSES
 
 
@@ -45,6 +47,7 @@ class ApplicationService:
 
     def __init__(self, conn: DBConnection) -> None:
         self._conn = conn
+        self._links = LinkService(conn)
 
     # --- Application CRUD ---
 
@@ -68,7 +71,10 @@ class ApplicationService:
         self, app_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
         """Get a single application by ID."""
-        return load_application(self._conn, app_id, user_id=user_id)
+        app = load_application(self._conn, app_id, user_id=user_id)
+        uid = user_id or "legacy"
+        app["links"] = self._links.list_links("application", app_id, uid)
+        return app
 
     def list_applications(
         self,
@@ -78,9 +84,16 @@ class ApplicationService:
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """List applications with optional filter/search."""
-        return load_applications(
+        apps = load_applications(
             self._conn, status=status, tags=tags, q=q, user_id=user_id
         )
+        if apps:
+            uid = user_id or "legacy"
+            ids = [a["id"] for a in apps]
+            counts = self._links.count_links("application", ids, uid)
+            for a in apps:
+                a["link_count"] = counts.get(a["id"], 0)
+        return apps
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
@@ -103,6 +116,7 @@ class ApplicationService:
         self, app_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
         """Delete an application and cascade."""
+        unlink_all_for(self._conn, "application", app_id, user_id or "legacy")
         return delete_application(self._conn, app_id, user_id=user_id)
 
     # --- Contact CRUD ---

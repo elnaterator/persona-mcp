@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CommunicationsPanel from '../../components/CommunicationsPanel'
 import * as api from '../../services/api'
-import type { Communication } from '../../types/resume'
+import type { Communication } from '../../types'
 
 vi.mock('../../services/api')
 

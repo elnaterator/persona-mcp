@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { ApplicationContact } from '../types/resume'
+import type { ApplicationContact } from '../types'
 import { listAppContacts, addContact, updateAppContact, removeContact } from '../services/api'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'

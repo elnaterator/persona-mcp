@@ -10,6 +10,7 @@ from persona.application_service import ApplicationService
 from persona.auth import UserContext
 from persona.communication_service import ContactCommunicationService
 from persona.contact_service import ContactService
+from persona.link_service import RESOURCE_TYPES, LinkService
 from persona.models import Resume
 from persona.note_service import NoteService
 from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
@@ -38,6 +39,7 @@ def create_router(
     note_service: NoteService | None = None,
     contact_service: ContactService | None = None,
     comm_service: ContactCommunicationService | None = None,
+    link_service: LinkService | None = None,
     get_current_user: Callable | None = None,
 ) -> APIRouter:
     """Create an APIRouter with all endpoints.
@@ -977,6 +979,72 @@ def create_router(
         ) -> list[dict[str, Any]]:
             uid = current_user.id if current_user is not None else None
             return comm_service.search(q=q, tags=tag, parent=parent, user_id=uid)
+
+    # ==========================================================
+    # Resource Link Routes
+    # ==========================================================
+
+    if link_service is not None:
+
+        @api.post("/api/links", status_code=201)
+        def create_link(
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> dict[str, str]:
+            uid = current_user.id if current_user is not None else None
+            a_type = data.get("a_type", "")
+            b_type = data.get("b_type", "")
+            a_id = data.get("a_id")
+            b_id = data.get("b_id")
+            if a_type not in RESOURCE_TYPES or b_type not in RESOURCE_TYPES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Invalid resource type. Must be one of: "
+                        f"{', '.join(RESOURCE_TYPES)}"
+                    ),
+                )
+            if not isinstance(a_id, int) or not isinstance(b_id, int):
+                raise HTTPException(
+                    status_code=422, detail="a_id and b_id must be integers"
+                )
+            effective_uid = uid or "legacy"
+            try:
+                link_service.link(a_type, a_id, b_type, b_id, effective_uid)
+            except ValueError as e:
+                detail = str(e)
+                if "not found" in detail or "not owned" in detail:
+                    raise HTTPException(status_code=404, detail=detail)
+                raise HTTPException(status_code=422, detail=detail)
+            return {"message": f"Linked {a_type}/{a_id} ↔ {b_type}/{b_id}"}
+
+        @api.delete("/api/links", status_code=204)
+        def remove_link(
+            data: dict[str, Any],
+            current_user: UserContext | None = Depends(_user_dep),
+        ) -> None:
+            uid = current_user.id if current_user is not None else None
+            a_type = data.get("a_type", "")
+            b_type = data.get("b_type", "")
+            a_id = data.get("a_id")
+            b_id = data.get("b_id")
+            if a_type not in RESOURCE_TYPES or b_type not in RESOURCE_TYPES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Invalid resource type. Must be one of: "
+                        f"{', '.join(RESOURCE_TYPES)}"
+                    ),
+                )
+            if not isinstance(a_id, int) or not isinstance(b_id, int):
+                raise HTTPException(
+                    status_code=422, detail="a_id and b_id must be integers"
+                )
+            effective_uid = uid or "legacy"
+            try:
+                link_service.unlink(a_type, a_id, b_type, b_id, effective_uid)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
 
     # ==========================================================
     # Unified Tags Route

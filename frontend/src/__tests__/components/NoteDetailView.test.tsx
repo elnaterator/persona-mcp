@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import NoteDetailView from '../../components/NoteDetailView'
+import NoteDetailView from '../../pages/notes/NoteDetailView'
 import * as api from '../../services/api'
-import type { Note } from '../../types/resume'
+import type { Note } from '../../types'
 
 vi.mock('../../services/api')
 
@@ -31,6 +31,7 @@ function renderView(id = '1') {
 describe('NoteDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(api.listAllTags).mockResolvedValue([])
   })
 
   it('renders note title and content', async () => {

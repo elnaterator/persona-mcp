@@ -81,6 +81,8 @@ def _detect_actual_version(conn) -> int:
     Checked newest-to-oldest; returns the first version whose structural
     marker is present.
     """
+    if _table_exists(conn, "resource_link"):
+        return 10
     if _column_exists(conn, "communication", "contact_ref_id"):
         return 9
     if _table_exists(conn, "contact") and _column_exists(conn, "contact", "user_id"):
@@ -540,6 +542,47 @@ def migrate_v8_to_v9(conn) -> None:
     conn.commit()
 
 
+def migrate_v9_to_v10(conn) -> None:
+    """Add resource_link table for polymorphic cross-resource linking."""
+    conn.execute(
+        """
+        CREATE TABLE resource_link (
+            left_type   TEXT NOT NULL,
+            left_id     INTEGER NOT NULL,
+            right_type  TEXT NOT NULL,
+            right_id    INTEGER NOT NULL,
+            user_id     TEXT NOT NULL,
+            created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (left_type, left_id, right_type, right_id),
+            CONSTRAINT resource_link_no_self CHECK (
+                (left_type, left_id) <> (right_type, right_id)
+            ),
+            CONSTRAINT resource_link_left_type_valid CHECK (
+                left_type IN ('application','accomplishment','resume','note','contact')
+            ),
+            CONSTRAINT resource_link_right_type_valid CHECK (
+                right_type IN ('application','accomplishment','resume','note','contact')
+            ),
+            CONSTRAINT resource_link_canonical CHECK (
+                left_type < right_type
+                OR (left_type = right_type AND left_id < right_id)
+            ),
+            CONSTRAINT fk_resource_link_user FOREIGN KEY (user_id)
+                REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX idx_link_user_left ON resource_link(user_id, left_type, left_id)"
+    )
+    conn.execute(
+        "CREATE INDEX idx_link_user_right "
+        "ON resource_link(user_id, right_type, right_id)"
+    )
+    conn.execute("UPDATE schema_version SET version = %s", (10,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -550,6 +593,7 @@ MIGRATIONS: list = [
     migrate_v6_to_v7,
     migrate_v7_to_v8,
     migrate_v8_to_v9,
+    migrate_v9_to_v10,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)

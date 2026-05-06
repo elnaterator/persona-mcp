@@ -1,0 +1,237 @@
+import { useState, useCallback, useEffect } from 'react'
+import { useParams, useNavigate, Link } from 'react-router'
+import { Pencil, Trash2, Check, X } from 'lucide-react'
+import type { Note } from '../../types'
+import { getNote, updateNote, deleteNote, listAllTags, mapGroupedLinks } from '../../services/api'
+import { TagInput } from '../../components/TagInput'
+import { LinksPanel } from '../../components/LinksPanel'
+import Breadcrumb from '../../components/Breadcrumb'
+import NotFound from '../../components/NotFound'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { StatusMessage } from '../../components/StatusMessage'
+import { SectionCard } from '../../components/SectionCard'
+import { MarkdownContent } from '../../components/MarkdownContent'
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
+import { useResourceDetail } from '../../hooks/useResourceDetail'
+import styles from './NoteDetailView.module.css'
+
+export default function NoteDetailView() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+
+  const numericId = id && /^\d+$/.test(id) ? Number(id) : null
+
+  const [allTags, setAllTags] = useState<string[]>([])
+  const [notFound, setNotFound] = useState(false)
+  const [forbidden, setForbidden] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState<Partial<Note>>({})
+  const [editError, setEditError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [, setDeleting] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const noteFetcher = useCallback(async (strId: string) => {
+    try {
+      return await getNote(Number(strId))
+    } catch (err) {
+      const status = (err as { status?: number })?.status
+      if (status === 404) setNotFound(true)
+      else if (status === 403) setForbidden(true)
+      throw err
+    }
+  }, [])
+
+  const { item: note, setItem: setNote, refresh: reloadNote } = useResourceDetail<Note>(id, noteFetcher)
+
+  useEffect(() => {
+    if (numericId === null) {
+      navigate('/notes', { replace: true })
+      return
+    }
+    listAllTags().then(setAllTags).catch(() => {})
+  }, [numericId, navigate])
+
+  if (numericId === null) return null
+  if (notFound) return <NotFound entityName="Note" backTo="/notes" backLabel="Back to Notes" />
+  if (forbidden) return <NotFound entityName="Note" backTo="/notes" backLabel="Back to Notes" heading="This note isn't yours" message="This note belongs to another account and cannot be accessed." />
+  if (!note) {
+    return <div>Loading...</div>
+  }
+
+  const startEdit = () => {
+    setEditForm({
+      title: note.title,
+      content: note.content,
+      tags: note.tags,
+    })
+    setEditError('')
+    setEditing(true)
+  }
+
+  const handleEditFieldChange = (field: keyof Note, value: string | string[]) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSave = async () => {
+    if (!editForm.title?.trim()) {
+      setEditError('Title is required')
+      return
+    }
+    setSaving(true)
+    setEditError('')
+    try {
+      const updated = await updateNote(numericId, {
+        title: editForm.title.trim(),
+        content: editForm.content,
+        tags: editForm.tags as string[],
+      })
+      setNote(updated)
+      setEditing(false)
+      setStatusMessage({ type: 'success', message: 'Saved' })
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteNote(numericId)
+      navigate('/notes')
+    } catch {
+      setDeleting(false)
+      setConfirmDelete(false)
+      setStatusMessage({ type: 'error', message: 'Failed to delete note' })
+    }
+  }
+
+  return (
+    <div className={styles.container}>
+      <Breadcrumb
+        items={[
+          { label: 'Notes', to: '/notes' },
+          { label: note.title },
+        ]}
+      />
+
+      <div className={styles.topBar}>
+        <Link to="/notes" className={styles.backButton}>Back</Link>
+        {editing ? (
+          <input
+            className={styles.titleInput}
+            type="text"
+            value={editForm.title ?? ''}
+            onChange={(e) => handleEditFieldChange('title', e.target.value)}
+            autoFocus
+          />
+        ) : (
+          <h2 className={styles.topBarTitle}>{note.title}</h2>
+        )}
+        <div className={styles.topBarActions}>
+          {editing ? (
+            <>
+              <button
+                className={styles.saveIconButton}
+                onClick={handleSave}
+                disabled={saving}
+                aria-label="Save note"
+              >
+                <Check size={14} />
+              </button>
+              <button
+                className={styles.cancelIconButton}
+                onClick={() => setEditing(false)}
+                aria-label="Cancel editing"
+              >
+                <X size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button className={styles.editButton} onClick={startEdit} aria-label="Edit note">
+                <Pencil size={14} />
+              </button>
+              <button className={styles.deleteButton} onClick={() => setConfirmDelete(true)} aria-label="Delete note">
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {editError && <p className={styles.formError}>{editError}</p>}
+
+      {statusMessage && (
+        <StatusMessage
+          type={statusMessage.type}
+          message={statusMessage.message}
+          onDismiss={() => setStatusMessage(null)}
+        />
+      )}
+
+      {editing ? (
+        <div className={styles.metaEdit}>
+          <div className={styles.metaField}>
+            <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
+            <TagInput
+              id="edit-tags"
+              value={(editForm.tags as string[]) ?? []}
+              onChange={(tags) => handleEditFieldChange('tags', tags)}
+              availableTags={allTags}
+              allowCreate={true}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className={styles.meta}>
+          {note.tags.length > 0 && (
+            <div className={styles.tagList}>
+              {note.tags.map((tag) => (
+                <span key={tag} className={styles.tagBadge}>{tag}</span>
+              ))}
+            </div>
+          )}
+          {note.updated_at && (
+            <span className={styles.updatedDate}>Updated {new Date(note.updated_at).toLocaleDateString()}</span>
+          )}
+        </div>
+      )}
+
+      <SectionCard>
+        {editing ? (
+          <AutoResizeTextarea
+            className={styles.contentTextarea}
+            value={editForm.content ?? ''}
+            onChange={(value) => handleEditFieldChange('content', value)}
+            placeholder="Write your note here..."
+          />
+        ) : (
+          note.content ? (
+            <MarkdownContent>{note.content}</MarkdownContent>
+          ) : (
+            <p className={styles.placeholderText}>No content yet.</p>
+          )
+        )}
+      </SectionCard>
+
+      <LinksPanel
+        resourceType="note"
+        resourceId={numericId}
+        links={mapGroupedLinks(note.links as Record<string, unknown[]>)}
+        onChange={reloadNote}
+      />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          message="Delete this note? This cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+    </div>
+  )
+}

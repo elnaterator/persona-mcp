@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import AccomplishmentListView from '../../components/AccomplishmentListView'
+import AccomplishmentListView from '../../pages/accomplishments/AccomplishmentListView'
 import * as api from '../../services/api'
-import type { AccomplishmentSummary } from '../../types/resume'
+import type { AccomplishmentSummary } from '../../types'
 
 vi.mock('../../services/api')
 

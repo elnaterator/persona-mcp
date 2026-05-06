@@ -9,9 +9,11 @@ from persona.database import (
     load_accomplishment,
     load_accomplishment_tags,
     load_accomplishments,
+    unlink_all_for,
     update_accomplishment,
 )
 from persona.db import DBConnection
+from persona.link_service import LinkService
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -45,6 +47,7 @@ class AccomplishmentService:
 
     def __init__(self, conn: DBConnection) -> None:
         self._conn = conn
+        self._links = LinkService(conn)
 
     def list_accomplishments(
         self,
@@ -53,7 +56,14 @@ class AccomplishmentService:
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Return AccomplishmentSummary dicts, ordered reverse-chronologically."""
-        return load_accomplishments(self._conn, tags=tags or [], q=q, user_id=user_id)
+        accs = load_accomplishments(self._conn, tags=tags or [], q=q, user_id=user_id)
+        if accs:
+            uid = user_id or "legacy"
+            ids = [a["id"] for a in accs]
+            counts = self._links.count_links("accomplishment", ids, uid)
+            for a in accs:
+                a["link_count"] = counts.get(a["id"], 0)
+        return accs
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
@@ -63,7 +73,11 @@ class AccomplishmentService:
         self, acc_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
         """Return full Accomplishment dict. Raises ValueError if not found."""
-        return load_accomplishment(self._conn, acc_id, user_id=user_id)
+        acc = load_accomplishment(self._conn, acc_id, user_id=user_id)
+        acc["links"] = self._links.list_links(
+            "accomplishment", acc_id, user_id or "legacy"
+        )
+        return acc
 
     def create_accomplishment(
         self, data: dict[str, Any], user_id: str | None = None
@@ -119,4 +133,5 @@ class AccomplishmentService:
         self, acc_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
         """Delete. Raises ValueError if not found."""
+        unlink_all_for(self._conn, "accomplishment", acc_id, user_id or "legacy")
         return delete_accomplishment(self._conn, acc_id, user_id=user_id)

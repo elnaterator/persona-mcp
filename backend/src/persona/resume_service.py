@@ -11,10 +11,12 @@ from persona.database import (
     load_resume_version_tags,
     load_resume_versions,
     set_default_resume_version,
+    unlink_all_for,
     update_resume_version_data,
     update_resume_version_metadata,
 )
 from persona.db import DBConnection
+from persona.link_service import LinkService
 from persona.models import (
     ContactInfo,
     Education,
@@ -49,20 +51,31 @@ class ResumeService:
 
     def __init__(self, conn: DBConnection) -> None:
         self._conn = conn
+        self._links = LinkService(conn)
 
     # --- Version management ---
 
     def list_resumes(self, user_id: str | None = None) -> list[dict[str, Any]]:
         """List all resume versions with metadata."""
-        return load_resume_versions(self._conn, user_id=user_id)
+        resumes = load_resume_versions(self._conn, user_id=user_id)
+        if resumes:
+            uid = user_id or "legacy"
+            ids = [r["id"] for r in resumes]
+            counts = self._links.count_links("resume", ids, uid)
+            for r in resumes:
+                r["link_count"] = counts.get(r["id"], 0)
+        return resumes
 
     def get_resume(
         self, version_id: int | None = None, user_id: str | None = None
     ) -> dict[str, Any]:
         """Get a resume version. If id is None, returns the default."""
         if version_id is None:
-            return load_default_resume_version(self._conn, user_id=user_id)
-        return load_resume_version(self._conn, version_id, user_id=user_id)
+            rv = load_default_resume_version(self._conn, user_id=user_id)
+        else:
+            rv = load_resume_version(self._conn, version_id, user_id=user_id)
+        rv["links"] = self._links.list_links("resume", rv["id"], user_id or "legacy")
+        return rv
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
@@ -101,6 +114,7 @@ class ResumeService:
 
     def delete_resume(self, version_id: int, user_id: str | None = None) -> str:
         """Delete a resume version."""
+        unlink_all_for(self._conn, "resume", version_id, user_id or "legacy")
         label = delete_resume_version(self._conn, version_id, user_id=user_id)
         return f"Deleted resume version '{label}'"
 

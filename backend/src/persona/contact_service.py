@@ -9,9 +9,11 @@ from persona.database import (
     load_contact,
     load_contact_tags,
     load_contacts,
+    unlink_all_for,
     update_contact,
 )
 from persona.db import DBConnection
+from persona.link_service import LinkService
 
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -41,6 +43,7 @@ class ContactService:
 
     def __init__(self, conn: DBConnection) -> None:
         self._conn = conn
+        self._links = LinkService(conn)
 
     def list_contacts(
         self,
@@ -50,7 +53,14 @@ class ContactService:
     ) -> list[dict[str, Any]]:
         """Return ContactSummary dicts, ordered by updated_at DESC."""
         normalized = [t.strip().lower() for t in (tags or []) if t.strip()]
-        return load_contacts(self._conn, tags=normalized, q=q, user_id=user_id)
+        contacts = load_contacts(self._conn, tags=normalized, q=q, user_id=user_id)
+        if contacts:
+            uid = user_id or "legacy"
+            ids = [c["id"] for c in contacts]
+            counts = self._links.count_links("contact", ids, uid)
+            for c in contacts:
+                c["link_count"] = counts.get(c["id"], 0)
+        return contacts
 
     def list_tags(self, user_id: str | None = None) -> list[str]:
         """Return sorted unique tag list for autocomplete."""
@@ -60,7 +70,11 @@ class ContactService:
         self, contact_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
         """Return full Contact dict. Raises ValueError if not found."""
-        return load_contact(self._conn, contact_id, user_id=user_id)
+        contact = load_contact(self._conn, contact_id, user_id=user_id)
+        contact["links"] = self._links.list_links(
+            "contact", contact_id, user_id or "legacy"
+        )
+        return contact
 
     def create_contact(
         self, data: dict[str, Any], user_id: str | None = None
@@ -140,4 +154,5 @@ class ContactService:
         self, contact_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
         """Delete. Raises ValueError if not found."""
+        unlink_all_for(self._conn, "contact", contact_id, user_id or "legacy")
         return delete_contact(self._conn, contact_id, user_id=user_id)

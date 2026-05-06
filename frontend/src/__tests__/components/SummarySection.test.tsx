@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import SummarySection from '../../components/SummarySection';
+import SummarySection from '../../pages/resumes/SummarySection';
 import * as api from '../../services/api';
 
 const testSummary = 'Experienced software engineer with a passion for building scalable applications.';

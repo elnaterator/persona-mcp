@@ -1429,3 +1429,98 @@ def delete_communication(conn: DBConnection, comm_id: int) -> str:
     subject = row["subject"] or "(no subject)"
     conn.execute("DELETE FROM communication WHERE id = %s", (comm_id,))
     return subject
+
+
+# --- Resource Link operations ---
+
+
+def link_insert(
+    conn: DBConnection,
+    left_type: str,
+    left_id: int,
+    right_type: str,
+    right_id: int,
+    user_id: str,
+) -> None:
+    """Insert a canonical resource_link row. No-op if already exists."""
+    conn.execute(
+        "INSERT INTO resource_link (left_type, left_id, right_type, right_id, user_id) "
+        "VALUES (%s, %s, %s, %s, %s) "
+        "ON CONFLICT (left_type, left_id, right_type, right_id) DO NOTHING",
+        (left_type, left_id, right_type, right_id, user_id),
+    )
+
+
+def link_delete(
+    conn: DBConnection,
+    left_type: str,
+    left_id: int,
+    right_type: str,
+    right_id: int,
+    user_id: str,
+) -> None:
+    """Delete a canonical resource_link row."""
+    conn.execute(
+        "DELETE FROM resource_link "
+        "WHERE left_type = %s AND left_id = %s "
+        "AND right_type = %s AND right_id = %s AND user_id = %s",
+        (left_type, left_id, right_type, right_id, user_id),
+    )
+
+
+def links_for_resource(
+    conn: DBConnection,
+    resource_type: str,
+    resource_id: int,
+    user_id: str,
+) -> list[dict[str, Any]]:
+    """Return all (other_type, other_id) linked to this resource for this user."""
+    rows = conn.execute(
+        "SELECT right_type AS other_type, right_id AS other_id "
+        "FROM resource_link "
+        "WHERE user_id = %s AND left_type = %s AND left_id = %s "
+        "UNION ALL "
+        "SELECT left_type AS other_type, left_id AS other_id "
+        "FROM resource_link "
+        "WHERE user_id = %s AND right_type = %s AND right_id = %s",
+        (user_id, resource_type, resource_id, user_id, resource_type, resource_id),
+    ).fetchall()
+    return [{"other_type": r["other_type"], "other_id": r["other_id"]} for r in rows]
+
+
+def link_counts(
+    conn: DBConnection,
+    resource_type: str,
+    resource_ids: list[int],
+    user_id: str,
+) -> dict[int, int]:
+    """Return {resource_id: count} for all linked resources in bulk."""
+    if not resource_ids:
+        return {}
+    rows = conn.execute(
+        "SELECT resource_id, COUNT(*) AS cnt FROM ("
+        "  SELECT left_id AS resource_id FROM resource_link "
+        "  WHERE user_id = %s AND left_type = %s AND left_id = ANY(%s) "
+        "  UNION ALL "
+        "  SELECT right_id AS resource_id FROM resource_link "
+        "  WHERE user_id = %s AND right_type = %s AND right_id = ANY(%s)"
+        ") t GROUP BY resource_id",
+        (user_id, resource_type, resource_ids, user_id, resource_type, resource_ids),
+    ).fetchall()
+    return {r["resource_id"]: r["cnt"] for r in rows}
+
+
+def unlink_all_for(
+    conn: DBConnection,
+    resource_type: str,
+    resource_id: int,
+    user_id: str,
+) -> None:
+    """Delete all resource_link rows for this resource (both directions)."""
+    conn.execute(
+        "DELETE FROM resource_link "
+        "WHERE user_id = %s "
+        "AND ((left_type = %s AND left_id = %s) "
+        "OR (right_type = %s AND right_id = %s))",
+        (user_id, resource_type, resource_id, resource_type, resource_id),
+    )

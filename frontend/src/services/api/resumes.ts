@@ -1,0 +1,285 @@
+/**
+ * Resume and resume version API endpoints.
+ */
+
+import type {
+  Resume,
+  ContactInfo,
+  WorkExperience,
+  Education,
+  Skill,
+  ResumeVersion,
+  ResumeVersionSummary,
+  ApiSuccessResponse,
+} from '../../types'
+import { API_BASE, fetchWithErrorHandling, handleResponse } from './client'
+
+/**
+ * Get the full resume
+ */
+export async function getResume(): Promise<Resume> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resume`)
+  return handleResponse<Resume>(response)
+}
+
+/**
+ * Get a specific section of the resume
+ */
+export async function getSection(
+  section: 'contact' | 'summary' | 'experience' | 'education' | 'skills'
+): Promise<ContactInfo | string | WorkExperience[] | Education[] | Skill[]> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resume/${section}`)
+  return handleResponse(response)
+}
+
+/**
+ * Update resume contact information
+ */
+export async function updateResumeContact(
+  data: Partial<ContactInfo>
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resume/contact`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update summary text
+ */
+export async function updateSummary(text: string): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resume/summary`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text }),
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Add a new entry to a list-based section
+ */
+export async function addEntry(
+  section: 'experience' | 'education' | 'skills',
+  data: WorkExperience | Education | Skill
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resume/${section}/entries`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update an existing entry in a list-based section
+ */
+export async function updateEntry(
+  section: 'experience' | 'education' | 'skills',
+  index: number,
+  data: Partial<WorkExperience | Education | Skill>
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resume/${section}/entries/${index}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Remove an entry from a list-based section
+ */
+export async function removeEntry(
+  section: 'experience' | 'education' | 'skills',
+  index: number
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resume/${section}/entries/${index}`,
+    {
+      method: 'DELETE',
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+// ─── Resume version API ───────────────────────────────────────────────────────
+
+/**
+ * List all resume versions (summaries without full resume data)
+ */
+export async function listResumes(): Promise<ResumeVersionSummary[]> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes`)
+  return handleResponse<ResumeVersionSummary[]>(response)
+}
+
+/**
+ * Get a single resume version by ID (includes full resume_data)
+ */
+export async function getResumeVersion(id: number): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`)
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Get the default resume version
+ */
+export async function getDefaultResume(): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/default`)
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Create a new resume version by cloning the current default
+ */
+export async function createResume(label: string): Promise<ResumeVersion> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label }),
+  })
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Delete a resume version
+ */
+export async function deleteResume(id: number): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`, {
+    method: 'DELETE',
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Set a resume version as the default
+ */
+export async function setDefaultResume(id: number): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}/default`, {
+    method: 'POST',
+  })
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update the label and/or tags of a resume version
+ */
+export async function updateResumeLabel(
+  id: number,
+  label: string,
+  tags?: string[]
+): Promise<ResumeVersion> {
+  const body: Record<string, unknown> = { label }
+  if (tags !== undefined) body.tags = tags
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<ResumeVersion>(response)
+}
+
+/**
+ * Update contact info for a specific resume version
+ */
+export async function updateVersionContact(
+  versionId: number,
+  data: Partial<ContactInfo>
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/contact`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update summary for a specific resume version
+ */
+export async function updateVersionSummary(
+  versionId: number,
+  text: string
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/summary`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Add an entry to a version-scoped section
+ */
+export async function addVersionEntry(
+  versionId: number,
+  section: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/${section}/entries`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Update an entry in a version-scoped section
+ */
+export async function updateVersionEntry(
+  versionId: number,
+  section: string,
+  index: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/${section}/entries/${index}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
+
+/**
+ * Remove an entry from a version-scoped section
+ */
+export async function removeVersionEntry(
+  versionId: number,
+  section: string,
+  index: number
+): Promise<ApiSuccessResponse> {
+  const response = await fetchWithErrorHandling(
+    `${API_BASE}/resumes/${versionId}/${section}/entries/${index}`,
+    { method: 'DELETE' }
+  )
+  return handleResponse<ApiSuccessResponse>(response)
+}
