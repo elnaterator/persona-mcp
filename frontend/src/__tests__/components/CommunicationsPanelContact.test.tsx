@@ -20,11 +20,11 @@ const mockComm: Communication = {
   created_at: '2025-04-01T00:00:00Z',
 }
 
-function renderPanel(parentType: 'application' | 'contact' = 'contact', parentId = 42) {
-  return render(<CommunicationsPanel parentType={parentType} parentId={parentId} />)
+function renderPanel(contactId = 42) {
+  return render(<CommunicationsPanel contactId={contactId} />)
 }
 
-describe('CommunicationsPanel (parentType=contact)', () => {
+describe('CommunicationsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.listAllTags).mockResolvedValue(['outreach', 'followup'])
@@ -92,23 +92,6 @@ describe('CommunicationsPanel (parentType=contact)', () => {
 
     await waitFor(() => {
       expect(api.removeContactCommunication).toHaveBeenCalledWith(42, 1)
-    })
-  })
-})
-
-describe('CommunicationsPanel (parentType=application)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(api.listAllTags).mockResolvedValue([])
-    vi.mocked(api.listCommunications).mockResolvedValue([
-      { ...mockComm, app_id: 99, contact_ref_id: undefined },
-    ])
-  })
-
-  it('calls listCommunications for application parent', async () => {
-    renderPanel('application', 99)
-    await waitFor(() => {
-      expect(api.listCommunications).toHaveBeenCalledWith(99)
     })
   })
 })

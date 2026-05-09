@@ -295,14 +295,12 @@ def register_contact_tools(
     def search_communications(
         q: str | None = None,
         tag: str | None = None,
-        parent: str | None = None,
     ) -> list[dict[str, Any]] | str:
-        """Search communications across all applications and contacts.
+        """Search communications across all networking contacts.
 
         Args:
             q: Substring search on subject, body, contact name.
-            tag: Filter by exact tag (AND logic if called multiple times via list).
-            parent: Filter by parent type: 'application', 'contact', or omit for all.
+            tag: Filter by exact tag.
         """
         user_id = require_user_id()
         svc: ContactCommunicationService = get_comm_service()
@@ -310,7 +308,6 @@ def register_contact_tools(
             return svc.search(
                 q=q,
                 tags=[tag] if tag else None,
-                parent=parent,
                 user_id=user_id,
             )
         except ValueError as e:

@@ -32,14 +32,3 @@ export interface ApplicationSummary {
   updated_at: string
   link_count?: number
 }
-
-export interface ApplicationContact {
-  id: number
-  app_id: number
-  name: string
-  role: string | null
-  email: string | null
-  phone: string | null
-  notes: string
-  created_at: string
-}

@@ -17,7 +17,7 @@ export type {
   ResumeVersion,
   ResumeVersionSummary,
 } from './resume'
-export type { Application, ApplicationSummary, ApplicationContact } from './application'
+export type { Application, ApplicationSummary } from './application'
 export type { Accomplishment, AccomplishmentSummary } from './accomplishment'
 export type { Note, NoteSummary } from './note'
 export type { Contact, ContactSummary } from './contact'

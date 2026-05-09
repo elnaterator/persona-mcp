@@ -57,17 +57,17 @@ _VALID = {
 }
 
 
-class TestCheckConstraint:
-    def test_check_constraint_exists(self, db_conn: Connection[Any]) -> None:
-        """communication_parent_xor CHECK constraint is present in schema."""
+class TestContactRefIdNotNull:
+    def test_contact_ref_id_is_not_null(self, db_conn: Connection[Any]) -> None:
+        """communication.contact_ref_id is NOT NULL after v11 migration."""
         row = db_conn.execute(
-            "SELECT 1 FROM information_schema.table_constraints "
-            "WHERE table_name = 'communication' "
-            "AND constraint_name = 'communication_parent_xor'"
+            "SELECT is_nullable FROM information_schema.columns "
+            "WHERE table_name = 'communication' AND column_name = 'contact_ref_id'"
         ).fetchone()
         assert row is not None
+        assert row["is_nullable"] == "NO"
 
-    def test_both_null_violates_check(self, db_conn: Connection[Any]) -> None:
+    def test_null_contact_ref_id_rejected(self, db_conn: Connection[Any]) -> None:
         with pytest.raises(Exception):
             db_conn.execute(
                 "INSERT INTO communication "

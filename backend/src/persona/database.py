@@ -508,93 +508,6 @@ def delete_application(
     return app
 
 
-# --- Application Contact operations ---
-
-
-def create_app_contact(
-    conn: DBConnection, app_id: int, data: dict[str, Any]
-) -> dict[str, Any]:
-    """Create a contact for an application."""
-    load_application(conn, app_id)
-
-    row = conn.execute(
-        "INSERT INTO application_contact "
-        "(app_id, name, role, email, phone, notes) "
-        "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
-        (
-            app_id,
-            data["name"],
-            data.get("role"),
-            data.get("email"),
-            data.get("phone"),
-            data.get("notes", ""),
-        ),
-    ).fetchone()
-    result_row = conn.execute(
-        "SELECT * FROM application_contact WHERE id = %s",
-        (row["id"],),
-    ).fetchone()
-    return dict(result_row)
-
-
-def load_app_contacts(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
-    """Load all contacts for an application."""
-    rows = conn.execute(
-        "SELECT * FROM application_contact WHERE app_id = %s ORDER BY id",
-        (app_id,),
-    ).fetchall()
-    return [dict(row) for row in rows]
-
-
-def update_app_contact(
-    conn: DBConnection, contact_id: int, data: dict[str, Any]
-) -> dict[str, Any]:
-    """Update an application contact. Returns updated contact."""
-    row = conn.execute(
-        "SELECT * FROM application_contact WHERE id = %s",
-        (contact_id,),
-    ).fetchone()
-    if row is None:
-        raise ValueError(f"Contact {contact_id} not found")
-
-    updatable = ("name", "role", "email", "phone", "notes")
-    sets: list[str] = []
-    params: list[Any] = []
-    for field in updatable:
-        if field in data:
-            sets.append(f"{field} = %s")
-            params.append(data[field])
-
-    if not sets:
-        return dict(row)
-
-    params.append(contact_id)
-    conn.execute(
-        f"UPDATE application_contact SET {', '.join(sets)} WHERE id = %s",
-        params,
-    )
-    return dict(
-        conn.execute(
-            "SELECT * FROM application_contact WHERE id = %s",
-            (contact_id,),
-        ).fetchone()
-    )
-
-
-def delete_app_contact(conn: DBConnection, contact_id: int) -> str:
-    """Delete an application contact. Returns contact name."""
-    row = conn.execute(
-        "SELECT * FROM application_contact WHERE id = %s",
-        (contact_id,),
-    ).fetchone()
-    if row is None:
-        raise ValueError(f"Contact {contact_id} not found")
-
-    name = row["name"]
-    conn.execute("DELETE FROM application_contact WHERE id = %s", (contact_id,))
-    return name
-
-
 # --- Communication operations ---
 
 
@@ -603,47 +516,6 @@ def _row_to_communication(row: Any) -> dict[str, Any]:
     d = dict(row)
     d["tags"] = json.loads(d.get("tags", "[]"))
     return d
-
-
-def create_communication(
-    conn: DBConnection, app_id: int, data: dict[str, Any]
-) -> dict[str, Any]:
-    """Create a communication. Auto-populates contact_name from contact_id."""
-    load_application(conn, app_id)
-
-    contact_name = data.get("contact_name")
-    contact_id = data.get("contact_id")
-    if contact_id is not None:
-        contact_row = conn.execute(
-            "SELECT name FROM application_contact WHERE id = %s",
-            (contact_id,),
-        ).fetchone()
-        if contact_row:
-            contact_name = contact_row["name"]
-
-    row = conn.execute(
-        "INSERT INTO communication "
-        "(app_id, contact_id, contact_name, type, direction, "
-        "subject, body, date, status, tags) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-        (
-            app_id,
-            contact_id,
-            contact_name,
-            data["type"],
-            data["direction"],
-            data.get("subject", ""),
-            data["body"],
-            data["date"],
-            data.get("status", "sent"),
-            json.dumps(data.get("tags", [])),
-        ),
-    ).fetchone()
-    result_row = conn.execute(
-        "SELECT * FROM communication WHERE id = %s",
-        (row["id"],),
-    ).fetchone()
-    return _row_to_communication(result_row)
 
 
 def create_contact_communication(
@@ -687,15 +559,6 @@ def create_contact_communication(
     return _row_to_communication(result_row)
 
 
-def load_communications(conn: DBConnection, app_id: int) -> list[dict[str, Any]]:
-    """Load communications for an application, sorted by date desc."""
-    rows = conn.execute(
-        "SELECT * FROM communication WHERE app_id = %s ORDER BY date DESC, id DESC",
-        (app_id,),
-    ).fetchall()
-    return [_row_to_communication(row) for row in rows]
-
-
 def load_contact_communications(
     conn: DBConnection, contact_id: int
 ) -> list[dict[str, Any]]:
@@ -718,15 +581,7 @@ def update_communication(
     if row is None:
         raise ValueError(f"Communication {comm_id} not found")
 
-    updatable = (
-        "contact_id",
-        "type",
-        "direction",
-        "subject",
-        "body",
-        "date",
-        "status",
-    )
+    updatable = ("type", "direction", "subject", "body", "date", "status")
     sets: list[str] = []
     params: list[Any] = []
     for field in updatable:
@@ -737,15 +592,6 @@ def update_communication(
     if "tags" in data:
         sets.append("tags = %s")
         params.append(json.dumps(data["tags"]))
-
-    if "contact_id" in data and data["contact_id"] is not None:
-        contact_row = conn.execute(
-            "SELECT name FROM application_contact WHERE id = %s",
-            (data["contact_id"],),
-        ).fetchone()
-        if contact_row:
-            sets.append("contact_name = %s")
-            params.append(contact_row["name"])
 
     if not sets:
         return _row_to_communication(row)
@@ -765,21 +611,16 @@ def delete_communication_owned(
 ) -> str:
     """Delete a communication with ownership check. Returns subject."""
     row = conn.execute(
-        "SELECT c.*, a.user_id AS app_user_id, ct.user_id AS contact_user_id "
+        "SELECT c.*, ct.user_id AS contact_user_id "
         "FROM communication c "
-        "LEFT JOIN application a ON c.app_id = a.id "
-        "LEFT JOIN contact ct ON c.contact_ref_id = ct.id "
+        "JOIN contact ct ON c.contact_ref_id = ct.id "
         "WHERE c.id = %s",
         (comm_id,),
     ).fetchone()
     if row is None:
         raise ValueError(f"Communication {comm_id} not found")
-    if user_id is not None:
-        owner_id = row["app_user_id"] or row["contact_user_id"]
-        if owner_id != user_id:
-            raise PermissionError(
-                f"Communication {comm_id} belongs to a different user"
-            )
+    if user_id is not None and row["contact_user_id"] != user_id:
+        raise PermissionError(f"Communication {comm_id} belongs to a different user")
     subject = row["subject"] or "(no subject)"
     conn.execute("DELETE FROM communication WHERE id = %s", (comm_id,))
     return subject
@@ -789,41 +630,29 @@ def search_communications(
     conn: DBConnection,
     q: str | None = None,
     tags: list[str] | None = None,
-    parent: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Search communications across application and contact parents."""
+    """Search communications attached to networking contacts."""
     query = (
-        "SELECT c.id, c.app_id, c.contact_ref_id, c.contact_id, c.contact_name, "
-        "c.type, c.direction, c.subject, c.body, c.date, c.status, c.tags, "
-        "c.created_at, "
-        "CASE WHEN c.app_id IS NOT NULL THEN 'application' ELSE 'contact' END "
-        "  AS parent_type, "
-        "COALESCE(c.app_id, c.contact_ref_id) AS parent_id, "
-        "COALESCE(a.company || ' – ' || a.position, ct.name) AS parent_name "
+        "SELECT c.id, c.contact_ref_id, c.type, c.direction, c.subject, "
+        "c.body, c.date, c.status, c.tags, c.created_at, "
+        "'contact' AS parent_type, "
+        "c.contact_ref_id AS parent_id, "
+        "ct.name AS parent_name "
         "FROM communication c "
-        "LEFT JOIN application a ON c.app_id = a.id "
-        "LEFT JOIN contact ct ON c.contact_ref_id = ct.id"
+        "JOIN contact ct ON c.contact_ref_id = ct.id"
     )
     conditions: list[str] = []
     params: list[Any] = []
 
     if user_id is not None:
-        conditions.append("(a.user_id = %s OR ct.user_id = %s)")
-        params.extend([user_id, user_id])
-
-    if parent == "application":
-        conditions.append("c.app_id IS NOT NULL")
-    elif parent == "contact":
-        conditions.append("c.contact_ref_id IS NOT NULL")
+        conditions.append("ct.user_id = %s")
+        params.append(user_id)
 
     if q:
         pattern = f"%{q}%"
-        conditions.append(
-            "(c.subject ILIKE %s OR c.body ILIKE %s "
-            "OR c.contact_name ILIKE %s OR ct.name ILIKE %s)"
-        )
-        params.extend([pattern, pattern, pattern, pattern])
+        conditions.append("(c.subject ILIKE %s OR c.body ILIKE %s OR ct.name ILIKE %s)")
+        params.extend([pattern, pattern, pattern])
 
     for tag in tags or []:
         conditions.append("c.tags ILIKE %s")
@@ -851,10 +680,9 @@ def load_communication_tags(
     if user_id is not None:
         rows = conn.execute(
             "SELECT c.tags FROM communication c "
-            "LEFT JOIN application a ON c.app_id = a.id "
-            "LEFT JOIN contact ct ON c.contact_ref_id = ct.id "
-            "WHERE (a.user_id = %s OR ct.user_id = %s)",
-            (user_id, user_id),
+            "JOIN contact ct ON c.contact_ref_id = ct.id "
+            "WHERE ct.user_id = %s",
+            (user_id,),
         ).fetchall()
     else:
         rows = conn.execute("SELECT tags FROM communication").fetchall()
@@ -1416,19 +1244,6 @@ def load_contact_tags(
         tags = json.loads(row["tags"])
         all_tags.update(tags)
     return sorted(all_tags)
-
-
-def delete_communication(conn: DBConnection, comm_id: int) -> str:
-    """Delete a communication. Returns its subject."""
-    row = conn.execute(
-        "SELECT * FROM communication WHERE id = %s", (comm_id,)
-    ).fetchone()
-    if row is None:
-        raise ValueError(f"Communication {comm_id} not found")
-
-    subject = row["subject"] or "(no subject)"
-    conn.execute("DELETE FROM communication WHERE id = %s", (comm_id,))
-    return subject
 
 
 # --- Resource Link operations ---

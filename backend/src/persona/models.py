@@ -163,18 +163,6 @@ class ApplicationSummary(BaseModel):
     link_count: int = 0
 
 
-class ApplicationContact(BaseModel):
-    """A contact associated with a job application."""
-
-    id: int
-    app_id: int
-    name: str
-    role: str | None = None
-    email: str | None = None
-    phone: str | None = None
-    notes: str = ""
-
-
 class Accomplishment(BaseModel):
     """A career accomplishment in STAR format."""
 
@@ -281,13 +269,10 @@ class ContactSummary(BaseModel):
 
 
 class Communication(BaseModel):
-    """A communication entry attached to an application or contact."""
+    """A communication entry attached to a networking contact."""
 
     id: int
-    app_id: int | None = None
-    contact_ref_id: int | None = None
-    contact_id: int | None = None
-    contact_name: str | None = None
+    contact_ref_id: int
     type: str
     direction: str
     subject: str = ""
@@ -330,9 +315,7 @@ class CommunicationSearchResult(BaseModel):
     parent_type: str
     parent_id: int
     parent_name: str
-    app_id: int | None = None
-    contact_ref_id: int | None = None
-    contact_name: str | None = None
+    contact_ref_id: int
     type: str
     direction: str
     subject: str = ""
