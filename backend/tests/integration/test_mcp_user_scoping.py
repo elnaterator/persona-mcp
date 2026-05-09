@@ -314,9 +314,9 @@ class TestDefaultResumeFallbackRemoved:
 
 
 class TestApplicationContextUserScoping:
-    """get_application_context must pass user_id to resume lookups."""
+    """get_application_context must enforce ownership."""
 
-    def test_context_uses_user_scoped_default_resume(
+    def test_context_returns_own_application(
         self, two_user_db: Connection[Any]
     ) -> None:
         from persona.application_service import ApplicationService
@@ -327,8 +327,9 @@ class TestApplicationContextUserScoping:
         )
         context = svc.get_application_context(app["id"], user_id="user_alice")
 
-        assert context["default_resume"] is not None
-        assert context["default_resume"]["label"] == "Alice CV"
+        assert context["application"]["id"] == app["id"]
+        assert context["application"]["company"] == "AliceCo"
+        assert "linked" in context
 
     def test_context_rejects_cross_user_app(self, two_user_db: Connection[Any]) -> None:
         from persona.application_service import ApplicationService

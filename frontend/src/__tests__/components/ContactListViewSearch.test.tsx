@@ -96,14 +96,4 @@ describe('ContactListView — communication search panel', () => {
     )
   })
 
-  it('parent filter buttons are rendered', async () => {
-    const user = userEvent.setup()
-    renderView()
-    await waitFor(() => expect(screen.getByText(/Search Communications/i)).toBeInTheDocument())
-    await user.click(screen.getByText(/Search Communications/i))
-
-    expect(screen.getByRole('button', { name: /^All$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Applications/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Contacts/i })).toBeInTheDocument()
-  })
 })

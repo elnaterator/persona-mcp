@@ -2,10 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import type { Communication } from '../types'
 import {
-  listCommunications,
-  addCommunication,
-  updateCommunication,
-  removeCommunication,
   listContactCommunications,
   addContactCommunication,
   updateContactCommunication,
@@ -32,8 +28,7 @@ const STATUS_CLASS: Record<string, string> = {
 }
 
 export interface CommunicationsPanelProps {
-  parentType: 'application' | 'contact'
-  parentId: number
+  contactId: number
   initialExpandId?: number
 }
 
@@ -59,7 +54,7 @@ const emptyForm: CommForm = {
   tags: [],
 }
 
-export default function CommunicationsPanel({ parentType, parentId, initialExpandId }: CommunicationsPanelProps) {
+export default function CommunicationsPanel({ contactId, initialExpandId }: CommunicationsPanelProps) {
   const [communications, setCommunications] = useState<Communication[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
@@ -82,9 +77,7 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
   const load = useCallback(async () => {
     try {
       const [data, tags] = await Promise.all([
-        parentType === 'application'
-          ? listCommunications(parentId)
-          : listContactCommunications(parentId),
+        listContactCommunications(contactId),
         listAllTags(),
       ])
       const sorted = [...data].sort(
@@ -104,7 +97,7 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to load communications'
       setStatusMessage({ type: 'error', message: msg })
     }
-  }, [parentType, parentId, initialExpandId])
+  }, [contactId, initialExpandId])
 
   useEffect(() => {
     load()
@@ -123,11 +116,7 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
         status: form.status,
         tags: form.tags,
       }
-      if (parentType === 'application') {
-        await addCommunication(parentId, payload)
-      } else {
-        await addContactCommunication(parentId, payload)
-      }
+      await addContactCommunication(contactId, payload)
       setForm(emptyForm)
       setShowAddForm(false)
       setStatusMessage({ type: 'success', message: 'Communication added' })
@@ -168,11 +157,7 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
         status: form.status,
         tags: form.tags,
       }
-      if (parentType === 'application') {
-        await updateCommunication(parentId, editTarget.id, payload)
-      } else {
-        await updateContactCommunication(parentId, editTarget.id, payload)
-      }
+      await updateContactCommunication(contactId, editTarget.id, payload)
       setEditTarget(null)
       setForm(emptyForm)
       setStatusMessage({ type: 'success', message: 'Communication updated' })
@@ -188,11 +173,7 @@ export default function CommunicationsPanel({ parentType, parentId, initialExpan
   const handleDelete = async () => {
     if (deleteTarget === null) return
     try {
-      if (parentType === 'application') {
-        await removeCommunication(parentId, deleteTarget)
-      } else {
-        await removeContactCommunication(parentId, deleteTarget)
-      }
+      await removeContactCommunication(contactId, deleteTarget)
       setDeleteTarget(null)
       setStatusMessage({ type: 'success', message: 'Communication removed' })
       await load()

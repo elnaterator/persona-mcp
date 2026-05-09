@@ -33,8 +33,6 @@ const EMPTY_FORM: FormState = {
   tags: [],
 }
 
-type ParentFilter = 'all' | 'application' | 'contact'
-
 export default function ContactListView() {
   const navigate = useNavigate()
   const [allTags, setAllTags] = useState<string[]>([])
@@ -49,7 +47,6 @@ export default function ContactListView() {
   const [showCommSearch, setShowCommSearch] = useState(false)
   const [commQ, setCommQ] = useState('')
   const [commTags, setCommTags] = useState<string[]>([])
-  const [commParent, setCommParent] = useState<ParentFilter>('all')
   const [commResults, setCommResults] = useState<CommunicationSearchResult[]>([])
   const [commSearching, setCommSearching] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -65,7 +62,7 @@ export default function ContactListView() {
 
   const { items: contacts, refresh: loadData } = useResourceList<ContactSummary>(fetcher)
 
-  const runCommSearch = useCallback(async (q: string, tags: string[], parent: ParentFilter) => {
+  const runCommSearch = useCallback(async (q: string, tags: string[]) => {
     if (!q && tags.length === 0) {
       setCommResults([])
       return
@@ -75,7 +72,6 @@ export default function ContactListView() {
       const results = await searchCommunications({
         q: q || undefined,
         tags: tags.length ? tags : undefined,
-        parent: parent === 'all' ? undefined : parent,
       })
       setCommResults(results)
     } catch {
@@ -89,12 +85,12 @@ export default function ContactListView() {
     if (!showCommSearch) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      runCommSearch(commQ, commTags, commParent)
+      runCommSearch(commQ, commTags)
     }, 300)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [commQ, commTags, commParent, showCommSearch, runCommSearch])
+  }, [commQ, commTags, showCommSearch, runCommSearch])
 
   const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -126,11 +122,7 @@ export default function ContactListView() {
   }
 
   const handleCommResultClick = (result: CommunicationSearchResult) => {
-    const path =
-      result.parentType === 'application'
-        ? `/applications/${result.parentId}`
-        : `/contacts/${result.parentId}`
-    navigate(path, { state: { expandCommId: result.id } })
+    navigate(`/contacts/${result.parentId}`, { state: { expandCommId: result.id } })
   }
 
   return (
@@ -261,17 +253,6 @@ export default function ContactListView() {
                 onChange={(e) => setCommQ(e.target.value)}
                 placeholder="Search subject, body, contact..."
               />
-              <div className={styles.parentToggle}>
-                {(['all', 'application', 'contact'] as ParentFilter[]).map((p) => (
-                  <button
-                    key={p}
-                    className={`${styles.parentBtn} ${commParent === p ? styles.parentBtnActive : ''}`}
-                    onClick={() => setCommParent(p)}
-                  >
-                    {p === 'all' ? 'All' : p === 'application' ? 'Applications' : 'Contacts'}
-                  </button>
-                ))}
-              </div>
             </div>
             <TagInput
               value={commTags}
@@ -295,9 +276,6 @@ export default function ContactListView() {
                       <span className={styles.commResultDate}>{r.date.slice(0, 10)}</span>
                       <span className={styles.commResultType}>{r.type}</span>
                       <span className={styles.commResultDir}>{r.direction}</span>
-                      <span className={`${styles.parentBadge} ${styles[`parent_${r.parentType}`]}`}>
-                        {r.parentType}
-                      </span>
                     </div>
                     <div className={styles.commResultParent}>{r.parentName}</div>
                     {r.subject && <div className={styles.commResultSubject}>{r.subject}</div>}

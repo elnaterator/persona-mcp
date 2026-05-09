@@ -139,10 +139,9 @@ class ContactCommunicationService:
         self,
         q: str | None = None,
         tags: list[str] | None = None,
-        parent: str | None = None,
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         normalized_tags = [t.strip().lower() for t in (tags or []) if t.strip()]
         return search_communications(
-            self._conn, q=q, tags=normalized_tags, parent=parent, user_id=user_id
+            self._conn, q=q, tags=normalized_tags, user_id=user_id
         )

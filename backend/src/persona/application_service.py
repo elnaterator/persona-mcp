@@ -3,23 +3,13 @@
 from typing import Any
 
 from persona.database import (
-    create_app_contact,
     create_application,
-    create_communication,
-    delete_app_contact,
     delete_application,
-    delete_communication,
-    load_app_contacts,
     load_application,
     load_application_tags,
     load_applications,
-    load_communications,
-    load_default_resume_version,
-    load_resume_version,
     unlink_all_for,
-    update_app_contact,
     update_application,
-    update_communication,
 )
 from persona.db import DBConnection
 from persona.link_service import LinkService
@@ -119,83 +109,15 @@ class ApplicationService:
         unlink_all_for(self._conn, "application", app_id, user_id or "legacy")
         return delete_application(self._conn, app_id, user_id=user_id)
 
-    # --- Contact CRUD ---
-
-    def add_contact(self, app_id: int, data: dict[str, Any]) -> dict[str, Any]:
-        """Add a contact to an application."""
-        if not data.get("name"):
-            raise ValueError("Contact name is required")
-        return create_app_contact(self._conn, app_id, data)
-
-    def list_contacts(self, app_id: int) -> list[dict[str, Any]]:
-        """List contacts for an application."""
-        return load_app_contacts(self._conn, app_id)
-
-    def update_contact(self, contact_id: int, data: dict[str, Any]) -> dict[str, Any]:
-        """Update a contact."""
-        return update_app_contact(self._conn, contact_id, data)
-
-    def remove_contact(self, contact_id: int) -> str:
-        """Remove a contact. Returns contact name."""
-        return delete_app_contact(self._conn, contact_id)
-
-    # --- Communication CRUD ---
-
-    def add_communication(self, app_id: int, data: dict[str, Any]) -> dict[str, Any]:
-        """Add a communication to an application."""
-        if not data.get("type"):
-            raise ValueError("Communication type is required")
-        if not data.get("direction"):
-            raise ValueError("Communication direction is required")
-        if not data.get("body"):
-            raise ValueError("Communication body is required")
-        if not data.get("date"):
-            raise ValueError("Communication date is required")
-        return create_communication(self._conn, app_id, data)
-
-    def list_communications(self, app_id: int) -> list[dict[str, Any]]:
-        """List communications for an application."""
-        return load_communications(self._conn, app_id)
-
-    def update_communication(
-        self, comm_id: int, data: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Update a communication."""
-        return update_communication(self._conn, comm_id, data)
-
-    def remove_communication(self, comm_id: int) -> str:
-        """Remove a communication. Returns subject."""
-        return delete_communication(self._conn, comm_id)
-
     # --- Context (AI composite) ---
 
     def get_application_context(
         self, app_id: int, user_id: str | None = None
     ) -> dict[str, Any]:
-        """Get full context for AI-assisted operations."""
-        app = load_application(self._conn, app_id, user_id=user_id)
-        contacts = load_app_contacts(self._conn, app_id)
-        communications = load_communications(self._conn, app_id)
+        """Get full context for AI-assisted operations.
 
-        resume_version = None
-        if app.get("resume_version_id"):
-            try:
-                resume_version = load_resume_version(
-                    self._conn, app["resume_version_id"], user_id=user_id
-                )
-            except ValueError:
-                pass
-
-        default_resume = None
-        try:
-            default_resume = load_default_resume_version(self._conn, user_id=user_id)
-        except ValueError:
-            pass
-
-        return {
-            "application": app,
-            "contacts": contacts,
-            "communications": communications,
-            "resume_version": resume_version,
-            "default_resume": default_resume,
-        }
+        Returns the application plus everything linked to it via the
+        cross-resource links registry, grouped by type.
+        """
+        app = self.get_application(app_id, user_id=user_id)
+        return {"application": app, "linked": app["links"]}

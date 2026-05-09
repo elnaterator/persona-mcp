@@ -190,173 +190,6 @@ class TestApplicationServiceDelete:
             svc.delete_application(9999)
 
 
-class TestApplicationServiceContacts:
-    """Tests for ApplicationService contact operations."""
-
-    def test_add_contact_requires_name(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        with pytest.raises(ValueError, match="name is required"):
-            svc.add_contact(created["id"], {"role": "HR"})
-
-    def test_add_contact_returns_contact(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        contact = svc.add_contact(
-            created["id"],
-            {"name": "Alice", "email": "alice@corp.com"},
-        )
-
-        assert contact["name"] == "Alice"
-        assert contact["email"] == "alice@corp.com"
-        assert contact["app_id"] == created["id"]
-
-    def test_list_contacts(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        svc.add_contact(created["id"], {"name": "Alice"})
-        svc.add_contact(created["id"], {"name": "Bob"})
-        contacts = svc.list_contacts(created["id"])
-
-        assert len(contacts) == 2
-
-    def test_update_contact(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        contact = svc.add_contact(created["id"], {"name": "Alice"})
-        updated = svc.update_contact(contact["id"], {"role": "Engineering Manager"})
-
-        assert updated["role"] == "Engineering Manager"
-        assert updated["name"] == "Alice"
-
-    def test_remove_contact(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        contact = svc.add_contact(created["id"], {"name": "Alice"})
-        name = svc.remove_contact(contact["id"])
-
-        assert name == "Alice"
-        contacts = svc.list_contacts(created["id"])
-        assert len(contacts) == 0
-
-
-class TestApplicationServiceCommunications:
-    """Tests for ApplicationService communication operations."""
-
-    def test_add_communication_requires_type(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        with pytest.raises(ValueError, match="type is required"):
-            svc.add_communication(
-                created["id"],
-                {"direction": "sent", "body": "Hello", "date": "2024-01-01"},
-            )
-
-    def test_add_communication_requires_body(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        with pytest.raises(ValueError, match="body is required"):
-            svc.add_communication(
-                created["id"],
-                {"type": "email", "direction": "sent", "date": "2024-01-01"},
-            )
-
-    def test_add_communication_returns_record(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        comm = svc.add_communication(
-            created["id"],
-            {
-                "type": "email",
-                "direction": "sent",
-                "body": "Applying for the role.",
-                "date": "2024-01-01",
-                "subject": "Application",
-            },
-        )
-
-        assert comm["id"] is not None
-        assert comm["type"] == "email"
-        assert comm["subject"] == "Application"
-
-    def test_list_communications(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        svc.add_communication(
-            created["id"],
-            {"type": "email", "direction": "sent", "body": "A", "date": "2024-01-01"},
-        )
-        svc.add_communication(
-            created["id"],
-            {
-                "type": "phone",
-                "direction": "received",
-                "body": "B",
-                "date": "2024-02-01",
-            },
-        )
-        comms = svc.list_communications(created["id"])
-
-        assert len(comms) == 2
-
-    def test_update_communication(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        comm = svc.add_communication(
-            created["id"],
-            {
-                "type": "email",
-                "direction": "sent",
-                "body": "Draft",
-                "date": "2024-01-01",
-            },
-        )
-        updated = svc.update_communication(comm["id"], {"status": "draft"})
-
-        assert updated["status"] == "draft"
-
-    def test_remove_communication(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        comm = svc.add_communication(
-            created["id"],
-            {
-                "type": "email",
-                "direction": "sent",
-                "body": "Hello",
-                "date": "2024-01-01",
-                "subject": "Greetings",
-            },
-        )
-        subject = svc.remove_communication(comm["id"])
-
-        assert subject == "Greetings"
-        comms = svc.list_communications(created["id"])
-        assert len(comms) == 0
-
-
 class TestApplicationServiceContext:
     """Tests for ApplicationService.get_application_context."""
 
@@ -365,18 +198,10 @@ class TestApplicationServiceContext:
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
-        svc.add_contact(created["id"], {"name": "Alice"})
-        svc.add_communication(
-            created["id"],
-            {"type": "email", "direction": "sent", "body": "Hi", "date": "2024-01-01"},
-        )
         context = svc.get_application_context(created["id"])
 
         assert "application" in context
-        assert "contacts" in context
-        assert "communications" in context
-        assert "resume_version" in context
-        assert "default_resume" in context
+        assert "linked" in context
 
     def test_application_data_matches(self, app_service: object) -> None:
         from persona.application_service import ApplicationService
@@ -387,27 +212,6 @@ class TestApplicationServiceContext:
 
         assert context["application"]["id"] == created["id"]
         assert context["application"]["company"] == "Corp"
-
-    def test_contacts_list_in_context(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        svc.add_contact(created["id"], {"name": "Bob"})
-        context = svc.get_application_context(created["id"])
-
-        assert len(context["contacts"]) == 1
-        assert context["contacts"][0]["name"] == "Bob"
-
-    def test_default_resume_included(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-
-        svc: ApplicationService = app_service  # type: ignore[assignment]
-        created = svc.create_application({"company": "Corp", "position": "Dev"})
-        context = svc.get_application_context(created["id"])
-
-        # default_resume should be populated since migration creates a default version
-        assert context["default_resume"] is not None
 
     def test_raises_for_nonexistent_app(self, app_service: object) -> None:
         from persona.application_service import ApplicationService

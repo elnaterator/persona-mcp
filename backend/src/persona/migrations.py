@@ -81,6 +81,10 @@ def _detect_actual_version(conn) -> int:
     Checked newest-to-oldest; returns the first version whose structural
     marker is present.
     """
+    if _table_exists(conn, "resource_link") and not _column_exists(
+        conn, "communication", "app_id"
+    ):
+        return 11
     if _table_exists(conn, "resource_link"):
         return 10
     if _column_exists(conn, "communication", "contact_ref_id"):
@@ -583,6 +587,36 @@ def migrate_v9_to_v10(conn) -> None:
     conn.commit()
 
 
+def migrate_v10_to_v11(conn) -> None:
+    """Drop application-scoped contacts and communications.
+
+    Removes the application_contact table and the app-related columns on
+    communication (app_id, contact_id, contact_name). Communications now
+    only attach to networking contacts; cross-resource relations to
+    applications are expressed via resource_link.
+    """
+    # Drop the parent-XOR check constraint before columns it references.
+    conn.execute(
+        "ALTER TABLE communication DROP CONSTRAINT IF EXISTS communication_parent_xor"
+    )
+    # Purge app-only communications (they have no contact_ref_id).
+    conn.execute("DELETE FROM communication WHERE contact_ref_id IS NULL")
+    # Drop indexes on dropped columns / table.
+    conn.execute("DROP INDEX IF EXISTS idx_application_contact_app")
+    conn.execute("DROP INDEX IF EXISTS idx_communication_app")
+    conn.execute("DROP INDEX IF EXISTS idx_communication_date")
+    # Drop application-scoped columns.
+    conn.execute("ALTER TABLE communication DROP COLUMN IF EXISTS app_id")
+    conn.execute("ALTER TABLE communication DROP COLUMN IF EXISTS contact_id")
+    conn.execute("ALTER TABLE communication DROP COLUMN IF EXISTS contact_name")
+    # Tighten contact_ref_id now that it's the only parent.
+    conn.execute("ALTER TABLE communication ALTER COLUMN contact_ref_id SET NOT NULL")
+    # Drop the application_contact table itself.
+    conn.execute("DROP TABLE IF EXISTS application_contact CASCADE")
+    conn.execute("UPDATE schema_version SET version = %s", (11,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -594,6 +628,7 @@ MIGRATIONS: list = [
     migrate_v7_to_v8,
     migrate_v8_to_v9,
     migrate_v9_to_v10,
+    migrate_v10_to_v11,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)

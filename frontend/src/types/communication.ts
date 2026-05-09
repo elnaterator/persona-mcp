@@ -4,10 +4,7 @@
 
 export interface Communication {
   id: number
-  app_id?: number | null
-  contact_ref_id?: number | null
-  contact_id?: number | null
-  contact_name?: string | null
+  contact_ref_id: number
   type: string
   direction: string
   subject: string
@@ -19,7 +16,7 @@ export interface Communication {
 }
 
 export interface CommunicationSearchResult extends Communication {
-  parentType: 'application' | 'contact'
+  parentType: 'contact'
   parentId: number
   parentName: string
 }

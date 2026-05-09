@@ -174,21 +174,15 @@ class TestCommunicationSearch:
         assert resp.status_code == 200
         assert len(resp.json()) == 1
 
-    def test_search_parent_filter_contact(
+    def test_search_returns_contact_parent_type(
         self, client: TestClient, contact_id: int
     ) -> None:
         client.post(f"/api/contacts/{contact_id}/communications", json=_VALID_COMM)
-        resp = client.get("/api/communications?parent=contact")
+        resp = client.get("/api/communications")
         assert resp.status_code == 200
-        assert len(resp.json()) == 1
-
-    def test_search_parent_filter_application_empty(
-        self, client: TestClient, contact_id: int
-    ) -> None:
-        client.post(f"/api/contacts/{contact_id}/communications", json=_VALID_COMM)
-        resp = client.get("/api/communications?parent=application")
-        assert resp.status_code == 200
-        assert resp.json() == []
+        results = resp.json()
+        assert len(results) == 1
+        assert results[0]["parent_type"] == "contact"
 
 
 class TestCommunicationSearchCrossUserIsolation:

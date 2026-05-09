@@ -402,7 +402,7 @@ export default function ContactDetailView() {
               )}
             </SectionCard>
           </div>
-          <CommunicationsPanel parentType="contact" parentId={contact.id} initialExpandId={expandCommId} />
+          <CommunicationsPanel contactId={contact.id} initialExpandId={expandCommId} />
         </>
       )}
 

@@ -36,33 +36,36 @@ Should use many to many relationship. Contacts may be associated to applications
 Should have a `pages/` dir, separate subdir for each page with page and components specific to page.  Top level `components/` dir for shared/reusable components across pages. Improve reuse of components. Rename frontend/src/types/resume.ts, it has all types. Update AGENTS.md to explain frontend org. Suggest other high value front end refactors.
 
 
-## Remove application contacts and communications, use links instead
+## R007 Remove application contacts and communications, use links instead - DONE
 
 Remove duplicate functionality from applications, use linked contacts and contact communications. Just have list of linked resources like all other pages. No need to preserve existing application contacts or communications, just delete (early in project, no users yet).
 
 
-## Adopt TanStack Query for server state
+## R008 Adopt TanStack Query for server state
 
 Replace per-view `useEffect(fetch, [])` + manual `refresh()` pattern with `useQuery` / `useMutation`. Cache list + detail responses, dedup in-flight requests, refetch on focus, invalidate on mutate. Enables instant back-nav, optimistic updates for tag/link toggles. Replaces or thins out `useResourceList` / `useResourceDetail` hooks.
 
 
-## Theme tokens (CSS variables)
+## R009 Theme tokens (CSS variables)
 
 Define `:root` CSS vars in `index.css` for spacing, colors, radii, shadows (`--space-1..8`, `--color-fg/bg/accent`, `--radius-sm/md`, `--shadow-card`). Sweep all `*.module.css` to reference vars instead of hardcoded hex/px. Enables dark mode + design-system consistency. Low risk, high visual payoff.
 
 
-## Toast / notification provider
+## R010 Toast / notification provider
 
 Replace per-view `StatusMessage` state + auto-dismiss timers with single `<ToastProvider>` at root + `useToast()` hook. Single render slot, queue, animation, no prop drilling. Cuts ~10 LOC per list/detail view.
 
 
-## Form abstraction (react-hook-form + zod)
+## R011 Form abstraction (react-hook-form + zod)
 
 Replace hand-rolled field state + validation in `EntryForm`, `ContactDetailView`, `ApplicationDetailView` with `react-hook-form` (uncontrolled, fast) + `zod` schemas (single source of truth, infer TS types). Kills validation drift between client + server.
 
 
-## Storybook for shared components
+## R012 Storybook for shared components
 
 Set up Storybook targeting `frontend/src/components/` (post-refactor). Stories per primitive (`Breadcrumb`, `ConfirmDialog`, `EditableSection`, `LinkPickerModal`, `TagInput`, `LinksPanel`, etc.) with props matrix + a11y addon. Enables isolated visual review and future visual-regression testing (Chromatic). Defer until shared component set stabilizes.
 
 
+## R013 UI test suite with playwright
+
+I want to set up a playwright test suite to validate the behavior of the running UI as well as validation of look and feel. It should not be part of the CI pipeline yet.

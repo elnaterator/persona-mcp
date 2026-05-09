@@ -14,8 +14,7 @@ import { API_BASE, fetchWithErrorHandling, handleResponse } from './client'
 function _mapComm(raw: Record<string, unknown>): Communication {
   return {
     ...(raw as unknown as Communication),
-    app_id: raw.app_id as number | null | undefined,
-    contact_ref_id: raw.contact_ref_id as number | null | undefined,
+    contact_ref_id: raw.contact_ref_id as number,
     tags: (raw.tags as string[]) ?? [],
   }
 }
@@ -147,19 +146,17 @@ export async function removeContactCommunication(
 export async function searchCommunications(params: {
   q?: string
   tags?: string[]
-  parent?: 'application' | 'contact' | 'all'
 }): Promise<CommunicationSearchResult[]> {
   const qs = new URLSearchParams()
   if (params.q) qs.set('q', params.q)
   if (params.tags?.length) params.tags.forEach((t) => qs.append('tag', t))
-  if (params.parent && params.parent !== 'all') qs.set('parent', params.parent)
   const response = await fetchWithErrorHandling(
     `${API_BASE}/communications${qs.toString() ? `?${qs}` : ''}`
   )
   const data = await handleResponse<Record<string, unknown>[]>(response)
   return data.map((r) => ({
     ...(_mapComm(r) as CommunicationSearchResult),
-    parentType: r.parent_type as 'application' | 'contact',
+    parentType: 'contact',
     parentId: r.parent_id as number,
     parentName: r.parent_name as string,
   }))

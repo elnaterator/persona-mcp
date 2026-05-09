@@ -515,141 +515,6 @@ def create_router(
                 )
             }
 
-        # --- Application Contacts ---
-
-        @api.get("/api/applications/{app_id}/contacts")
-        def list_app_contacts(
-            app_id: int,
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> list[dict[str, Any]]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                raise HTTPException(status_code=404, detail=str(e))
-            return app_service.list_contacts(app_id)
-
-        @api.post("/api/applications/{app_id}/contacts", status_code=201)
-        def add_contact(
-            app_id: int,
-            data: dict[str, Any],
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> dict[str, Any]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-                return app_service.add_contact(app_id, data)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                detail = str(e)
-                if "not found" in detail:
-                    raise HTTPException(status_code=404, detail=detail)
-                raise HTTPException(status_code=422, detail=detail)
-
-        @api.patch("/api/applications/{app_id}/contacts/{contact_id}")
-        def update_app_contact(
-            app_id: int,
-            contact_id: int,
-            data: dict[str, Any],
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> dict[str, Any]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-                return app_service.update_contact(contact_id, data)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                raise HTTPException(status_code=404, detail=str(e))
-
-        @api.delete("/api/applications/{app_id}/contacts/{contact_id}")
-        def delete_app_contact(
-            app_id: int,
-            contact_id: int,
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> dict[str, str]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-                name = app_service.remove_contact(contact_id)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                raise HTTPException(status_code=404, detail=str(e))
-            return {"message": f"Removed contact '{name}'"}
-
-        # --- Communications ---
-
-        @api.get("/api/applications/{app_id}/communications")
-        def list_communications(
-            app_id: int,
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> list[dict[str, Any]]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                raise HTTPException(status_code=404, detail=str(e))
-            return app_service.list_communications(app_id)
-
-        @api.post(
-            "/api/applications/{app_id}/communications",
-            status_code=201,
-        )
-        def add_communication(
-            app_id: int,
-            data: dict[str, Any],
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> dict[str, Any]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-                return app_service.add_communication(app_id, data)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                detail = str(e)
-                if "not found" in detail:
-                    raise HTTPException(status_code=404, detail=detail)
-                raise HTTPException(status_code=422, detail=detail)
-
-        @api.patch("/api/applications/{app_id}/communications/{comm_id}")
-        def update_communication(
-            app_id: int,
-            comm_id: int,
-            data: dict[str, Any],
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> dict[str, Any]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-                return app_service.update_communication(comm_id, data)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                raise HTTPException(status_code=404, detail=str(e))
-
-        @api.delete("/api/applications/{app_id}/communications/{comm_id}")
-        def delete_communication(
-            app_id: int,
-            comm_id: int,
-            current_user: UserContext | None = Depends(_user_dep),
-        ) -> dict[str, str]:
-            uid = current_user.id if current_user is not None else None
-            try:
-                app_service.get_application(app_id, user_id=uid)
-                subject = app_service.remove_communication(comm_id)
-            except PermissionError as e:
-                raise HTTPException(status_code=403, detail=str(e))
-            except ValueError as e:
-                raise HTTPException(status_code=404, detail=str(e))
-            return {"message": f"Removed communication '{subject}'"}
-
         # --- Application Context ---
 
         @api.get("/api/applications/{app_id}/context")
@@ -974,11 +839,10 @@ def create_router(
         def search_communications(
             q: str | None = None,
             tag: list[str] | None = Query(default=None),
-            parent: str | None = None,
             current_user: UserContext | None = Depends(_user_dep),
         ) -> list[dict[str, Any]]:
             uid = current_user.id if current_user is not None else None
-            return comm_service.search(q=q, tags=tag, parent=parent, user_id=uid)
+            return comm_service.search(q=q, tags=tag, user_id=uid)
 
     # ==========================================================
     # Resource Link Routes

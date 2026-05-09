@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, useNavigate, useLocation, Link } from 'react-router'
+import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Application, ResumeVersionSummary } from '../../types'
 import {
@@ -11,8 +11,6 @@ import {
   mapGroupedLinks,
 } from '../../services/api'
 import { TagInput } from '../../components/TagInput'
-import ContactsPanel from '../../components/ContactsPanel'
-import CommunicationsPanel from '../../components/CommunicationsPanel'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
@@ -51,8 +49,6 @@ type EditSection = 'details' | 'description' | 'notes' | 'resume' | 'tags' | nul
 export default function ApplicationDetailView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
-  const expandCommId = (location.state as { expandCommId?: number } | null)?.expandCommId
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
@@ -486,8 +482,6 @@ export default function ApplicationDetailView() {
       </div>
 
       <div className={styles.panels}>
-        <ContactsPanel appId={numericId} />
-        <CommunicationsPanel parentType="application" parentId={numericId} initialExpandId={expandCommId} />
         <LinksPanel
           resourceType="application"
           resourceId={numericId}

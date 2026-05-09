@@ -143,8 +143,8 @@ class TestSearchCrossParents:
             results_by_tag = search_fn(tag="search-tag")
             assert any("search-tag" in r["tags"] for r in results_by_tag)
 
-            results_contact_only = search_fn(parent="contact")
-            assert all(r["parent_type"] == "contact" for r in results_contact_only)
+            results_all = search_fn()
+            assert all(r["parent_type"] == "contact" for r in results_all)
 
         finally:
             current_user_id_var.reset(token)
