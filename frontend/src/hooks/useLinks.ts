@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { GroupedLinks, ResourceType } from '../types'
-import { mapGroupedLinks, linkResources, unlinkResources } from '../services/api'
+import { linkResources, unlinkResources } from '../services/api'
 
 // Note: links are embedded in the resource detail responses as `links` field
 // This hook is for cases where you need to fetch/manage links independently
@@ -28,8 +28,7 @@ export function useLinks(
     if (!resourceId) return
     setLoading(true)
     try {
-      const raw = await linkResources(resourceType, resourceId, bType, bId)
-      setLinks(mapGroupedLinks(raw as Record<string, unknown[]>))
+      await linkResources(resourceType, resourceId, bType, bId)
     } finally {
       setLoading(false)
     }
