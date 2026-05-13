@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Note } from '../../types'
-import { getNote, updateNote, deleteNote, listAllTags, mapGroupedLinks } from '../../services/api'
+import { ApiClientError } from '../../types'
+import { mapGroupedLinks } from '../../services/api'
+import { useAllTags, useNoteDetail, useNoteMutations } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
@@ -12,7 +14,6 @@ import { StatusMessage } from '../../components/StatusMessage'
 import { SectionCard } from '../../components/SectionCard'
 import { MarkdownContent } from '../../components/MarkdownContent'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
-import { useResourceDetail } from '../../hooks/useResourceDetail'
 import styles from './NoteDetailView.module.css'
 
 export default function NoteDetailView() {
@@ -21,37 +22,29 @@ export default function NoteDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [allTags, setAllTags] = useState<string[]>([])
-  const [notFound, setNotFound] = useState(false)
-  const [forbidden, setForbidden] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Note>>({})
   const [editError, setEditError] = useState('')
-  const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-
-  const noteFetcher = useCallback(async (strId: string) => {
-    try {
-      return await getNote(Number(strId))
-    } catch (err) {
-      const status = (err as { status?: number })?.status
-      if (status === 404) setNotFound(true)
-      else if (status === 403) setForbidden(true)
-      throw err
-    }
-  }, [])
-
-  const { item: note, setItem: setNote, refresh: reloadNote } = useResourceDetail<Note>(id, noteFetcher)
 
   useEffect(() => {
     if (numericId === null) {
       navigate('/notes', { replace: true })
-      return
     }
-    listAllTags().then(setAllTags).catch(() => {})
   }, [numericId, navigate])
+
+  const detailQuery = useNoteDetail(numericId ?? undefined)
+  const tagsQuery = useAllTags()
+  const { update, remove } = useNoteMutations()
+
+  const note = detailQuery.data ?? null
+  const allTags = tagsQuery.data ?? []
+  const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
+  const notFound = errStatus === 404
+  const forbidden = errStatus === 403
+  const saving = update.isPending
+  const reloadNote = () => detailQuery.refetch()
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Note" backTo="/notes" backLabel="Back to Notes" />
@@ -79,31 +72,28 @@ export default function NoteDetailView() {
       setEditError('Title is required')
       return
     }
-    setSaving(true)
     setEditError('')
     try {
-      const updated = await updateNote(numericId, {
-        title: editForm.title.trim(),
-        content: editForm.content,
-        tags: editForm.tags as string[],
+      await update.mutateAsync({
+        id: numericId,
+        data: {
+          title: editForm.title.trim(),
+          content: editForm.content,
+          tags: editForm.tags as string[],
+        },
       })
-      setNote(updated)
       setEditing(false)
       setStatusMessage({ type: 'success', message: 'Saved' })
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    setDeleting(true)
     try {
-      await deleteNote(numericId)
+      await remove.mutateAsync(numericId)
       navigate('/notes')
     } catch {
-      setDeleting(false)
       setConfirmDelete(false)
       setStatusMessage({ type: 'error', message: 'Failed to delete note' })
     }

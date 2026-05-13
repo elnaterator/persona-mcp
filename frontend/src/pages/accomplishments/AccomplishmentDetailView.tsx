@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import type { Accomplishment } from '../../types'
-import { getAccomplishment, updateAccomplishment, deleteAccomplishment, listAllTags, mapGroupedLinks } from '../../services/api'
+import { ApiClientError } from '../../types'
+import { mapGroupedLinks } from '../../services/api'
+import {
+  useAccomplishmentDetail,
+  useAccomplishmentMutations,
+  useAllTags,
+} from '../../hooks/queries'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
@@ -20,38 +26,28 @@ export default function AccomplishmentDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [acc, setAcc] = useState<Accomplishment | null>(null)
-  const [allTags, setAllTags] = useState<string[]>([])
-  const [notFound, setNotFound] = useState(false)
-  const [forbidden, setForbidden] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Accomplishment>>({})
   const [editError, setEditError] = useState('')
-  const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
     if (numericId === null) {
       navigate('/accomplishments', { replace: true })
-      return
     }
-    Promise.all([
-      getAccomplishment(numericId),
-      listAllTags(),
-    ]).then(([accData, tags]) => {
-      setAcc(accData)
-      setAllTags(tags)
-    }).catch((err: unknown) => {
-      const status = (err as { status?: number })?.status
-      if (status === 404) {
-        setNotFound(true)
-      } else if (status === 403) {
-        setForbidden(true)
-      }
-    })
   }, [numericId, navigate])
+
+  const detailQuery = useAccomplishmentDetail(numericId ?? undefined)
+  const tagsQuery = useAllTags()
+  const { update, remove } = useAccomplishmentMutations()
+
+  const acc = detailQuery.data ?? null
+  const allTags = tagsQuery.data ?? []
+  const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
+  const notFound = errStatus === 404
+  const forbidden = errStatus === 403
+  const saving = update.isPending
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Accomplishment" backTo="/accomplishments" backLabel="Back to Accomplishments" />
@@ -83,31 +79,28 @@ export default function AccomplishmentDetailView() {
       setEditError('Title is required')
       return
     }
-    setSaving(true)
     setEditError('')
     try {
-      const updated = await updateAccomplishment(numericId, {
-        ...editForm,
-        accomplishment_date: editForm.accomplishment_date || null,
-        tags: editForm.tags as string[],
+      await update.mutateAsync({
+        id: numericId,
+        data: {
+          ...editForm,
+          accomplishment_date: editForm.accomplishment_date || null,
+          tags: editForm.tags as string[],
+        },
       })
-      setAcc(updated)
       setEditing(false)
       setStatusMessage({ type: 'success', message: 'Saved' })
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    setDeleting(true)
     try {
-      await deleteAccomplishment(numericId)
+      await remove.mutateAsync(numericId)
       navigate('/accomplishments')
     } catch {
-      setDeleting(false)
       setConfirmDelete(false)
       setStatusMessage({ type: 'error', message: 'Failed to delete accomplishment' })
     }
@@ -249,7 +242,7 @@ export default function AccomplishmentDetailView() {
         resourceType="accomplishment"
         resourceId={numericId}
         links={mapGroupedLinks(acc.links as Record<string, unknown[]>)}
-        onChange={() => getAccomplishment(numericId).then(setAcc)}
+        onChange={() => detailQuery.refetch()}
       />
 
       {confirmDelete && (

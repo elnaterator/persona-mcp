@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { AccomplishmentSummary } from '../../types'
 import {
-  listAccomplishments,
-  createAccomplishment,
-  listAllTags,
-} from '../../services/api'
+  useAccomplishmentList,
+  useAccomplishmentMutations,
+  useAllTags,
+} from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import styles from './AccomplishmentListView.module.css'
 
@@ -31,26 +30,18 @@ const EMPTY_FORM: FormState = {
 }
 
 export default function AccomplishmentListView() {
-  const [accomplishments, setAccomplishments] = useState<AccomplishmentSummary[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
-  const [saving, setSaving] = useState(false)
 
-  const loadData = useCallback(async () => {
-    const [accs, tags] = await Promise.all([
-      listAccomplishments(tagFilter.length ? tagFilter : undefined),
-      listAllTags(),
-    ])
-    setAccomplishments(accs)
-    setAllTags(tags)
-  }, [tagFilter])
+  const listQuery = useAccomplishmentList({ tags: tagFilter })
+  const tagsQuery = useAllTags()
+  const { create } = useAccomplishmentMutations()
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  const accomplishments = listQuery.data ?? []
+  const allTags = tagsQuery.data ?? []
+  const saving = create.isPending
 
   const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -61,10 +52,9 @@ export default function AccomplishmentListView() {
       setFormError('Title is required')
       return
     }
-    setSaving(true)
     setFormError('')
     try {
-      await createAccomplishment({
+      await create.mutateAsync({
         title: form.title.trim(),
         situation: form.situation,
         task: form.task,
@@ -75,11 +65,8 @@ export default function AccomplishmentListView() {
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
-      await loadData()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 

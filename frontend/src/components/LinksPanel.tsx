@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-react'
 import type { GroupedLinks, ResourceRef, ResourceType } from '../types'
-import { linkResources, unlinkResources } from '../services/api'
+import { useLinkMutations } from '../hooks/queries'
 import { LinkPickerModal } from './LinkPickerModal'
 import styles from './LinksPanel.module.css'
 
@@ -69,7 +69,10 @@ export function LinksPanel({
 }: LinksPanelProps) {
   const navigate = useNavigate()
   const [showPicker, setShowPicker] = useState(false)
-  const [unlinking, setUnlinking] = useState<string | null>(null)
+  const { link, unlink } = useLinkMutations()
+  const unlinking = unlink.isPending
+    ? `${unlink.variables?.bType}/${unlink.variables?.bId}`
+    : null
 
   const count = totalLinkCount(links)
   const selfRef = buildSelfRef(resourceType, resourceId)
@@ -78,7 +81,7 @@ export function LinksPanel({
   const handlePick = async (ref: ResourceRef) => {
     setShowPicker(false)
     try {
-      await linkResources(resourceType, resourceId, ref.type, ref.id)
+      await link.mutateAsync({ aType: resourceType, aId: resourceId, bType: ref.type, bId: ref.id })
       onChange()
     } catch {
       // ignore
@@ -86,15 +89,11 @@ export function LinksPanel({
   }
 
   const handleUnlink = async (ref: ResourceRef) => {
-    const key = `${ref.type}/${ref.id}`
-    setUnlinking(key)
     try {
-      await unlinkResources(resourceType, resourceId, ref.type, ref.id)
+      await unlink.mutateAsync({ aType: resourceType, aId: resourceId, bType: ref.type, bId: ref.id })
       onChange()
     } catch {
       // ignore
-    } finally {
-      setUnlinking(null)
     }
   }
 

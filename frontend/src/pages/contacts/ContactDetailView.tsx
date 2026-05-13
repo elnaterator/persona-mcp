@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router'
 import { Pencil, Trash2, Check, X, Mail, Phone, Building2, Briefcase, MapPin, Linkedin, Calendar } from 'lucide-react'
 import type { Contact } from '../../types'
-import { getContact, updateContact, deleteContact, listAllTags, mapGroupedLinks } from '../../services/api'
+import { ApiClientError } from '../../types'
+import { mapGroupedLinks } from '../../services/api'
+import { useAllTags, useContactDetail, useContactMutations } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
@@ -13,7 +15,6 @@ import { MarkdownContent } from '../../components/MarkdownContent'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
 import CommunicationsPanel from '../../components/CommunicationsPanel'
 import { LinksPanel } from '../../components/LinksPanel'
-import { useResourceDetail } from '../../hooks/useResourceDetail'
 import styles from './ContactDetailView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -34,37 +35,29 @@ export default function ContactDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [allTags, setAllTags] = useState<string[]>([])
-  const [notFound, setNotFound] = useState(false)
-  const [forbidden, setForbidden] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Contact>>({})
   const [editError, setEditError] = useState('')
-  const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [, setDeleting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-
-  const contactFetcher = useCallback(async (strId: string) => {
-    try {
-      return await getContact(Number(strId))
-    } catch (err) {
-      const status = (err as { status?: number })?.status
-      if (status === 404) setNotFound(true)
-      else if (status === 403) setForbidden(true)
-      throw err
-    }
-  }, [])
-
-  const { item: contact, setItem: setContact, refresh: reloadContact } = useResourceDetail<Contact>(id, contactFetcher)
 
   useEffect(() => {
     if (numericId === null) {
       navigate('/contacts', { replace: true })
-      return
     }
-    listAllTags().then(setAllTags).catch(() => {})
   }, [numericId, navigate])
+
+  const detailQuery = useContactDetail(numericId ?? undefined)
+  const tagsQuery = useAllTags()
+  const { update, remove } = useContactMutations()
+
+  const contact = detailQuery.data ?? null
+  const allTags = tagsQuery.data ?? []
+  const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
+  const notFound = errStatus === 404
+  const forbidden = errStatus === 403
+  const saving = update.isPending
+  const reloadContact = () => detailQuery.refetch()
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Contact" backTo="/contacts" backLabel="Back to Contacts" />
@@ -94,40 +87,37 @@ export default function ContactDetailView() {
       setEditError('Name is required')
       return
     }
-    setSaving(true)
     setEditError('')
     try {
-      const updated = await updateContact(numericId, {
-        name: editForm.name?.trim(),
-        email: editForm.email || null,
-        phone: editForm.phone || null,
-        company: editForm.company || null,
-        title: editForm.title || null,
-        relationship: editForm.relationship || null,
-        linkedin_url: editForm.linkedin_url || null,
-        location: editForm.location || null,
-        last_contacted_date: editForm.last_contacted_date || null,
-        followup_date: editForm.followup_date || null,
-        notes: editForm.notes,
-        tags: editForm.tags as string[],
+      await update.mutateAsync({
+        id: numericId,
+        data: {
+          name: editForm.name?.trim(),
+          email: editForm.email || null,
+          phone: editForm.phone || null,
+          company: editForm.company || null,
+          title: editForm.title || null,
+          relationship: editForm.relationship || null,
+          linkedin_url: editForm.linkedin_url || null,
+          location: editForm.location || null,
+          last_contacted_date: editForm.last_contacted_date || null,
+          followup_date: editForm.followup_date || null,
+          notes: editForm.notes,
+          tags: editForm.tags as string[],
+        },
       })
-      setContact(updated)
       setEditing(false)
       setStatusMessage({ type: 'success', message: 'Saved' })
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    setDeleting(true)
     try {
-      await deleteContact(numericId)
+      await remove.mutateAsync(numericId)
       navigate('/contacts')
     } catch {
-      setDeleting(false)
       setConfirmDelete(false)
       setStatusMessage({ type: 'error', message: 'Failed to delete contact' })
     }

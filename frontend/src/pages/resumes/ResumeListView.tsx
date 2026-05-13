@@ -1,42 +1,32 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { ResumeVersionSummary } from '../../types'
-import { listResumes, createResume, listAllTags } from '../../services/api'
+import { useResumeList, useResumeMutations } from '../../hooks/queries'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { StatusMessage } from '../../components/StatusMessage'
 import { InlineCreateForm } from '../../components/InlineCreateForm'
 import styles from './ResumeListView.module.css'
 
 export default function ResumeListView() {
-  const [resumes, setResumes] = useState<ResumeVersionSummary[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: resumes = [], isPending, isError } = useResumeList()
+  const { create } = useResumeMutations()
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [creating, setCreating] = useState(false)
-  const [, setAllTags] = useState<string[]>([])
-
-  const load = useCallback(async () => {
-    try {
-      setLoading(true)
-      const [data, tags] = await Promise.all([listResumes(), listAllTags()])
-      setResumes(data)
-      setAllTags(tags)
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to load resume versions' })
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (isError) {
+      setStatusMessage({ type: 'error', message: 'Failed to load resume versions' })
+    }
+  }, [isError])
 
   const handleCreateConfirm = async (label: string) => {
-    await createResume(label)
-    setStatusMessage({ type: 'success', message: 'Resume version created' })
-    setCreating(false)
-    await load()
+    try {
+      await create.mutateAsync(label)
+      setStatusMessage({ type: 'success', message: 'Resume version created' })
+      setCreating(false)
+    } catch {
+      setStatusMessage({ type: 'error', message: 'Failed to create resume version' })
+    }
   }
 
   const formatDate = (iso: string) => {
@@ -47,7 +37,7 @@ export default function ResumeListView() {
     })
   }
 
-  if (loading) return <LoadingSpinner />
+  if (isPending) return <LoadingSpinner />
 
   return (
     <div className={styles.container} data-testid="resume-list-view">
