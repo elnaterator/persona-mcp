@@ -1,12 +1,12 @@
 .container {
-  padding: 1rem 0;
+  padding: var(--space-6) 0;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--space-7);
 }
 
 .heading {
@@ -19,12 +19,12 @@
 .newButton {
   background: none;
   color: var(--accent-green);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-none);
   font-weight: 500;
   border: none;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast);
   font-family: var(--font-mono);
 }
 
@@ -39,29 +39,29 @@
 /* New Application Form */
 .newForm {
   background-color: var(--bg-hover);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-7);
+  margin-bottom: var(--space-7);
 }
 
 .formTitle {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-6);
 }
 
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .formField {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .formLabel {
@@ -71,9 +71,9 @@
 }
 
 .input {
-  padding: 0.5rem 0.625rem;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius);
+  border-radius: var(--radius-none);
   font-size: 0.9375rem;
   font-family: var(--font-mono);
   background-color: var(--bg-input);
@@ -82,13 +82,13 @@
 
 .input:focus {
   outline: none;
-  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
+  box-shadow: var(--shadow-focus);
 }
 
 .select {
-  padding: 0.5rem 0.625rem;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius);
+  border-radius: var(--radius-none);
   font-size: 0.9375rem;
   font-family: var(--font-mono);
   background-color: var(--bg-input);
@@ -97,25 +97,25 @@
 
 .select:focus {
   outline: none;
-  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
+  box-shadow: var(--shadow-focus);
 }
 
 .formActions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-3);
 }
 
 .submitButton {
   background-color: var(--bg-hover);
   color: var(--accent-green);
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-none);
   font-size: 0.875rem;
   font-weight: 500;
   font-family: var(--font-mono);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast);
 }
 
 .submitButton:hover:not(:disabled) {
@@ -131,8 +131,8 @@
   background-color: var(--bg-hover);
   color: var(--text-secondary);
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-none);
   font-size: 0.875rem;
   font-family: var(--font-mono);
   cursor: pointer;
@@ -146,14 +146,14 @@
 /* Filters */
 .filters {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
 .filterSelect {
-  padding: 0.5rem 0.625rem;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius);
+  border-radius: var(--radius-none);
   font-size: 0.9375rem;
   font-family: var(--font-mono);
   background-color: var(--bg-input);
@@ -163,14 +163,14 @@
 
 .filterSelect:focus {
   outline: none;
-  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
+  box-shadow: var(--shadow-focus);
 }
 
 .searchInput {
   flex: 1;
-  padding: 0.5rem 0.625rem;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius);
+  border-radius: var(--radius-none);
   font-size: 0.9375rem;
   font-family: var(--font-mono);
   background-color: var(--bg-input);
@@ -179,7 +179,7 @@
 
 .searchInput:focus {
   outline: none;
-  box-shadow: inset 0 -1px 0 var(--accent-green-dim);
+  box-shadow: var(--shadow-focus);
 }
 
 /* List */
@@ -194,15 +194,15 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: var(--space-4);
 }
 
 .item {
   background-color: var(--bg-hover);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-6) var(--space-7);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast);
 }
 
 .item:hover {
@@ -217,14 +217,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.375rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
 .itemTitle {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -242,8 +242,8 @@
 .statusBadge {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.2rem 0.625rem;
-  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-none);
   white-space: nowrap;
   flex-shrink: 0;
   font-family: var(--font-mono);
@@ -251,32 +251,32 @@
 
 /* Status badge colors — muted on dark background */
 .statusInterested {
-  background-color: rgba(0, 255, 65, 0.06);
+  background-color: var(--status-green-dim-bg);
   color: var(--accent-green-dim);
 }
 
 .statusApplied {
-  background-color: rgba(0, 255, 65, 0.1);
+  background-color: var(--status-green-bg);
   color: var(--accent-green);
 }
 
 .statusPhoneScreen {
-  background-color: rgba(255, 170, 0, 0.08);
+  background-color: var(--status-warning-bg);
   color: var(--status-warning);
 }
 
 .statusInterview {
-  background-color: rgba(170, 120, 255, 0.08);
-  color: #aa78ff;
+  background-color: var(--accent-purple-bg);
+  color: var(--accent-purple);
 }
 
 .statusOffer {
-  background-color: rgba(0, 255, 65, 0.12);
+  background-color: var(--status-green-bg);
   color: var(--accent-green);
 }
 
 .statusRejected {
-  background-color: rgba(255, 68, 68, 0.08);
+  background-color: var(--status-error-bg);
   color: var(--status-error);
 }
 
@@ -286,14 +286,14 @@
 }
 
 .statusAccepted {
-  background-color: rgba(0, 255, 65, 0.15);
+  background-color: var(--status-green-bg-strong);
   color: var(--accent-green);
 }
 
 .itemMeta {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-6);
   font-size: 0.8125rem;
   color: var(--text-muted);
 }
@@ -305,7 +305,7 @@
 .linkCount {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: var(--space-1);
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
@@ -322,14 +322,14 @@
 .tagList {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  gap: var(--space-2);
 }
 
 .tagBadge {
   font-size: 0.75rem;
   font-weight: 500;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-none);
   background-color: var(--accent-green-bg);
   color: var(--accent-green);
 }

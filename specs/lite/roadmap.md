@@ -46,7 +46,7 @@ Remove duplicate functionality from applications, use linked contacts and contac
 Replace per-view `useEffect(fetch, [])` + manual `refresh()` pattern with `useQuery` / `useMutation`. Cache list + detail responses, dedup in-flight requests, refetch on focus, invalidate on mutate. Enables instant back-nav, optimistic updates for tag/link toggles. Replaces or thins out `useResourceList` / `useResourceDetail` hooks.
 
 
-## R009 Theme tokens (CSS variables)
+## R009 Theme tokens (CSS variables) - DONE
 
 Define `:root` CSS vars in `index.css` for spacing, colors, radii, shadows (`--space-1..8`, `--color-fg/bg/accent`, `--radius-sm/md`, `--shadow-card`). Sweep all `*.module.css` to reference vars instead of hardcoded hex/px. Enables dark mode + design-system consistency. Low risk, high visual payoff.
 

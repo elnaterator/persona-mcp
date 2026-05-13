@@ -6,7 +6,7 @@
 }
 
 .header {
-  padding: 1.25rem 2rem;
+  padding: var(--space-7) var(--space-9);
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-primary);
   box-shadow: none;
@@ -24,7 +24,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4rem 2rem 3rem;
+  padding: 4rem var(--space-9) var(--space-10);
   gap: 4rem;
 }
 
@@ -35,7 +35,7 @@
   align-items: center;
   text-align: center;
   max-width: 720px;
-  gap: 1.25rem;
+  gap: var(--space-7);
 }
 
 .headline {
@@ -52,17 +52,17 @@
 }
 
 .ctaButton {
-  margin-top: 0.5rem;
-  padding: 0.875rem 2.25rem;
+  margin-top: var(--space-3);
+  padding: var(--space-5) var(--space-9);
   font-size: 1rem;
   font-weight: 600;
   color: var(--bg-primary);
   background-color: var(--accent-green);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-none);
   cursor: pointer;
   font-family: var(--font-mono);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--transition-fast);
 }
 
 .ctaButton:hover {
@@ -78,7 +78,7 @@
 .features {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 1.5rem;
+  gap: var(--space-8);
   max-width: 1100px;
   width: 100%;
 }
@@ -86,17 +86,17 @@
 .feature {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius);
-  padding: 1.75rem 1.5rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-9) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-3);
 }
 
 .featureIcon {
   font-size: 1.75rem;
   line-height: 1;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .feature h3 {
@@ -114,8 +114,8 @@
 /* Responsive */
 @media (max-width: 640px) {
   .main {
-    padding: 2.5rem 1rem 2rem;
-    gap: 2.5rem;
+    padding: var(--space-9) var(--space-6) var(--space-9);
+    gap: var(--space-9);
   }
 
   .headline {

@@ -279,7 +279,7 @@ def create_app(
     # We add this route directly to FastAPI's router (not via app.mount)
     # because Starlette's Mount("/mcp") regex requires a trailing slash,
     # causing POST /mcp to fall through to StaticFiles → 405.
-    mcp_app = mcp.http_app(path="/mcp")
+    mcp_app = mcp.http_app(path="/mcp", stateless_http=True)
 
     # Create combined lifespan that wraps MCP lifespan and closes pool on shutdown
     @asynccontextmanager

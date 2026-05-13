@@ -2,13 +2,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: var(--space-9);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--bg-spinner-track);
   border-top-color: var(--accent-green);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
