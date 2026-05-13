@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--bg-modal-overlay);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -13,15 +13,15 @@
 
 .dialog {
   background: var(--bg-hover);
-  border-radius: var(--radius);
-  padding: 2rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-9);
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-card);
 }
 
 .message {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 var(--space-8) 0;
   font-size: 1rem;
   line-height: 1.5;
   color: var(--text-primary);
@@ -30,18 +30,18 @@
 .buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: var(--space-4);
 }
 
 .cancelButton,
 .confirmButton {
-  padding: 0.5rem 1.25rem;
+  padding: var(--space-3) var(--space-7);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-none);
   font-size: 0.95rem;
   font-family: var(--font-mono);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-default);
 }
 
 .cancelButton {
@@ -55,12 +55,12 @@
 }
 
 .confirmButton {
-  background-color: rgba(255, 68, 68, 0.15);
+  background-color: var(--status-error-bg-hover);
   color: var(--status-error);
 }
 
 .confirmButton:hover {
-  background-color: rgba(255, 68, 68, 0.25);
+  background-color: var(--status-error-bg-strong);
 }
 
 .cancelButton:focus,

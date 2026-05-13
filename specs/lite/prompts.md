@@ -12,5 +12,5 @@ You are staff software engineer, value clean code, high quality UI/UX, if refact
 
 ## Commit and PR
 
-Check if curr branch name good, create new branch if needed, never commit to main. Use caveman-commit skill. Commit all changes, including specs/lite/*. Ask for confirm, then push to remote and use github mcp to create PR, curr branch -> main, PR description sections: motivation, what changed, testing (with checkboxes). 
+Check if curr branch name good, create new branch if needed, never commit to main. Use caveman-commit skill. Commit all changes, including specs/lite/*.md except plans with higher seq nums. Ask for confirm, then push to remote and use github mcp to create PR, curr branch -> main, PR description sections: motivation, what changed, testing (with checkboxes). Plan seq num: 
 

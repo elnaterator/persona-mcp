@@ -1,25 +1,25 @@
 .container {
   position: relative;
   background-color: var(--bg-hover);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-6) var(--space-7);
 }
 
 .editIcon {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: var(--space-3);
+  right: var(--space-3);
   color: var(--text-secondary);
   cursor: pointer;
   background-color: var(--bg-surface);
   border: none;
-  border-radius: var(--radius);
-  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-1) var(--space-2);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1;
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .editIcon:hover {
@@ -29,10 +29,10 @@
 
 .editActions {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: var(--space-3);
+  right: var(--space-3);
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
   align-items: center;
   z-index: 1;
 }
@@ -42,12 +42,12 @@
   cursor: pointer;
   background-color: var(--bg-surface);
   border: none;
-  border-radius: var(--radius);
-  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-1) var(--space-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .actionButton:hover {

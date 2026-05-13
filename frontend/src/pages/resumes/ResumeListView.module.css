@@ -1,12 +1,12 @@
 .container {
-  padding: 1rem 0;
+  padding: var(--space-6) 0;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-8);
 }
 
 .heading {
@@ -19,12 +19,12 @@
 .newButton {
   background: none;
   color: var(--accent-green);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-none);
   font-weight: 500;
   border: none;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color var(--transition-fast);
   font-family: var(--font-mono);
 }
 
@@ -48,18 +48,18 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-4);
 }
 
 .item {
   background-color: var(--bg-hover);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-none);
+  padding: var(--space-6) var(--space-7);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-fast);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-6);
 }
 
 .item:hover {
@@ -74,7 +74,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-6);
   text-decoration: none;
   min-width: 0;
 }
@@ -83,7 +83,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -100,13 +100,13 @@
   color: var(--accent-green-dim);
   font-size: 0.75rem;
   font-weight: 500;
-  padding: 0.125rem 0;
+  padding: var(--space-1) 0;
   white-space: nowrap;
 }
 
 .itemMeta {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-6);
   color: var(--text-muted);
   font-size: 0.875rem;
   white-space: nowrap;
@@ -119,22 +119,22 @@
 .linkCount {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: var(--space-1);
   color: var(--text-secondary);
 }
 
 .tagList {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
-  margin: 0.25rem 0;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
 }
 
 .tagBadge {
   font-size: 0.75rem;
   font-weight: 500;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-none);
   background-color: var(--accent-green-bg);
   color: var(--accent-green);
 }
@@ -143,11 +143,11 @@
   .item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: var(--space-4);
   }
 
   .itemMeta {
     flex-direction: column;
-    gap: 0.25rem;
+    gap: var(--space-1);
   }
 }
