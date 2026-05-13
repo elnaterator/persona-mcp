@@ -1,14 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { NoteSummary } from '../../types'
-import {
-  listNotes,
-  createNote,
-  listAllTags,
-} from '../../services/api'
+import { useAllTags, useNoteList, useNoteMutations } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
-import { useResourceList } from '../../hooks/useResourceList'
 import styles from './NoteListView.module.css'
 
 interface FormState {
@@ -24,24 +18,19 @@ const EMPTY_FORM: FormState = {
 }
 
 export default function NoteListView() {
-  const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
-  const [saving, setSaving] = useState(false)
 
-  const fetcher = useCallback(async () => {
-    const [noteList, tags] = await Promise.all([
-      listNotes(tagFilter.length ? tagFilter : undefined, searchQuery || undefined),
-      listAllTags(),
-    ])
-    setAllTags(tags)
-    return noteList
-  }, [tagFilter, searchQuery])
+  const listQuery = useNoteList({ tags: tagFilter, q: searchQuery })
+  const tagsQuery = useAllTags()
+  const { create } = useNoteMutations()
 
-  const { items: notes, refresh: loadData } = useResourceList<NoteSummary>(fetcher)
+  const notes = listQuery.data ?? []
+  const allTags = tagsQuery.data ?? []
+  const saving = create.isPending
 
   const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -52,21 +41,17 @@ export default function NoteListView() {
       setFormError('Title is required')
       return
     }
-    setSaving(true)
     setFormError('')
     try {
-      await createNote({
+      await create.mutateAsync({
         title: form.title.trim(),
         content: form.content,
         tags: form.tags,
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
-      await loadData()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 

@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Trash2, Pencil, Check, X } from 'lucide-react'
-import type { ResumeVersion } from '../../types'
-import { getResumeVersion, updateResumeLabel, deleteResume, setDefaultResume, listAllTags, mapGroupedLinks } from '../../services/api'
+import { mapGroupedLinks } from '../../services/api'
+import {
+  resumeKeys,
+  useAllTags,
+  useResumeDetail,
+  useResumeMutations,
+} from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import ContactSection from './ContactSection'
 import SummarySection from './SummarySection'
@@ -15,6 +21,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { StatusMessage } from '../../components/StatusMessage'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { LinksPanel } from '../../components/LinksPanel'
+import { ApiClientError } from '../../types'
 import styles from './ResumeDetailView.module.css'
 
 export default function ResumeDetailView() {
@@ -23,18 +30,13 @@ export default function ResumeDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [version, setVersion] = useState<ResumeVersion | null>(null)
-  const [allTags, setAllTags] = useState<string[]>([])
+  const qc = useQueryClient()
   const [editingTags, setEditingTags] = useState(false)
   const [tagsForm, setTagsForm] = useState<string[]>([])
-  const [notFound, setNotFound] = useState(false)
-  const [forbidden, setForbidden] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelInput, setLabelInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [, setDeleting] = useState(false)
 
   useEffect(() => {
     if (numericId === null) {
@@ -42,40 +44,32 @@ export default function ResumeDetailView() {
     }
   }, [numericId, navigate])
 
-  const load = useCallback(async (silent = false) => {
-    if (numericId === null) return
-    try {
-      if (!silent) setLoading(true)
-      const [data, tags] = await Promise.all([getResumeVersion(numericId), listAllTags()])
-      setVersion(data)
-      setLabelInput(data.label)
-      setAllTags(tags)
-    } catch (err: unknown) {
-      const status = (err as { status?: number })?.status
-      if (status === 404) {
-        setNotFound(true)
-      } else if (status === 403) {
-        setForbidden(true)
-      } else {
-        setStatusMessage({ type: 'error', message: 'Failed to load resume version' })
-      }
-    } finally {
-      if (!silent) setLoading(false)
-    }
-  }, [numericId])
+  const detailQuery = useResumeDetail(numericId ?? undefined)
+  const tagsQuery = useAllTags()
+  const { remove, setDefault, updateLabelOrTags } = useResumeMutations()
+
+  const version = detailQuery.data ?? null
+  const allTags = tagsQuery.data ?? []
+  const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
+  const notFound = errStatus === 404
+  const forbidden = errStatus === 403
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (version) setLabelInput(version.label)
+  }, [version])
+
+  const reloadResume = () => {
+    if (numericId !== null) {
+      qc.invalidateQueries({ queryKey: resumeKeys.detail(numericId) })
+    }
+  }
 
   const handleDelete = async () => {
     if (numericId === null) return
-    setDeleting(true)
     try {
-      await deleteResume(numericId)
+      await remove.mutateAsync(numericId)
       navigate('/resumes')
     } catch {
-      setDeleting(false)
       setConfirmDelete(false)
       setStatusMessage({ type: 'error', message: 'Failed to delete resume version' })
     }
@@ -84,8 +78,7 @@ export default function ResumeDetailView() {
   const handleSetDefault = async () => {
     if (numericId === null) return
     try {
-      await setDefaultResume(numericId)
-      await load(true)
+      await setDefault.mutateAsync(numericId)
       setStatusMessage({ type: 'success', message: 'Default resume updated' })
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to set default resume' })
@@ -95,8 +88,7 @@ export default function ResumeDetailView() {
   const handleLabelSave = async () => {
     if (!labelInput.trim() || numericId === null) return
     try {
-      const updated = await updateResumeLabel(numericId, labelInput.trim())
-      setVersion((prev) => prev ? { ...prev, label: updated.label } : prev)
+      await updateLabelOrTags.mutateAsync({ id: numericId, label: labelInput.trim() })
       setEditingLabel(false)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to update label' })
@@ -112,8 +104,11 @@ export default function ResumeDetailView() {
   const handleTagsSave = async () => {
     if (numericId === null || !version) return
     try {
-      const updated = await updateResumeLabel(numericId, version.label, tagsForm)
-      setVersion((prev) => prev ? { ...prev, tags: updated.tags } : prev)
+      await updateLabelOrTags.mutateAsync({
+        id: numericId,
+        label: version.label,
+        tags: tagsForm,
+      })
       setEditingTags(false)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to update tags' })
@@ -121,7 +116,7 @@ export default function ResumeDetailView() {
   }
 
   if (numericId === null) return null
-  if (loading) return <LoadingSpinner />
+  if (detailQuery.isPending) return <LoadingSpinner />
   if (notFound) return <NotFound entityName="Resume" backTo="/resumes" backLabel="Back to Resumes" />
   if (forbidden) return <NotFound entityName="Resume" backTo="/resumes" backLabel="Back to Resumes" heading="This resume isn't yours" message="This resume belongs to another account and cannot be accessed." />
   if (!version) return null
@@ -236,27 +231,27 @@ export default function ResumeDetailView() {
       <div className={styles.document}>
         <ContactSection
           contact={resume.contact}
-          onUpdate={() => load(true)}
+          onUpdate={reloadResume}
           versionId={numericId}
         />
         <SummarySection
           summary={resume.summary}
-          onUpdate={() => load(true)}
+          onUpdate={reloadResume}
           versionId={numericId}
         />
         <ExperienceSection
           experience={resume.experience}
-          onUpdate={() => load(true)}
+          onUpdate={reloadResume}
           versionId={numericId}
         />
         <EducationSection
           education={resume.education}
-          onUpdate={() => load(true)}
+          onUpdate={reloadResume}
           versionId={numericId}
         />
         <SkillsSection
           skills={resume.skills}
-          onUpdate={() => load(true)}
+          onUpdate={reloadResume}
           versionId={numericId}
         />
       </div>
@@ -265,7 +260,7 @@ export default function ResumeDetailView() {
         resourceType="resume"
         resourceId={numericId}
         links={mapGroupedLinks(version.links as Record<string, unknown[]>)}
-        onChange={() => load(true)}
+        onChange={reloadResume}
       />
 
       {confirmDelete && (

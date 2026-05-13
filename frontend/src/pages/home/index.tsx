@@ -1,10 +1,16 @@
-import { Component, useEffect, useState } from 'react'
+import { Component, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useUser } from '@clerk/clerk-react'
 import { APIKeys } from '@clerk/clerk-react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { listResumes, listApplications, listNotes, listAccomplishments, listContacts } from '../../services/api'
+import {
+  useAccomplishmentList,
+  useApplicationList,
+  useContactList,
+  useNoteList,
+  useResumeList,
+} from '../../hooks/queries'
 import styles from './HomeView.module.css'
 
 // ─── Connect section ──────────────────────────────────────────────────────────
@@ -205,39 +211,39 @@ function ConnectSection() {
 
 const TERMINAL_STATUSES = new Set(['Rejected', 'Withdrawn', 'Accepted'])
 
-interface Stats {
-  resumes: number
-  applications: number
-  activeApplications: number
-  notes: number
-  accomplishments: number
-  contacts: number
-}
-
 // ─── Home ─────────────────────────────────────────────────────────────────────
 
 export default function HomeView() {
   const { user } = useUser()
   const firstName = user?.firstName ?? null
 
-  const [stats, setStats] = useState<Stats | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
 
-  useEffect(() => {
-    Promise.all([listResumes(), listApplications(), listNotes(), listAccomplishments(), listContacts()]).then(
-      ([resumes, applications, notes, accomplishments, contacts]) => {
-        const active = applications.filter((a) => !TERMINAL_STATUSES.has(a.status))
-        setStats({
-          resumes: (resumes || []).length,
-          applications: (applications || []).length,
-          activeApplications: active.length,
-          notes: (notes || []).length,
-          accomplishments: (accomplishments || []).length,
-          contacts: (contacts || []).length,
-        })
+  const resumes = useResumeList()
+  const applications = useApplicationList()
+  const notes = useNoteList()
+  const accomplishments = useAccomplishmentList()
+  const contacts = useContactList()
+
+  const ready =
+    resumes.isSuccess &&
+    applications.isSuccess &&
+    notes.isSuccess &&
+    accomplishments.isSuccess &&
+    contacts.isSuccess
+
+  const stats = ready
+    ? {
+        resumes: resumes.data.length,
+        applications: applications.data.length,
+        activeApplications: applications.data.filter(
+          (a) => !TERMINAL_STATUSES.has(a.status),
+        ).length,
+        notes: notes.data.length,
+        accomplishments: accomplishments.data.length,
+        contacts: contacts.data.length,
       }
-    )
-  }, [])
+    : null
 
   return (
     <div className={styles.container}>

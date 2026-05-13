@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import type { ResourceRef, ResourceType } from '../types'
 import {
-  listApplications,
-  listAccomplishments,
-  listResumes,
-  listNotes,
-  listContacts,
-} from '../services/api'
+  useAccomplishmentList,
+  useApplicationList,
+  useContactList,
+  useNoteList,
+  useResumeList,
+} from '../hooks/queries'
 import styles from './LinkPickerModal.module.css'
 
 type TabId = 'all' | ResourceType
@@ -31,108 +31,6 @@ function isExcluded(ref: ResourceRef, excludeRefs: ResourceRef[]): boolean {
   return excludeRefs.some((e) => e.type === ref.type && e.id === ref.id)
 }
 
-async function fetchAll(): Promise<ResourceRef[]> {
-  const [apps, accs, resumes, notes, contacts] = await Promise.all([
-    listApplications().catch(() => []),
-    listAccomplishments().catch(() => []),
-    listResumes().catch(() => []),
-    listNotes().catch(() => []),
-    listContacts().catch(() => []),
-  ])
-
-  const refs: ResourceRef[] = [
-    ...apps.map((a) => ({
-      type: 'application' as const,
-      id: a.id,
-      name: a.position ? `${a.company} – ${a.position}` : a.company,
-      updatedAt: a.updated_at,
-    })),
-    ...accs.map((a) => ({
-      type: 'accomplishment' as const,
-      id: a.id,
-      name: a.title,
-      updatedAt: a.updated_at,
-    })),
-    ...resumes.map((r) => ({
-      type: 'resume' as const,
-      id: r.id,
-      name: r.label,
-      updatedAt: r.updated_at,
-    })),
-    ...notes.map((n) => ({
-      type: 'note' as const,
-      id: n.id,
-      name: n.title,
-      updatedAt: n.updated_at,
-    })),
-    ...contacts.map((c) => ({
-      type: 'contact' as const,
-      id: c.id,
-      name: c.name,
-      updatedAt: c.updated_at,
-    })),
-  ]
-
-  refs.sort((a, b) => {
-    if (a.updatedAt && b.updatedAt) {
-      return b.updatedAt.localeCompare(a.updatedAt)
-    }
-    return 0
-  })
-
-  return refs
-}
-
-async function fetchForType(type: ResourceType): Promise<ResourceRef[]> {
-  switch (type) {
-    case 'application': {
-      const items = await listApplications()
-      return items.map((a) => ({
-        type: 'application' as const,
-        id: a.id,
-        name: a.position ? `${a.company} – ${a.position}` : a.company,
-        updatedAt: a.updated_at,
-      }))
-    }
-    case 'accomplishment': {
-      const items = await listAccomplishments()
-      return items.map((a) => ({
-        type: 'accomplishment' as const,
-        id: a.id,
-        name: a.title,
-        updatedAt: a.updated_at,
-      }))
-    }
-    case 'resume': {
-      const items = await listResumes()
-      return items.map((r) => ({
-        type: 'resume' as const,
-        id: r.id,
-        name: r.label,
-        updatedAt: r.updated_at,
-      }))
-    }
-    case 'note': {
-      const items = await listNotes()
-      return items.map((n) => ({
-        type: 'note' as const,
-        id: n.id,
-        name: n.title,
-        updatedAt: n.updated_at,
-      }))
-    }
-    case 'contact': {
-      const items = await listContacts()
-      return items.map((c) => ({
-        type: 'contact' as const,
-        id: c.id,
-        name: c.name,
-        updatedAt: c.updated_at,
-      }))
-    }
-  }
-}
-
 export function LinkPickerModal({
   excludeRefs,
   onPick,
@@ -140,20 +38,98 @@ export function LinkPickerModal({
 }: LinkPickerModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>('all')
   const [query, setQuery] = useState('')
-  const [allRefs, setAllRefs] = useState<ResourceRef[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    setLoading(true)
-    const fn = activeTab === 'all' ? fetchAll() : fetchForType(activeTab)
-    fn.then((refs) => {
-      setAllRefs(refs)
-      setLoading(false)
-    }).catch(() => {
-      setAllRefs([])
-      setLoading(false)
-    })
-  }, [activeTab])
+  const apps = useApplicationList()
+  const accs = useAccomplishmentList()
+  const resumes = useResumeList()
+  const notes = useNoteList()
+  const contacts = useContactList()
+
+  const QUERIES = { application: apps, accomplishment: accs, resume: resumes, note: notes, contact: contacts }
+
+  const allRefs = useMemo<ResourceRef[]>(() => {
+    if (activeTab === 'all') {
+      const refs: ResourceRef[] = [
+        ...((apps.data ?? []).map((a) => ({
+          type: 'application' as const,
+          id: a.id,
+          name: a.position ? `${a.company} – ${a.position}` : a.company,
+          updatedAt: a.updated_at,
+        }))),
+        ...((accs.data ?? []).map((a) => ({
+          type: 'accomplishment' as const,
+          id: a.id,
+          name: a.title,
+          updatedAt: a.updated_at,
+        }))),
+        ...((resumes.data ?? []).map((r) => ({
+          type: 'resume' as const,
+          id: r.id,
+          name: r.label,
+          updatedAt: r.updated_at,
+        }))),
+        ...((notes.data ?? []).map((n) => ({
+          type: 'note' as const,
+          id: n.id,
+          name: n.title,
+          updatedAt: n.updated_at,
+        }))),
+        ...((contacts.data ?? []).map((c) => ({
+          type: 'contact' as const,
+          id: c.id,
+          name: c.name,
+          updatedAt: c.updated_at,
+        }))),
+      ]
+      refs.sort((a, b) => {
+        if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt)
+        return 0
+      })
+      return refs
+    }
+    switch (activeTab) {
+      case 'application':
+        return (apps.data ?? []).map((a) => ({
+          type: 'application' as const,
+          id: a.id,
+          name: a.position ? `${a.company} – ${a.position}` : a.company,
+          updatedAt: a.updated_at,
+        }))
+      case 'accomplishment':
+        return (accs.data ?? []).map((a) => ({
+          type: 'accomplishment' as const,
+          id: a.id,
+          name: a.title,
+          updatedAt: a.updated_at,
+        }))
+      case 'resume':
+        return (resumes.data ?? []).map((r) => ({
+          type: 'resume' as const,
+          id: r.id,
+          name: r.label,
+          updatedAt: r.updated_at,
+        }))
+      case 'note':
+        return (notes.data ?? []).map((n) => ({
+          type: 'note' as const,
+          id: n.id,
+          name: n.title,
+          updatedAt: n.updated_at,
+        }))
+      case 'contact':
+        return (contacts.data ?? []).map((c) => ({
+          type: 'contact' as const,
+          id: c.id,
+          name: c.name,
+          updatedAt: c.updated_at,
+        }))
+    }
+  }, [activeTab, apps.data, accs.data, resumes.data, notes.data, contacts.data])
+
+  const loading =
+    activeTab === 'all'
+      ? apps.isPending || accs.isPending || resumes.isPending || notes.isPending || contacts.isPending
+      : QUERIES[activeTab as ResourceType].isPending
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

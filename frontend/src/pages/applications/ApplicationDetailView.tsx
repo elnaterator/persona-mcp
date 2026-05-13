@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { Application, ResumeVersionSummary } from '../../types'
+import type { Application } from '../../types'
+import { ApiClientError } from '../../types'
+import { mapGroupedLinks } from '../../services/api'
 import {
-  getApplication,
-  updateApplication,
-  deleteApplication,
-  listResumes,
-  listAllTags,
-  mapGroupedLinks,
-} from '../../services/api'
+  useAllTags,
+  useApplicationDetail,
+  useApplicationMutations,
+  useResumeList,
+} from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
@@ -52,13 +52,6 @@ export default function ApplicationDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [app, setApp] = useState<Application | null>(null)
-  const [resumeVersions, setResumeVersions] = useState<ResumeVersionSummary[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
-  const [notFound, setNotFound] = useState(false)
-  const [forbidden, setForbidden] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [editingSection, setEditingSection] = useState<EditSection>(null)
   const [sectionForm, setSectionForm] = useState<Partial<Application>>({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -70,35 +63,25 @@ export default function ApplicationDetailView() {
     }
   }, [numericId, navigate])
 
-  const load = useCallback(async () => {
-    if (numericId === null) return
-    try {
-      setLoading(true)
-      const [appData, versions, tags] = await Promise.all([
-        getApplication(numericId),
-        listResumes(),
-        listAllTags(),
-      ])
-      setApp(appData)
-      setResumeVersions(versions)
-      setAllTags(tags)
-    } catch (err: unknown) {
-      const status = (err as { status?: number })?.status
-      if (status === 404) {
-        setNotFound(true)
-      } else if (status === 403) {
-        setForbidden(true)
-      } else {
-        setStatusMessage({ type: 'error', message: 'Failed to load application' })
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [numericId])
+  const detailQuery = useApplicationDetail(numericId ?? undefined)
+  const resumesQuery = useResumeList()
+  const tagsQuery = useAllTags()
+  const { update, remove } = useApplicationMutations()
+
+  const app = detailQuery.data ?? null
+  const resumeVersions = resumesQuery.data ?? []
+  const allTags = tagsQuery.data ?? []
+  const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
+  const notFound = errStatus === 404
+  const forbidden = errStatus === 403
+  const loading = detailQuery.isPending
+  const saving = update.isPending
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (detailQuery.isError && !notFound && !forbidden) {
+      setStatusMessage({ type: 'error', message: 'Failed to load application' })
+    }
+  }, [detailQuery.isError, notFound, forbidden])
 
   const startEdit = (section: EditSection) => {
     if (!app) return
@@ -115,7 +98,6 @@ export default function ApplicationDetailView() {
     if (!app || numericId === null) return
     if (editingSection === 'details' && (!sectionForm.company?.trim() || !sectionForm.position?.trim())) return
     try {
-      setSaving(true)
       const payload: Partial<Application> = editingSection === 'tags'
         ? { tags: sectionForm.tags ?? app.tags }
         : {
@@ -129,15 +111,12 @@ export default function ApplicationDetailView() {
               ? sectionForm.resume_version_id ?? null
               : app.resume_version_id,
           }
-      const updated = await updateApplication(numericId, payload)
-      setApp(updated)
+      await update.mutateAsync({ id: numericId, data: payload })
       setEditingSection(null)
       setSectionForm({})
       setStatusMessage({ type: 'success', message: 'Saved' })
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to save' })
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -156,7 +135,7 @@ export default function ApplicationDetailView() {
   const handleDelete = async () => {
     if (numericId === null) return
     try {
-      await deleteApplication(numericId)
+      await remove.mutateAsync(numericId)
       navigate('/applications')
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to delete application' })
@@ -486,7 +465,7 @@ export default function ApplicationDetailView() {
           resourceType="application"
           resourceId={numericId}
           links={mapGroupedLinks(app.links as Record<string, unknown[]>)}
-          onChange={() => getApplication(numericId).then(setApp)}
+          onChange={() => detailQuery.refetch()}
         />
       </div>
 

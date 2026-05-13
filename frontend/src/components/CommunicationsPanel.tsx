@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import type { Communication } from '../types'
+import { ApiClientError } from '../services/api'
 import {
-  listContactCommunications,
-  addContactCommunication,
-  updateContactCommunication,
-  removeContactCommunication,
-  listAllTags,
-  ApiClientError,
-} from '../services/api'
+  useAllTags,
+  useCommunicationMutations,
+  useContactCommunications,
+} from '../hooks/queries'
 import { TagInput } from './TagInput'
 import { ConfirmDialog } from './ConfirmDialog'
 import { StatusMessage } from './StatusMessage'
@@ -55,8 +53,6 @@ const emptyForm: CommForm = {
 }
 
 export default function CommunicationsPanel({ contactId, initialExpandId }: CommunicationsPanelProps) {
-  const [communications, setCommunications] = useState<Communication[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editTarget, setEditTarget] = useState<Communication | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
@@ -64,8 +60,39 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
     initialExpandId !== undefined ? new Set([initialExpandId]) : new Set()
   )
   const [form, setForm] = useState<CommForm>(emptyForm)
-  const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const commsQuery = useContactCommunications(contactId)
+  const tagsQuery = useAllTags()
+  const { add, update, remove } = useCommunicationMutations()
+
+  const allTags = tagsQuery.data ?? []
+  const submitting = add.isPending || update.isPending
+
+  const communications = useMemo<Communication[]>(() => {
+    const data = commsQuery.data ?? []
+    return [...data].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+  }, [commsQuery.data])
+
+  useEffect(() => {
+    if (commsQuery.isSuccess && initialExpandId !== undefined) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.getElementById(`comm-${initialExpandId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        })
+      })
+    }
+  }, [commsQuery.isSuccess, initialExpandId])
+
+  useEffect(() => {
+    if (commsQuery.isError) {
+      const err = commsQuery.error
+      const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to load communications'
+      setStatusMessage({ type: 'error', message: msg })
+    }
+  }, [commsQuery.isError, commsQuery.error])
 
   const toggleExpand = (id: number) =>
     setExpandedIds((prev) => {
@@ -74,39 +101,9 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
       return next
     })
 
-  const load = useCallback(async () => {
-    try {
-      const [data, tags] = await Promise.all([
-        listContactCommunications(contactId),
-        listAllTags(),
-      ])
-      const sorted = [...data].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-      setCommunications(sorted)
-      setAllTags(tags)
-      if (initialExpandId !== undefined) {
-        // Double rAF: first frame commits React DOM, second ensures layout is stable
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            document.getElementById(`comm-${initialExpandId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          })
-        })
-      }
-    } catch (err) {
-      const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to load communications'
-      setStatusMessage({ type: 'error', message: msg })
-    }
-  }, [contactId, initialExpandId])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      setSubmitting(true)
       const payload = {
         type: form.type,
         direction: form.direction,
@@ -116,16 +113,13 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
         status: form.status,
         tags: form.tags,
       }
-      await addContactCommunication(contactId, payload)
+      await add.mutateAsync({ contactId, data: payload })
       setForm(emptyForm)
       setShowAddForm(false)
       setStatusMessage({ type: 'success', message: 'Communication added' })
-      await load()
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to add communication'
       setStatusMessage({ type: 'error', message: msg })
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -147,7 +141,6 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
     e.preventDefault()
     if (!editTarget) return
     try {
-      setSubmitting(true)
       const payload = {
         type: form.type,
         direction: form.direction,
@@ -157,26 +150,22 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
         status: form.status,
         tags: form.tags,
       }
-      await updateContactCommunication(contactId, editTarget.id, payload)
+      await update.mutateAsync({ contactId, commId: editTarget.id, data: payload })
       setEditTarget(null)
       setForm(emptyForm)
       setStatusMessage({ type: 'success', message: 'Communication updated' })
-      await load()
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to update communication'
       setStatusMessage({ type: 'error', message: msg })
-    } finally {
-      setSubmitting(false)
     }
   }
 
   const handleDelete = async () => {
     if (deleteTarget === null) return
     try {
-      await removeContactCommunication(contactId, deleteTarget)
+      await remove.mutateAsync({ contactId, commId: deleteTarget })
       setDeleteTarget(null)
       setStatusMessage({ type: 'success', message: 'Communication removed' })
-      await load()
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to remove communication'
       setStatusMessage({ type: 'error', message: msg })

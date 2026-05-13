@@ -41,7 +41,7 @@ Should have a `pages/` dir, separate subdir for each page with page and componen
 Remove duplicate functionality from applications, use linked contacts and contact communications. Just have list of linked resources like all other pages. No need to preserve existing application contacts or communications, just delete (early in project, no users yet).
 
 
-## R008 Adopt TanStack Query for server state
+## R008 Adopt TanStack Query for server state - DONE
 
 Replace per-view `useEffect(fetch, [])` + manual `refresh()` pattern with `useQuery` / `useMutation`. Cache list + detail responses, dedup in-flight requests, refetch on focus, invalidate on mutate. Enables instant back-nav, optimistic updates for tag/link toggles. Replaces or thins out `useResourceList` / `useResourceDetail` hooks.
 
@@ -69,3 +69,18 @@ Set up Storybook targeting `frontend/src/components/` (post-refactor). Stories p
 ## R013 UI test suite with playwright
 
 I want to set up a playwright test suite to validate the behavior of the running UI as well as validation of look and feel. It should not be part of the CI pipeline yet.
+
+
+## R014 Remove application to resume duplicate linking mechanism, use generic links
+
+`application.resume_version_id` FK duplicates the generic `link` table edge `application↔resume`. Drop the column and the matching `Application.resume_version_id` / `ApplicationSummary.resume_version_id` model fields, the `resume_version_id` param on `application_tools.py` create/update, and the resume-picker UI in `ApplicationDetailView` (replace with the standard `LinksPanel` resume entries). Replace `ResumeVersion.app_count` (currently a JOIN aggregate over the FK) with the existing generic `link_count` filtered to `type=application`, and update the resume list-card "X applications" badge accordingly. Migration must backfill existing `resume_version_id` values into `link` rows before dropping the column. No "primary resume per application" semantics preserved — generic links allow many resumes per app with no primary; revisit with a `primary_resume_link_id` flag only if the UX requires it.
+
+
+# R015 Render lists in more compact form
+
+Resume list items look good, make other list items similar, more compact, fit all on one line where possible, 2 if not, float right for things like dates, link counts, etc. The goal is clean, good looking, and compact to show more items at once.
+
+
+## R016 Consistent search experience
+
+Create a single search input that is conistent across the application and allows including tags and text in a single bar. When you search, it recommends tags, tab adds the tag as a chip in the search text bar, and also has search. For all object types we can search by tags or text, consistent experience. There should also be a generic search API across all resources, and search capability on the home page for any resource.  Refactor to reusable search component for UI.

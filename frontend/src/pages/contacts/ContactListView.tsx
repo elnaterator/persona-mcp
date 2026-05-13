@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { ContactSummary, CommunicationSearchResult } from '../../types'
-import { listContacts, createContact, listAllTags, searchCommunications } from '../../services/api'
+import type { CommunicationSearchResult } from '../../types'
+import {
+  useAllTags,
+  useCommunicationSearch,
+  useContactList,
+  useContactMutations,
+} from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
-import { useResourceList } from '../../hooks/useResourceList'
 import styles from './ContactListView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -35,62 +39,43 @@ const EMPTY_FORM: FormState = {
 
 export default function ContactListView() {
   const navigate = useNavigate()
-  const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
-  const [saving, setSaving] = useState(false)
 
   // Comm search state
   const [showCommSearch, setShowCommSearch] = useState(false)
   const [commQ, setCommQ] = useState('')
   const [commTags, setCommTags] = useState<string[]>([])
-  const [commResults, setCommResults] = useState<CommunicationSearchResult[]>([])
-  const [commSearching, setCommSearching] = useState(false)
+  const [debouncedCommQ, setDebouncedCommQ] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const fetcher = useCallback(async () => {
-    const [contactList, tags] = await Promise.all([
-      listContacts(tagFilter.length ? tagFilter : undefined, searchQuery || undefined),
-      listAllTags(),
-    ])
-    setAllTags(tags)
-    return contactList
-  }, [tagFilter, searchQuery])
+  const listQuery = useContactList({ tags: tagFilter, q: searchQuery })
+  const tagsQuery = useAllTags()
+  const { create } = useContactMutations()
 
-  const { items: contacts, refresh: loadData } = useResourceList<ContactSummary>(fetcher)
-
-  const runCommSearch = useCallback(async (q: string, tags: string[]) => {
-    if (!q && tags.length === 0) {
-      setCommResults([])
-      return
-    }
-    setCommSearching(true)
-    try {
-      const results = await searchCommunications({
-        q: q || undefined,
-        tags: tags.length ? tags : undefined,
-      })
-      setCommResults(results)
-    } catch {
-      setCommResults([])
-    } finally {
-      setCommSearching(false)
-    }
-  }, [])
+  const contacts = listQuery.data ?? []
+  const allTags = tagsQuery.data ?? []
+  const saving = create.isPending
 
   useEffect(() => {
     if (!showCommSearch) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      runCommSearch(commQ, commTags)
-    }, 300)
+    debounceRef.current = setTimeout(() => setDebouncedCommQ(commQ), 300)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [commQ, commTags, showCommSearch, runCommSearch])
+  }, [commQ, showCommSearch])
+
+  const commSearch = useCommunicationSearch({
+    q: debouncedCommQ || undefined,
+    tags: commTags,
+    enabled: showCommSearch,
+  })
+  const commResults: CommunicationSearchResult[] = commSearch.data ?? []
+  const commSearching = commSearch.isFetching
 
   const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -101,10 +86,9 @@ export default function ContactListView() {
       setFormError('Name is required')
       return
     }
-    setSaving(true)
     setFormError('')
     try {
-      await createContact({
+      await create.mutateAsync({
         name: form.name.trim(),
         company: form.company || undefined,
         title: form.title || undefined,
@@ -113,11 +97,8 @@ export default function ContactListView() {
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
-      await loadData()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save')
-    } finally {
-      setSaving(false)
     }
   }
 

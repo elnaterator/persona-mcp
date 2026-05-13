@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Link2 } from 'lucide-react'
-import type { Application } from '../../types'
-import { listApplications, createApplication, listAllTags } from '../../services/api'
+import {
+  useAllTags,
+  useApplicationList,
+  useApplicationMutations,
+} from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { StatusMessage } from '../../components/StatusMessage'
@@ -52,48 +55,37 @@ const emptyForm: NewAppForm = {
 
 export default function ApplicationListView() {
   const navigate = useNavigate()
-  const [applications, setApplications] = useState<Application[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
   const [tagFilter, setTagFilter] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
   const [newForm, setNewForm] = useState<NewAppForm>(emptyForm)
-  const [submitting, setSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true)
-      const [data, tags] = await Promise.all([
-        listApplications(
-          statusFilter || undefined,
-          searchQuery || undefined,
-          tagFilter.length ? tagFilter : undefined,
-        ),
-        listAllTags(),
-      ])
-      setApplications(data)
-      setAllTags(tags)
-    } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to load applications' })
-    } finally {
-      setLoading(false)
-    }
-  }, [statusFilter, searchQuery, tagFilter])
+  const listQuery = useApplicationList({
+    status: statusFilter || undefined,
+    q: searchQuery || undefined,
+    tags: tagFilter,
+  })
+  const tagsQuery = useAllTags()
+  const { create } = useApplicationMutations()
+
+  const applications = listQuery.data ?? []
+  const allTags = tagsQuery.data ?? []
+  const loading = listQuery.isPending
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (listQuery.isError) {
+      setStatusMessage({ type: 'error', message: 'Failed to load applications' })
+    }
+  }, [listQuery.isError])
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newForm.company.trim() || !newForm.position.trim()) return
 
     try {
-      setSubmitting(true)
-      const created = await createApplication({
+      const created = await create.mutateAsync({
         company: newForm.company.trim(),
         position: newForm.position.trim(),
         status: newForm.status,
@@ -108,10 +100,9 @@ export default function ApplicationListView() {
       navigate(`/applications/${created.id}`)
     } catch {
       setStatusMessage({ type: 'error', message: 'Failed to create application' })
-    } finally {
-      setSubmitting(false)
     }
   }
+  const submitting = create.isPending
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, {

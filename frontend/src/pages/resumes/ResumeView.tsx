@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getResume } from '../../services/api';
-import type { Resume } from '../../types';
 import ContactSection from './ContactSection';
 import SummarySection from './SummarySection';
 import ExperienceSection from './ExperienceSection';
@@ -10,41 +9,15 @@ import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { StatusMessage } from '../../components/StatusMessage';
 import styles from './ResumeView.module.css';
 
+const ROOT_RESUME_KEY = ['resume', 'root'] as const;
+
 export default function ResumeView() {
-  const [resume, setResume] = useState<Resume | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const { data: resume, isPending, error, isError, refetch } = useQuery({
+    queryKey: ROOT_RESUME_KEY,
+    queryFn: getResume,
+  });
 
-  useEffect(() => {
-    loadResume();
-  }, []);
-
-  const loadResume = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getResume();
-      setResume(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch resume data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    try {
-      setRefreshError(null);
-      const data = await getResume();
-      setResume(data);
-    } catch (err) {
-      // On refresh failure, keep existing data visible but show error
-      setRefreshError(err instanceof Error ? err.message : 'Failed to refresh resume data');
-    }
-  };
-
-  if (loading) {
+  if (isPending) {
     return (
       <div className={styles.centerContainer}>
         <LoadingSpinner />
@@ -52,12 +25,14 @@ export default function ResumeView() {
     );
   }
 
-  if (error) {
+  // Initial load failed (no data ever loaded) — full error screen with retry
+  if (isError && !resume) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch resume data';
     return (
       <div className={styles.centerContainer}>
-        <StatusMessage type="error" message={error} />
+        <StatusMessage type="error" message={message} />
         <button
-          onClick={loadResume}
+          onClick={() => refetch()}
           className={styles.retryButton}
           aria-label="Retry loading resume"
         >
@@ -75,15 +50,22 @@ export default function ResumeView() {
     );
   }
 
+  const refreshErrorMsg =
+    isError && resume
+      ? error instanceof Error
+        ? error.message
+        : 'Failed to refresh resume data'
+      : null;
+
+  const handleUpdate = () => {
+    refetch();
+  };
+
   return (
     <div className={styles.container}>
-      {refreshError && (
+      {refreshErrorMsg && (
         <div className={styles.refreshError}>
-          <StatusMessage
-            type="error"
-            message={refreshError}
-            onDismiss={() => setRefreshError(null)}
-          />
+          <StatusMessage type="error" message={refreshErrorMsg} />
         </div>
       )}
       <ContactSection contact={resume.contact} onUpdate={handleUpdate} />
