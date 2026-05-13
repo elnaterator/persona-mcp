@@ -9,7 +9,7 @@ import { TagInput } from '../../components/TagInput'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { SectionCard } from '../../components/SectionCard'
 import { MarkdownContent } from '../../components/MarkdownContent'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
@@ -39,7 +39,7 @@ export default function ContactDetailView() {
   const [editForm, setEditForm] = useState<Partial<Contact>>({})
   const [editError, setEditError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   useEffect(() => {
     if (numericId === null) {
@@ -107,7 +107,7 @@ export default function ContactDetailView() {
         },
       })
       setEditing(false)
-      setStatusMessage({ type: 'success', message: 'Saved' })
+      success('Saved')
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
     }
@@ -116,10 +116,11 @@ export default function ContactDetailView() {
   const handleDelete = async () => {
     try {
       await remove.mutateAsync(numericId)
+      success('Contact deleted')
       navigate('/contacts')
     } catch {
       setConfirmDelete(false)
-      setStatusMessage({ type: 'error', message: 'Failed to delete contact' })
+      error('Failed to delete contact')
     }
   }
 
@@ -178,14 +179,6 @@ export default function ContactDetailView() {
       </div>
 
       {editError && <p className={styles.formError}>{editError}</p>}
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {editing ? (
         <div className={styles.editGrid}>

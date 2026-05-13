@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import './index.css'
 import App from './App.tsx'
 import { queryClient } from './services/queryClient'
+import { ToastProvider } from './components/toast'
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -151,7 +152,9 @@ createRoot(document.getElementById('root')!).render(
         signInFallbackRedirectUrl={window.location.pathname + window.location.search}
         appearance={clerkAppearance}
       >
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </ClerkProvider>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>

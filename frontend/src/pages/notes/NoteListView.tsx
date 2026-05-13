@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
 import { useAllTags, useNoteList, useNoteMutations } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
+import { useToast } from '../../components/toast'
 import styles from './NoteListView.module.css'
 
 interface FormState {
@@ -27,6 +28,7 @@ export default function NoteListView() {
   const listQuery = useNoteList({ tags: tagFilter, q: searchQuery })
   const tagsQuery = useAllTags()
   const { create } = useNoteMutations()
+  const { success, error } = useToast()
 
   const notes = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
@@ -50,8 +52,10 @@ export default function NoteListView() {
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
+      success('Note created')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to save')
+      error(err instanceof Error ? err.message : 'Failed to create note')
+      setFormError(err instanceof Error ? err.message : 'Failed to create note')
     }
   }
 

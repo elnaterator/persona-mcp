@@ -3,29 +3,29 @@ import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
 import { useResumeList, useResumeMutations } from '../../hooks/queries'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { StatusMessage } from '../../components/StatusMessage'
 import { InlineCreateForm } from '../../components/InlineCreateForm'
+import { useToast } from '../../components/toast'
 import styles from './ResumeListView.module.css'
 
 export default function ResumeListView() {
   const { data: resumes = [], isPending, isError } = useResumeList()
   const { create } = useResumeMutations()
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     if (isError) {
-      setStatusMessage({ type: 'error', message: 'Failed to load resume versions' })
+      error('Failed to load resume versions')
     }
-  }, [isError])
+  }, [isError, error])
 
   const handleCreateConfirm = async (label: string) => {
     try {
       await create.mutateAsync(label)
-      setStatusMessage({ type: 'success', message: 'Resume version created' })
+      success('Resume version created')
       setCreating(false)
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to create resume version' })
+      error('Failed to create resume version')
     }
   }
 
@@ -47,14 +47,6 @@ export default function ResumeListView() {
           New Version
         </button>
       </div>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {creating && (
         <InlineCreateForm

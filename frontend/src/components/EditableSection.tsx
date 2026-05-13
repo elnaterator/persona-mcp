@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Pencil, Check, X } from 'lucide-react';
-import { StatusMessage } from './StatusMessage';
+import { useToast } from './toast';
 import styles from './EditableSection.module.css';
 
 type EditState = 'viewing' | 'editing' | 'saving';
@@ -14,32 +14,25 @@ interface EditableSectionProps {
 
 export function EditableSection({ children, onSave, title, placeholderContent }: EditableSectionProps) {
   const [editState, setEditState] = useState<EditState>('viewing');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const handleEdit = () => {
     setEditState('editing');
-    setError(null);
-    setSuccess(null);
   };
 
   const handleCancel = () => {
     setEditState('viewing');
-    setError(null);
-    setSuccess(null);
   };
 
   const handleSave = async () => {
     setEditState('saving');
-    setError(null);
-    setSuccess(null);
 
     try {
       await onSave();
-      setSuccess('Changes saved successfully');
+      toastSuccess('Changes saved successfully');
       setEditState('viewing');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save changes');
+      toastError(err instanceof Error ? err.message : 'Failed to save changes');
       setEditState('editing');
     }
   };
@@ -80,22 +73,6 @@ export function EditableSection({ children, onSave, title, placeholderContent }:
             <span className={styles.saving}>Saving...</span>
           )}
         </div>
-      )}
-
-      {error && (
-        <StatusMessage
-          type="error"
-          message={error}
-          onDismiss={() => setError(null)}
-        />
-      )}
-
-      {success && (
-        <StatusMessage
-          type="success"
-          message={success}
-          onDismiss={() => setSuccess(null)}
-        />
       )}
 
       <div className={styles.content}>

@@ -7,6 +7,8 @@ vi.mock('@testing-library/react', async () => {
   const React = await vi.importActual<typeof import('react')>('react')
   const { QueryClient, QueryClientProvider } =
     await vi.importActual<typeof import('@tanstack/react-query')>('@tanstack/react-query')
+  const { ToastProvider } =
+    await vi.importActual<typeof import('../components/toast')>('../components/toast')
 
   type RenderArgs = Parameters<typeof actual.render>
   const render: typeof actual.render = (ui, options) => {
@@ -21,7 +23,11 @@ vi.mock('@testing-library/react', async () => {
       const inner = ExistingWrapper
         ? React.createElement(ExistingWrapper, null, children)
         : (children as React.ReactElement)
-      return React.createElement(QueryClientProvider, { client }, inner)
+      return React.createElement(
+        QueryClientProvider,
+        { client },
+        React.createElement(ToastProvider, null, inner),
+      )
     }
     return actual.render(ui, { ...options, wrapper: Wrapper } as RenderArgs[1])
   }

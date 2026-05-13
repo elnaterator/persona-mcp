@@ -6,7 +6,6 @@ import ExperienceSection from './ExperienceSection';
 import EducationSection from './EducationSection';
 import SkillsSection from './SkillsSection';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
-import { StatusMessage } from '../../components/StatusMessage';
 import styles from './ResumeView.module.css';
 
 const ROOT_RESUME_KEY = ['resume', 'root'] as const;
@@ -30,7 +29,7 @@ export default function ResumeView() {
     const message = error instanceof Error ? error.message : 'Failed to fetch resume data';
     return (
       <div className={styles.centerContainer}>
-        <StatusMessage type="error" message={message} />
+        <p className={styles.inlineError} role="alert">{message}</p>
         <button
           onClick={() => refetch()}
           className={styles.retryButton}
@@ -45,7 +44,7 @@ export default function ResumeView() {
   if (!resume) {
     return (
       <div className={styles.centerContainer}>
-        <StatusMessage type="error" message="No resume data available" />
+        <p className={styles.inlineError} role="alert">No resume data available</p>
       </div>
     );
   }
@@ -64,9 +63,7 @@ export default function ResumeView() {
   return (
     <div className={styles.container}>
       {refreshErrorMsg && (
-        <div className={styles.refreshError}>
-          <StatusMessage type="error" message={refreshErrorMsg} />
-        </div>
+        <p className={styles.inlineError} role="alert">{refreshErrorMsg}</p>
       )}
       <ContactSection contact={resume.contact} onUpdate={handleUpdate} />
       <SummarySection summary={resume.summary} onUpdate={handleUpdate} />

@@ -10,7 +10,7 @@ import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { SectionCard } from '../../components/SectionCard'
 import { MarkdownContent } from '../../components/MarkdownContent'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
@@ -26,7 +26,7 @@ export default function NoteDetailView() {
   const [editForm, setEditForm] = useState<Partial<Note>>({})
   const [editError, setEditError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   useEffect(() => {
     if (numericId === null) {
@@ -83,7 +83,7 @@ export default function NoteDetailView() {
         },
       })
       setEditing(false)
-      setStatusMessage({ type: 'success', message: 'Saved' })
+      success('Saved')
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
     }
@@ -92,10 +92,11 @@ export default function NoteDetailView() {
   const handleDelete = async () => {
     try {
       await remove.mutateAsync(numericId)
+      success('Note deleted')
       navigate('/notes')
     } catch {
       setConfirmDelete(false)
-      setStatusMessage({ type: 'error', message: 'Failed to delete note' })
+      error('Failed to delete note')
     }
   }
 
@@ -154,14 +155,6 @@ export default function NoteDetailView() {
       </div>
 
       {editError && <p className={styles.formError}>{editError}</p>}
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {editing ? (
         <div className={styles.metaEdit}>
