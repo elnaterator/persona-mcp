@@ -3,7 +3,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { WorkExperience } from '../../types'
 import { EntryForm, type FieldConfig } from '../../components/EntryForm'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
 import styles from './ExperienceSection.module.css'
 
@@ -26,7 +26,7 @@ const experienceFields: FieldConfig[] = [
 
 export default function ExperienceSection({ experience, onUpdate, versionId }: ExperienceSectionProps) {
   const [mode, setMode] = useState<Mode>('view')
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   const handleAdd = async (data: Record<string, string | string[]>) => {
     try {
@@ -44,11 +44,11 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
       } else {
         await addEntry('experience', entryData)
       }
-      setStatusMessage({ type: 'success', message: 'Experience added successfully' })
+      success('Experience added successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to add experience' })
+      error('Failed to add experience')
     }
   }
 
@@ -70,11 +70,11 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
       } else {
         await updateEntry('experience', mode.index, entryData)
       }
-      setStatusMessage({ type: 'success', message: 'Experience updated successfully' })
+      success('Experience updated successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to update experience' })
+      error('Failed to update experience')
     }
   }
 
@@ -87,11 +87,11 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
       } else {
         await removeEntry('experience', mode.index)
       }
-      setStatusMessage({ type: 'success', message: 'Experience deleted successfully' })
+      success('Experience deleted successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to delete experience' })
+      error('Failed to delete experience')
       setMode('view')
     }
   }
@@ -100,13 +100,6 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
     <section className={styles.container} data-testid="experience-section">
       <h2 className={styles.sectionLabel}>Experience</h2>
 
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {experience.length > 0 ? (
         <div className={styles.list}>

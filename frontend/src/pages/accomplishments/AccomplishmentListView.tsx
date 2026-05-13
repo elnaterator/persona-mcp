@@ -7,6 +7,7 @@ import {
   useAllTags,
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
+import { useToast } from '../../components/toast'
 import styles from './AccomplishmentListView.module.css'
 
 interface FormState {
@@ -38,6 +39,7 @@ export default function AccomplishmentListView() {
   const listQuery = useAccomplishmentList({ tags: tagFilter })
   const tagsQuery = useAllTags()
   const { create } = useAccomplishmentMutations()
+  const { success, error } = useToast()
 
   const accomplishments = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
@@ -65,8 +67,10 @@ export default function AccomplishmentListView() {
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
+      success('Accomplishment created')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to save')
+      error(err instanceof Error ? err.message : 'Failed to create accomplishment')
+      setFormError(err instanceof Error ? err.message : 'Failed to create accomplishment')
     }
   }
 

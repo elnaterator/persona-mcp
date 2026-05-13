@@ -9,7 +9,7 @@ import {
 } from '../hooks/queries'
 import { TagInput } from './TagInput'
 import { ConfirmDialog } from './ConfirmDialog'
-import { StatusMessage } from './StatusMessage'
+import { useToast } from './toast'
 import { AutoResizeTextarea } from './AutoResizeTextarea'
 import { MarkdownContent } from './MarkdownContent'
 import styles from './CommunicationsPanel.module.css'
@@ -60,7 +60,7 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
     initialExpandId !== undefined ? new Set([initialExpandId]) : new Set()
   )
   const [form, setForm] = useState<CommForm>(emptyForm)
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error: toastError } = useToast()
 
   const commsQuery = useContactCommunications(contactId)
   const tagsQuery = useAllTags()
@@ -90,9 +90,9 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
     if (commsQuery.isError) {
       const err = commsQuery.error
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to load communications'
-      setStatusMessage({ type: 'error', message: msg })
+      toastError(msg)
     }
-  }, [commsQuery.isError, commsQuery.error])
+  }, [commsQuery.isError, commsQuery.error, toastError])
 
   const toggleExpand = (id: number) =>
     setExpandedIds((prev) => {
@@ -116,10 +116,10 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
       await add.mutateAsync({ contactId, data: payload })
       setForm(emptyForm)
       setShowAddForm(false)
-      setStatusMessage({ type: 'success', message: 'Communication added' })
+      success('Communication added')
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to add communication'
-      setStatusMessage({ type: 'error', message: msg })
+      toastError(msg)
     }
   }
 
@@ -153,10 +153,10 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
       await update.mutateAsync({ contactId, commId: editTarget.id, data: payload })
       setEditTarget(null)
       setForm(emptyForm)
-      setStatusMessage({ type: 'success', message: 'Communication updated' })
+      success('Communication updated')
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to update communication'
-      setStatusMessage({ type: 'error', message: msg })
+      toastError(msg)
     }
   }
 
@@ -165,10 +165,10 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
     try {
       await remove.mutateAsync({ contactId, commId: deleteTarget })
       setDeleteTarget(null)
-      setStatusMessage({ type: 'success', message: 'Communication removed' })
+      success('Communication removed')
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to remove communication'
-      setStatusMessage({ type: 'error', message: msg })
+      toastError(msg)
       setDeleteTarget(null)
     }
   }
@@ -193,14 +193,6 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
           </button>
         )}
       </div>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {showAddForm && (
         <form className={styles.form} onSubmit={handleAdd}>

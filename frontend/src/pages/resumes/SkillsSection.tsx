@@ -3,7 +3,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { Skill } from '../../types'
 import { EntryForm, type FieldConfig } from '../../components/EntryForm'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
 import styles from './SkillsSection.module.css'
 
@@ -22,7 +22,7 @@ const skillFields: FieldConfig[] = [
 
 export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSectionProps) {
   const [mode, setMode] = useState<Mode>('view')
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   const groupedSkills = skills.reduce((acc, skill, index) => {
     const category = skill.category || 'Other'
@@ -47,12 +47,12 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       } else {
         await addEntry('skills', entryData)
       }
-      setStatusMessage({ type: 'success', message: 'Skill added successfully' })
+      success('Skill added successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to add skill'
-      setStatusMessage({ type: 'error', message: msg })
+      error(msg)
     }
   }
 
@@ -70,12 +70,12 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       } else {
         await updateEntry('skills', mode.index, entryData)
       }
-      setStatusMessage({ type: 'success', message: 'Skill updated successfully' })
+      success('Skill updated successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update skill'
-      setStatusMessage({ type: 'error', message: msg })
+      error(msg)
     }
   }
 
@@ -88,12 +88,12 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       } else {
         await removeEntry('skills', mode.index)
       }
-      setStatusMessage({ type: 'success', message: 'Skill deleted successfully' })
+      success('Skill deleted successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to delete skill'
-      setStatusMessage({ type: 'error', message: msg })
+      error(msg)
       setMode('view')
     }
   }
@@ -101,14 +101,6 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
   return (
     <section className={styles.container} data-testid="skills-section">
       <h2 className={styles.sectionLabel}>Skills</h2>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {categories.length > 0 ? (
         <div className={styles.list}>

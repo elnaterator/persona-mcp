@@ -8,7 +8,7 @@ import {
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import styles from './ApplicationListView.module.css'
 
 const ALL_STATUSES = [
@@ -60,7 +60,7 @@ export default function ApplicationListView() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
   const [newForm, setNewForm] = useState<NewAppForm>(emptyForm)
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   const listQuery = useApplicationList({
     status: statusFilter || undefined,
@@ -76,9 +76,9 @@ export default function ApplicationListView() {
 
   useEffect(() => {
     if (listQuery.isError) {
-      setStatusMessage({ type: 'error', message: 'Failed to load applications' })
+      error('Failed to load applications')
     }
-  }, [listQuery.isError])
+  }, [listQuery.isError, error])
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,10 +96,10 @@ export default function ApplicationListView() {
       })
       setShowNewForm(false)
       setNewForm(emptyForm)
-      setStatusMessage({ type: 'success', message: 'Application created' })
+      success('Application created')
       navigate(`/applications/${created.id}`)
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to create application' })
+      error('Failed to create application')
     }
   }
   const submitting = create.isPending
@@ -122,14 +122,6 @@ export default function ApplicationListView() {
           {showNewForm ? 'Cancel' : 'New Application'}
         </button>
       </div>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {showNewForm && (
         <form className={styles.newForm} onSubmit={handleCreateSubmit}>

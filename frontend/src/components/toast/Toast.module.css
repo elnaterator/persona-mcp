@@ -1,0 +1,131 @@
+.container {
+  position: fixed;
+  top: var(--header-h, 64px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-9) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: var(--space-3) var(--space-6) 0;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    padding: var(--space-3) var(--space-8) 0;
+  }
+}
+
+@media (min-width: 1921px) {
+  .container {
+    max-width: 1400px;
+    padding: var(--space-3) var(--space-10) 0;
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+  pointer-events: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.item[data-state='visible'] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.item[data-state='leaving'] {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item,
+  .item[data-state='visible'],
+  .item[data-state='leaving'] {
+    transform: none;
+    transition: opacity 150ms ease;
+  }
+}
+
+.success {
+  background-color: var(--status-success-bg);
+  color: var(--status-success);
+  border: 1px solid var(--status-success);
+}
+
+.error {
+  background-color: var(--status-error-bg);
+  color: var(--status-error);
+  border: 1px solid var(--status-error);
+}
+
+.warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning);
+}
+
+.message {
+  flex: 1;
+}
+
+.actionButton {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.actionButton:hover {
+  opacity: 0.8;
+}
+
+.dismissButton {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+  color: inherit;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.dismissButton:hover {
+  opacity: 1;
+}
+
+.dismissButton:focus {
+  outline: none;
+  opacity: 1;
+}

@@ -51,7 +51,7 @@ Replace per-view `useEffect(fetch, [])` + manual `refresh()` pattern with `useQu
 Define `:root` CSS vars in `index.css` for spacing, colors, radii, shadows (`--space-1..8`, `--color-fg/bg/accent`, `--radius-sm/md`, `--shadow-card`). Sweep all `*.module.css` to reference vars instead of hardcoded hex/px. Enables dark mode + design-system consistency. Low risk, high visual payoff.
 
 
-## R010 Toast / notification provider
+## R010 Toast / notification provider - DONE
 
 Replace per-view `StatusMessage` state + auto-dismiss timers with single `<ToastProvider>` at root + `useToast()` hook. Single render slot, queue, animation, no prop drilling. Cuts ~10 LOC per list/detail view.
 

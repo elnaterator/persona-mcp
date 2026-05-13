@@ -23,6 +23,13 @@
   gap: var(--space-6);
 }
 
+.inlineError {
+  color: var(--status-error);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  margin: var(--space-4) 0;
+}
+
 .retryButton {
   padding: var(--space-4) var(--space-8);
   background: none;

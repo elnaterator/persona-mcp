@@ -3,7 +3,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { Education } from '../../types'
 import { EntryForm, type FieldConfig } from '../../components/EntryForm'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
 import styles from './EducationSection.module.css'
 
@@ -27,7 +27,7 @@ const educationFields: FieldConfig[] = [
 
 export default function EducationSection({ education, onUpdate, versionId }: EducationSectionProps) {
   const [mode, setMode] = useState<Mode>('view')
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   const handleAdd = async (data: Record<string, string | string[]>) => {
     try {
@@ -46,11 +46,11 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
       } else {
         await addEntry('education', entryData)
       }
-      setStatusMessage({ type: 'success', message: 'Education added successfully' })
+      success('Education added successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to add education' })
+      error('Failed to add education')
     }
   }
 
@@ -73,11 +73,11 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
       } else {
         await updateEntry('education', mode.index, entryData)
       }
-      setStatusMessage({ type: 'success', message: 'Education updated successfully' })
+      success('Education updated successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to update education' })
+      error('Failed to update education')
     }
   }
 
@@ -90,11 +90,11 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
       } else {
         await removeEntry('education', mode.index)
       }
-      setStatusMessage({ type: 'success', message: 'Education deleted successfully' })
+      success('Education deleted successfully')
       setMode('view')
       if (onUpdate) onUpdate()
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to delete education' })
+      error('Failed to delete education')
       setMode('view')
     }
   }
@@ -102,14 +102,6 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
   return (
     <section className={styles.container} data-testid="education-section">
       <h2 className={styles.sectionLabel}>Education</h2>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {education.length > 0 ? (
         <div className={styles.list}>

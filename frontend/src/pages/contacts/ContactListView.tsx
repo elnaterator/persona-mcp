@@ -9,6 +9,7 @@ import {
   useContactMutations,
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
+import { useToast } from '../../components/toast'
 import styles from './ContactListView.module.css'
 
 const RELATIONSHIP_SUGGESTIONS = [
@@ -55,6 +56,7 @@ export default function ContactListView() {
   const listQuery = useContactList({ tags: tagFilter, q: searchQuery })
   const tagsQuery = useAllTags()
   const { create } = useContactMutations()
+  const { success, error } = useToast()
 
   const contacts = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
@@ -97,8 +99,10 @@ export default function ContactListView() {
       })
       setForm(EMPTY_FORM)
       setShowForm(false)
+      success('Contact created')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to save')
+      error(err instanceof Error ? err.message : 'Failed to create contact')
+      setFormError(err instanceof Error ? err.message : 'Failed to create contact')
     }
   }
 

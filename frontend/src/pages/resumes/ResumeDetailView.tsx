@@ -18,7 +18,7 @@ import SkillsSection from './SkillsSection'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { LinksPanel } from '../../components/LinksPanel'
 import { ApiClientError } from '../../types'
@@ -31,9 +31,9 @@ export default function ResumeDetailView() {
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
   const qc = useQueryClient()
+  const { success, error } = useToast()
   const [editingTags, setEditingTags] = useState(false)
   const [tagsForm, setTagsForm] = useState<string[]>([])
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelInput, setLabelInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -68,10 +68,11 @@ export default function ResumeDetailView() {
     if (numericId === null) return
     try {
       await remove.mutateAsync(numericId)
+      success('Resume deleted')
       navigate('/resumes')
     } catch {
       setConfirmDelete(false)
-      setStatusMessage({ type: 'error', message: 'Failed to delete resume version' })
+      error('Failed to delete resume version')
     }
   }
 
@@ -79,9 +80,9 @@ export default function ResumeDetailView() {
     if (numericId === null) return
     try {
       await setDefault.mutateAsync(numericId)
-      setStatusMessage({ type: 'success', message: 'Default resume updated' })
+      success('Default resume updated')
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to set default resume' })
+      error('Failed to set default resume')
     }
   }
 
@@ -91,7 +92,7 @@ export default function ResumeDetailView() {
       await updateLabelOrTags.mutateAsync({ id: numericId, label: labelInput.trim() })
       setEditingLabel(false)
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to update label' })
+      error('Failed to update label')
     }
   }
 
@@ -111,7 +112,7 @@ export default function ResumeDetailView() {
       })
       setEditingTags(false)
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to update tags' })
+      error('Failed to update tags')
     }
   }
 
@@ -219,14 +220,6 @@ export default function ResumeDetailView() {
           </div>
         )}
       </div>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       <div className={styles.document}>
         <ContactSection

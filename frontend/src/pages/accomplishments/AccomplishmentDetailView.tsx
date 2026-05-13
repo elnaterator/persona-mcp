@@ -14,7 +14,7 @@ import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { TagInput } from '../../components/TagInput'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { SectionCard } from '../../components/SectionCard'
 import { MarkdownContent } from '../../components/MarkdownContent'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
@@ -30,7 +30,7 @@ export default function AccomplishmentDetailView() {
   const [editForm, setEditForm] = useState<Partial<Accomplishment>>({})
   const [editError, setEditError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   useEffect(() => {
     if (numericId === null) {
@@ -90,7 +90,7 @@ export default function AccomplishmentDetailView() {
         },
       })
       setEditing(false)
-      setStatusMessage({ type: 'success', message: 'Saved' })
+      success('Saved')
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save')
     }
@@ -99,10 +99,11 @@ export default function AccomplishmentDetailView() {
   const handleDelete = async () => {
     try {
       await remove.mutateAsync(numericId)
+      success('Accomplishment deleted')
       navigate('/accomplishments')
     } catch {
       setConfirmDelete(false)
-      setStatusMessage({ type: 'error', message: 'Failed to delete accomplishment' })
+      error('Failed to delete accomplishment')
     }
   }
 
@@ -168,14 +169,6 @@ export default function AccomplishmentDetailView() {
       </div>
 
       {editError && <p className={styles.formError}>{editError}</p>}
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       {editing ? (
         <div className={styles.metaEdit}>

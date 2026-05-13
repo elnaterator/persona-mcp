@@ -15,7 +15,7 @@ import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { StatusMessage } from '../../components/StatusMessage'
+import { useToast } from '../../components/toast'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { SectionCard } from '../../components/SectionCard'
 import { MarkdownContent } from '../../components/MarkdownContent'
@@ -55,7 +55,7 @@ export default function ApplicationDetailView() {
   const [editingSection, setEditingSection] = useState<EditSection>(null)
   const [sectionForm, setSectionForm] = useState<Partial<Application>>({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const { success, error } = useToast()
 
   useEffect(() => {
     if (numericId === null) {
@@ -79,9 +79,9 @@ export default function ApplicationDetailView() {
 
   useEffect(() => {
     if (detailQuery.isError && !notFound && !forbidden) {
-      setStatusMessage({ type: 'error', message: 'Failed to load application' })
+      error('Failed to load application')
     }
-  }, [detailQuery.isError, notFound, forbidden])
+  }, [detailQuery.isError, notFound, forbidden, error])
 
   const startEdit = (section: EditSection) => {
     if (!app) return
@@ -114,9 +114,9 @@ export default function ApplicationDetailView() {
       await update.mutateAsync({ id: numericId, data: payload })
       setEditingSection(null)
       setSectionForm({})
-      setStatusMessage({ type: 'success', message: 'Saved' })
+      success('Saved')
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to save' })
+      error('Failed to save')
     }
   }
 
@@ -136,9 +136,10 @@ export default function ApplicationDetailView() {
     if (numericId === null) return
     try {
       await remove.mutateAsync(numericId)
+      success('Application deleted')
       navigate('/applications')
     } catch {
-      setStatusMessage({ type: 'error', message: 'Failed to delete application' })
+      error('Failed to delete application')
       setShowDeleteConfirm(false)
     }
   }
@@ -223,14 +224,6 @@ export default function ApplicationDetailView() {
           <span className={styles.updatedDate}>Updated {new Date(app.updated_at).toLocaleDateString()}</span>
         )}
       </div>
-
-      {statusMessage && (
-        <StatusMessage
-          type={statusMessage.type}
-          message={statusMessage.message}
-          onDismiss={() => setStatusMessage(null)}
-        />
-      )}
 
       <div className={styles.sections}>
       {/* Details section */}
