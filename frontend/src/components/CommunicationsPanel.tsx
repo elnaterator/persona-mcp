@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
+import { useForm, Controller, type UseFormRegister, type Control } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import type { Communication } from '../types'
 import { ApiClientError } from '../services/api'
 import {
@@ -12,11 +14,14 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { useToast } from './toast'
 import { AutoResizeTextarea } from './AutoResizeTextarea'
 import { MarkdownContent } from './MarkdownContent'
+import {
+  communicationCreateSchema,
+  COMM_TYPES,
+  COMM_DIRECTIONS,
+  COMM_STATUSES,
+  type CommunicationCreateInput,
+} from '../schemas/communication'
 import styles from './CommunicationsPanel.module.css'
-
-const COMM_TYPES = ['email', 'phone', 'interview_note', 'other']
-const COMM_DIRECTIONS = ['sent', 'received']
-const COMM_STATUSES = ['draft', 'ready', 'sent', 'archived']
 
 const STATUS_CLASS: Record<string, string> = {
   draft: styles.statusDraft,
@@ -30,27 +35,17 @@ export interface CommunicationsPanelProps {
   initialExpandId?: number
 }
 
-interface CommForm {
-  type: string
-  direction: string
-  subject: string
-  body: string
-  date: string
-  status: string
-  tags: string[]
-}
-
 const today = () => new Date().toISOString().slice(0, 10)
 
-const emptyForm: CommForm = {
+const emptyDefaults = (): CommunicationCreateInput => ({
   type: 'email',
   direction: 'sent',
-  subject: '',
-  body: '',
+  subject: undefined,
+  body: undefined,
   date: today(),
   status: 'draft',
   tags: [],
-}
+})
 
 export default function CommunicationsPanel({ contactId, initialExpandId }: CommunicationsPanelProps) {
   const [showAddForm, setShowAddForm] = useState(false)
@@ -59,7 +54,6 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
   const [expandedIds, setExpandedIds] = useState<Set<number>>(
     initialExpandId !== undefined ? new Set([initialExpandId]) : new Set()
   )
-  const [form, setForm] = useState<CommForm>(emptyForm)
   const { success, error: toastError } = useToast()
 
   const commsQuery = useContactCommunications(contactId)
@@ -68,6 +62,12 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
 
   const allTags = tagsQuery.data ?? []
   const submitting = add.isPending || update.isPending
+
+  const { register, handleSubmit, reset, control, formState: { isSubmitting } } = useForm<CommunicationCreateInput>({
+    resolver: zodResolver(communicationCreateSchema),
+    mode: 'onSubmit',
+    defaultValues: emptyDefaults(),
+  })
 
   const communications = useMemo<Communication[]>(() => {
     const data = commsQuery.data ?? []
@@ -101,63 +101,43 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
       return next
     })
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onAddSubmit = handleSubmit(async (data) => {
     try {
-      const payload = {
-        type: form.type,
-        direction: form.direction,
-        subject: form.subject.trim(),
-        body: form.body.trim(),
-        date: form.date,
-        status: form.status,
-        tags: form.tags,
-      }
-      await add.mutateAsync({ contactId, data: payload })
-      setForm(emptyForm)
+      await add.mutateAsync({ contactId, data: { ...data, subject: data.subject ?? '', body: data.body ?? '' } })
+      reset(emptyDefaults())
       setShowAddForm(false)
       success('Communication added')
     } catch (err) {
-      const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to add communication'
+      const msg = err instanceof ApiClientError ? (err as ApiClientError).detail ?? err.message : 'Failed to add communication'
       toastError(msg)
     }
-  }
+  })
 
-  const startEdit = (comm: Communication) => {
-    setEditTarget(comm)
-    setForm({
-      type: comm.type,
-      direction: comm.direction,
-      subject: comm.subject,
-      body: comm.body,
-      date: comm.date.slice(0, 10),
-      status: comm.status,
-      tags: comm.tags ?? [],
-    })
-    setShowAddForm(false)
-  }
-
-  const handleEditSave = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onEditSubmit = handleSubmit(async (data) => {
     if (!editTarget) return
     try {
-      const payload = {
-        type: form.type,
-        direction: form.direction,
-        subject: form.subject.trim(),
-        body: form.body.trim(),
-        date: form.date,
-        status: form.status,
-        tags: form.tags,
-      }
-      await update.mutateAsync({ contactId, commId: editTarget.id, data: payload })
+      await update.mutateAsync({ contactId, commId: editTarget.id, data: { ...data, subject: data.subject ?? '', body: data.body ?? '' } })
       setEditTarget(null)
-      setForm(emptyForm)
+      reset(emptyDefaults())
       success('Communication updated')
     } catch (err) {
-      const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to update communication'
+      const msg = err instanceof ApiClientError ? (err as ApiClientError).detail ?? err.message : 'Failed to update communication'
       toastError(msg)
     }
+  })
+
+  const startEdit = (comm: Communication) => {
+    reset({
+      type: comm.type as CommunicationCreateInput['type'],
+      direction: comm.direction as CommunicationCreateInput['direction'],
+      subject: comm.subject || undefined,
+      body: comm.body || undefined,
+      date: comm.date.slice(0, 10),
+      status: comm.status as CommunicationCreateInput['status'],
+      tags: comm.tags ?? [],
+    })
+    setEditTarget(comm)
+    setShowAddForm(false)
   }
 
   const handleDelete = async () => {
@@ -167,7 +147,7 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
       setDeleteTarget(null)
       success('Communication removed')
     } catch (err) {
-      const msg = err instanceof ApiClientError ? err.detail ?? err.message : 'Failed to remove communication'
+      const msg = err instanceof ApiClientError ? (err as ApiClientError).detail ?? err.message : 'Failed to remove communication'
       toastError(msg)
       setDeleteTarget(null)
     }
@@ -187,7 +167,7 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
         {!showAddForm && (
           <button
             className={styles.addBtn}
-            onClick={() => { setShowAddForm(true); setEditTarget(null) }}
+            onClick={() => { reset(emptyDefaults()); setShowAddForm(true); setEditTarget(null) }}
           >
             Add Communication
           </button>
@@ -195,21 +175,21 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
       </div>
 
       {showAddForm && (
-        <form className={styles.form} onSubmit={handleAdd}>
+        <form className={styles.form} onSubmit={onAddSubmit} noValidate>
           <div className={styles.formHeader}>
-            <button type="submit" className={styles.saveIconBtn} disabled={submitting} aria-label="Save">
+            <button type="submit" className={styles.saveIconBtn} disabled={isSubmitting || submitting} aria-label="Save">
               <Check size={14} />
             </button>
             <button
               type="button"
               className={styles.cancelIconBtn}
-              onClick={() => { setShowAddForm(false); setForm(emptyForm) }}
+              onClick={() => { setShowAddForm(false); reset(emptyDefaults()) }}
               aria-label="Cancel"
             >
               <X size={14} />
             </button>
           </div>
-          <CommFormFields form={form} onChange={(f) => setForm(f)} allTags={allTags} />
+          <CommFormFields register={register} control={control} allTags={allTags} />
         </form>
       )}
 
@@ -220,21 +200,21 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
           {communications.map((comm) => (
             <li key={comm.id} id={`comm-${comm.id}`} className={styles.timelineItem}>
               {editTarget?.id === comm.id ? (
-                <form className={styles.form} onSubmit={handleEditSave}>
+                <form className={styles.form} onSubmit={onEditSubmit} noValidate>
                   <div className={styles.formHeader}>
-                    <button type="submit" className={styles.saveIconBtn} disabled={submitting} aria-label="Save">
+                    <button type="submit" className={styles.saveIconBtn} disabled={isSubmitting || submitting} aria-label="Save">
                       <Check size={14} />
                     </button>
                     <button
                       type="button"
                       className={styles.cancelIconBtn}
-                      onClick={() => { setEditTarget(null); setForm(emptyForm) }}
+                      onClick={() => { setEditTarget(null); reset(emptyDefaults()) }}
                       aria-label="Cancel"
                     >
                       <X size={14} />
                     </button>
                   </div>
-                  <CommFormFields form={form} onChange={(f) => setForm(f)} allTags={allTags} />
+                  <CommFormFields register={register} control={control} allTags={allTags} />
                 </form>
               ) : (
                 <div
@@ -315,60 +295,68 @@ export default function CommunicationsPanel({ contactId, initialExpandId }: Comm
 }
 
 interface CommFormFieldsProps {
-  form: CommForm
-  onChange: (form: CommForm) => void
+  register: UseFormRegister<CommunicationCreateInput>
+  control: Control<CommunicationCreateInput>
   allTags: string[]
 }
 
-function CommFormFields({ form, onChange, allTags }: CommFormFieldsProps) {
-  const set = (field: keyof Omit<CommForm, 'tags'>) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-      onChange({ ...form, [field]: e.target.value })
-
+function CommFormFields({ register, control, allTags }: CommFormFieldsProps) {
   return (
     <div className={styles.formGrid}>
       <div className={styles.formField}>
         <label className={styles.label} htmlFor="comm-type">Type</label>
-        <select id="comm-type" className={styles.select} value={form.type} onChange={set('type')}>
+        <select id="comm-type" className={styles.select} {...register('type')}>
           {COMM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
       <div className={styles.formField}>
         <label className={styles.label} htmlFor="comm-direction">Direction</label>
-        <select id="comm-direction" className={styles.select} value={form.direction} onChange={set('direction')}>
+        <select id="comm-direction" className={styles.select} {...register('direction')}>
           {COMM_DIRECTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
       <div className={styles.formField}>
         <label className={styles.label} htmlFor="comm-date">Date</label>
-        <input id="comm-date" type="date" className={styles.input} value={form.date} onChange={set('date')} />
+        <input id="comm-date" type="date" className={styles.input} {...register('date')} />
       </div>
       <div className={styles.formField}>
         <label className={styles.label} htmlFor="comm-status">Status</label>
-        <select id="comm-status" className={styles.select} value={form.status} onChange={set('status')}>
+        <select id="comm-status" className={styles.select} {...register('status')}>
           {COMM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
       <div className={`${styles.formField} ${styles.fullWidth}`}>
         <label className={styles.label} htmlFor="comm-subject">Subject</label>
-        <input id="comm-subject" className={styles.input} value={form.subject} onChange={set('subject')} placeholder="Subject line" />
+        <input id="comm-subject" className={styles.input} placeholder="Subject line" {...register('subject')} />
       </div>
       <div className={`${styles.formField} ${styles.fullWidth}`}>
         <label className={styles.label} htmlFor="comm-body">Body</label>
-        <AutoResizeTextarea
-          id="comm-body"
-          className={styles.textarea}
-          value={form.body}
-          onChange={(val) => onChange({ ...form, body: val })}
-          placeholder="Message body..."
+        <Controller
+          control={control}
+          name="body"
+          render={({ field }) => (
+            <AutoResizeTextarea
+              id="comm-body"
+              className={styles.textarea}
+              value={field.value ?? ''}
+              onChange={field.onChange}
+              placeholder="Message body..."
+            />
+          )}
         />
       </div>
       <div className={`${styles.formField} ${styles.fullWidth}`}>
         <label className={styles.label}>Tags</label>
-        <TagInput
-          value={form.tags}
-          onChange={(tags) => onChange({ ...form, tags })}
-          availableTags={allTags}
+        <Controller
+          control={control}
+          name="tags"
+          render={({ field }) => (
+            <TagInput
+              value={field.value ?? []}
+              onChange={field.onChange}
+              availableTags={allTags}
+            />
+          )}
         />
       </div>
     </div>

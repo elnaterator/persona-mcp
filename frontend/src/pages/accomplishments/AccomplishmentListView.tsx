@@ -8,33 +8,13 @@ import {
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { useToast } from '../../components/toast'
+import { AccomplishmentPanel } from './AccomplishmentPanel'
+import type { AccomplishmentCreateInput } from '../../schemas/accomplishment'
 import styles from './AccomplishmentListView.module.css'
-
-interface FormState {
-  title: string
-  situation: string
-  task: string
-  action: string
-  result: string
-  accomplishment_date: string
-  tags: string[]
-}
-
-const EMPTY_FORM: FormState = {
-  title: '',
-  situation: '',
-  task: '',
-  action: '',
-  result: '',
-  accomplishment_date: '',
-  tags: [],
-}
 
 export default function AccomplishmentListView() {
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState<FormState>(EMPTY_FORM)
-  const [formError, setFormError] = useState('')
 
   const listQuery = useAccomplishmentList({ tags: tagFilter })
   const tagsQuery = useAllTags()
@@ -43,34 +23,23 @@ export default function AccomplishmentListView() {
 
   const accomplishments = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
-  const saving = create.isPending
 
-  const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = async () => {
-    if (!form.title.trim()) {
-      setFormError('Title is required')
-      return
-    }
-    setFormError('')
+  const handleCreate = async (data: AccomplishmentCreateInput) => {
     try {
       await create.mutateAsync({
-        title: form.title.trim(),
-        situation: form.situation,
-        task: form.task,
-        action: form.action,
-        result: form.result,
-        accomplishment_date: form.accomplishment_date || null,
-        tags: form.tags,
+        title: data.title,
+        situation: data.situation ?? undefined,
+        task: data.task ?? undefined,
+        action: data.action ?? undefined,
+        result: data.result ?? undefined,
+        accomplishment_date: data.accomplishment_date ?? null,
+        tags: data.tags ?? [],
       })
-      setForm(EMPTY_FORM)
       setShowForm(false)
       success('Accomplishment created')
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to create accomplishment')
-      setFormError(err instanceof Error ? err.message : 'Failed to create accomplishment')
+      throw err
     }
   }
 
@@ -80,123 +49,19 @@ export default function AccomplishmentListView() {
         <h2 className={styles.heading}>Accomplishments</h2>
         <button
           className={styles.newButton}
-          onClick={() => {
-            setShowForm((v) => !v)
-            setFormError('')
-          }}
+          onClick={() => setShowForm((v) => !v)}
         >
           {showForm ? 'Cancel' : 'New Accomplishment'}
         </button>
       </div>
 
       {showForm && (
-        <div className={styles.newForm}>
-          <p className={styles.formTitle}>New Accomplishment</p>
-          {formError && <p className={styles.formError}>{formError}</p>}
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-title">Title *</label>
-            <input
-              id="acc-title"
-              className={styles.input}
-              type="text"
-              value={form.title}
-              onChange={(e) => handleFieldChange('title', e.target.value)}
-              placeholder="Brief title of the accomplishment"
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-situation">Situation</label>
-            <textarea
-              id="acc-situation"
-              className={styles.textarea}
-              value={form.situation}
-              onChange={(e) => handleFieldChange('situation', e.target.value)}
-              placeholder="Describe the context or background…"
-              rows={3}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-task">Task</label>
-            <textarea
-              id="acc-task"
-              className={styles.textarea}
-              value={form.task}
-              onChange={(e) => handleFieldChange('task', e.target.value)}
-              placeholder="What was your specific responsibility or goal?"
-              rows={3}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-action">Action</label>
-            <textarea
-              id="acc-action"
-              className={styles.textarea}
-              value={form.action}
-              onChange={(e) => handleFieldChange('action', e.target.value)}
-              placeholder="What steps did you take to address the situation?"
-              rows={3}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-result">Result</label>
-            <textarea
-              id="acc-result"
-              className={styles.textarea}
-              value={form.result}
-              onChange={(e) => handleFieldChange('result', e.target.value)}
-              placeholder="What was the outcome or impact? Include metrics where possible."
-              rows={3}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-date">Accomplishment Date</label>
-            <input
-              id="acc-date"
-              className={styles.input}
-              type="date"
-              value={form.accomplishment_date}
-              onChange={(e) => handleFieldChange('accomplishment_date', e.target.value)}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="acc-tags">Tags</label>
-            <TagInput
-              id="acc-tags"
-              value={form.tags}
-              onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
-              availableTags={allTags}
-              allowCreate={true}
-              placeholder="Add tag..."
-            />
-          </div>
-
-          <div className={styles.formActions}>
-            <button
-              className={styles.submitButton}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              className={styles.cancelButton}
-              onClick={() => {
-                setShowForm(false)
-                setFormError('')
-                setForm(EMPTY_FORM)
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <AccomplishmentPanel
+          mode="create"
+          allTags={allTags}
+          onSave={handleCreate}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       <div className={styles.filters}>
@@ -210,7 +75,7 @@ export default function AccomplishmentListView() {
       </div>
 
       {accomplishments.length === 0 ? (
-        <p className={styles.empty}>No accomplishments yet. Click "New Accomplishment" to add one.</p>
+        <p className={styles.empty}>No accomplishments yet. Click &quot;New Accomplishment&quot; to add one.</p>
       ) : (
         <ul className={styles.list}>
           {accomplishments.map((acc) => (

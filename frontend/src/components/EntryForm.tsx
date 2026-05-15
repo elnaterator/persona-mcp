@@ -1,6 +1,10 @@
-import { useState, FormEvent } from 'react'
+import { FormEvent } from 'react'
+import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Check, X, Trash2 } from 'lucide-react'
 import { AutoResizeTextarea } from './AutoResizeTextarea'
+import { FieldError } from './FieldError'
 import styles from './EntryForm.module.css'
 
 export interface FieldConfig {
@@ -14,95 +18,75 @@ export interface FieldConfig {
 
 interface EntryFormProps {
   fields: FieldConfig[]
-  initialData?: Record<string, string | string[]>
+  schema: z.ZodTypeAny
+  defaultValues?: Record<string, string | string[]>
   onSubmit: (data: Record<string, string | string[]>) => void
   onCancel: () => void
 }
 
+type HighlightItem = { value: string }
+type InternalValues = Record<string, string | HighlightItem[]>
 
-export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: EntryFormProps) {
-  const [formData, setFormData] = useState<Record<string, string | string[]>>(() => {
-    const data: Record<string, string | string[]> = {}
-    fields.forEach((field) => {
-      if (field.type === 'highlights') {
-        data[field.name] = initialData[field.name] || []
-      } else {
-        data[field.name] = (initialData[field.name] as string) || ''
-      }
-    })
-    return data
+function buildInternalDefaults(
+  defaults: Record<string, string | string[]>,
+  fields: FieldConfig[],
+): InternalValues {
+  const result: InternalValues = {}
+  for (const field of fields) {
+    if (field.type === 'highlights') {
+      const arr = (defaults[field.name] as string[]) ?? []
+      result[field.name] = arr.map((v) => ({ value: v }))
+    } else {
+      result[field.name] = (defaults[field.name] as string) ?? ''
+    }
+  }
+  return result
+}
+
+function buildExternalData(
+  data: InternalValues,
+  fields: FieldConfig[],
+): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {}
+  for (const field of fields) {
+    if (field.type === 'highlights') {
+      const arr = data[field.name] as HighlightItem[] | undefined
+      result[field.name] = (arr ?? []).map((h) => h.value)
+    } else {
+      result[field.name] = (data[field.name] as string) ?? ''
+    }
+  }
+  return result
+}
+
+export function EntryForm({ fields, schema, defaultValues = {}, onSubmit, onCancel }: EntryFormProps) {
+  const highlightsField = fields.find((f) => f.type === 'highlights')
+
+  const augmentedSchema = highlightsField
+    ? (schema as z.ZodObject<z.ZodRawShape>).extend({
+        [highlightsField.name]: z.array(z.object({ value: z.string() })).default([]),
+      })
+    : schema
+
+  const form = useForm<InternalValues>({
+    resolver: zodResolver(augmentedSchema),
+    defaultValues: buildInternalDefaults(defaultValues, fields),
+    mode: 'onBlur',
   })
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const highlightsArray = useFieldArray({
+    control: form.control,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    name: (highlightsField?.name ?? '__highlights') as any,
+  }) as unknown as { fields: { id: string; value: string }[]; append: (v: { value: string }) => void; remove: (i: number) => void }
 
-  const handleInputChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[name]
-        return newErrors
-      })
-    }
+  const handleSubmit = (data: InternalValues) => {
+    onSubmit(buildExternalData(data, fields))
   }
 
-  const handleHighlightsChange = (index: number, value: string) => {
-    const fieldName = fields.find((f) => f.type === 'highlights')?.name
-    if (!fieldName) return
-
-    setFormData((prev) => {
-      const highlights = [...(prev[fieldName] as string[])]
-      highlights[index] = value
-      return { ...prev, [fieldName]: highlights }
-    })
-  }
-
-  const addHighlight = () => {
-    const fieldName = fields.find((f) => f.type === 'highlights')?.name
-    if (!fieldName) return
-
-    setFormData((prev) => {
-      const highlights = [...(prev[fieldName] as string[])]
-      highlights.push('')
-      return { ...prev, [fieldName]: highlights }
-    })
-  }
-
-  const removeHighlight = (index: number) => {
-    const fieldName = fields.find((f) => f.type === 'highlights')?.name
-    if (!fieldName) return
-
-    setFormData((prev) => {
-      const highlights = [...(prev[fieldName] as string[])]
-      highlights.splice(index, 1)
-      return { ...prev, [fieldName]: highlights }
-    })
-  }
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {}
-
-    fields.forEach((field) => {
-      if (field.required && field.type !== 'highlights') {
-        const value = formData[field.name] as string
-        if (!value || value.trim() === '') {
-          newErrors[field.name] = `${field.label} is required`
-        }
-      }
-    })
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault()
-
-    if (!validate()) {
-      return
-    }
-
-    onSubmit(formData)
+    form.handleSubmit(handleSubmit)(e)
   }
 
   const renderTextField = (field: FieldConfig, inGroup = false) => (
@@ -115,17 +99,15 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
         type="text"
         id={field.name}
         className={styles.input}
-        value={formData[field.name] as string}
-        placeholder={inGroup ? field.placeholder ?? field.label : field.placeholder}
-        onChange={(e) => handleInputChange(field.name, e.target.value)}
+        placeholder={inGroup ? (field.placeholder ?? field.label) : field.placeholder}
+        aria-invalid={!!form.formState.errors[field.name]}
+        {...form.register(field.name)}
       />
-      {errors[field.name] && (
-        <span className={styles.error}>{errors[field.name]}</span>
-      )}
+      <FieldError error={form.formState.errors[field.name] as import('react-hook-form').FieldError | undefined} />
     </div>
   )
 
-  // Build rows: consecutive fields with the same group key go into one flex row
+  // Consecutive fields sharing the same `group` key render in one flex row
   const rows: (FieldConfig | FieldConfig[])[] = []
   let i = 0
   while (i < fields.length) {
@@ -145,7 +127,7 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={handleFormSubmit} noValidate>
       <div className={styles.formHeader}>
         <button type="submit" className={styles.saveIconButton} aria-label="Save">
           <Check size={14} />
@@ -166,7 +148,6 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
         const field = row
 
         if (field.type === 'highlights') {
-          const highlights = (formData[field.name] as string[]) || []
           return (
             <div key={field.name} className={styles.fieldGroup}>
               <label className={styles.label}>
@@ -174,18 +155,18 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
                 {field.required && <span className={styles.required}>*</span>}
               </label>
               <div className={styles.highlightsList}>
-                {highlights.map((highlight, index) => (
-                  <div key={index} className={styles.highlightItem}>
+                {highlightsArray.fields.map((item, index) => (
+                  <div key={item.id} className={styles.highlightItem}>
                     <AutoResizeTextarea
                       className={styles.highlightTextarea}
                       placeholder="Highlight"
-                      value={highlight}
-                      onChange={(value) => handleHighlightsChange(index, value)}
+                      value={form.watch(`${field.name}.${index}.value` as keyof InternalValues) as string ?? ''}
+                      onChange={(value) => form.setValue(`${field.name}.${index}.value` as keyof InternalValues, value as InternalValues[keyof InternalValues])}
                     />
                     <button
                       type="button"
                       className={styles.removeButton}
-                      onClick={() => removeHighlight(index)}
+                      onClick={() => highlightsArray.remove(index)}
                       aria-label="Remove"
                     >
                       <Trash2 size={14} />
@@ -195,7 +176,7 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
                 <button
                   type="button"
                   className={styles.addButton}
-                  onClick={addHighlight}
+                  onClick={() => highlightsArray.append({ value: '' })}
                   aria-label="Add highlight"
                 >
                   Add Highlight
@@ -215,13 +196,11 @@ export function EntryForm({ fields, initialData = {}, onSubmit, onCancel }: Entr
               <AutoResizeTextarea
                 id={field.name}
                 className={styles.textarea}
-                value={formData[field.name] as string}
-                onChange={(value) => handleInputChange(field.name, value)}
+                value={form.watch(field.name as keyof InternalValues) as string ?? ''}
+                onChange={(value) => form.setValue(field.name as keyof InternalValues, value as InternalValues[keyof InternalValues])}
                 placeholder={field.placeholder}
               />
-              {errors[field.name] && (
-                <span className={styles.error}>{errors[field.name]}</span>
-              )}
+              <FieldError error={form.formState.errors[field.name] as import('react-hook-form').FieldError | undefined} />
             </div>
           )
         }

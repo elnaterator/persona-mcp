@@ -56,7 +56,7 @@ Define `:root` CSS vars in `index.css` for spacing, colors, radii, shadows (`--s
 Replace per-view `StatusMessage` state + auto-dismiss timers with single `<ToastProvider>` at root + `useToast()` hook. Single render slot, queue, animation, no prop drilling. Cuts ~10 LOC per list/detail view.
 
 
-## R011 Form abstraction (react-hook-form + zod)
+## R011 Form abstraction (react-hook-form + zod) - DONE
 
 Replace hand-rolled field state + validation in `EntryForm`, `ContactDetailView`, `ApplicationDetailView` with `react-hook-form` (uncontrolled, fast) + `zod` schemas (single source of truth, infer TS types). Kills validation drift between client + server.
 

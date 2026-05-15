@@ -5,6 +5,7 @@ import { EntryForm, type FieldConfig } from '../../components/EntryForm'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
+import { skillSchema } from '../../schemas/resumeEntry'
 import styles from './SkillsSection.module.css'
 
 interface SkillsSectionProps {
@@ -113,7 +114,8 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
                     <EntryForm
                       key={skill.originalIndex}
                       fields={skillFields}
-                      initialData={skill as unknown as Record<string, string | string[]>}
+                      schema={skillSchema}
+                      defaultValues={skill as unknown as Record<string, string | string[]>}
                       onSubmit={handleEdit}
                       onCancel={() => setMode('view')}
                     />
@@ -150,6 +152,7 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
       {mode === 'add' && (
         <EntryForm
           fields={skillFields}
+          schema={skillSchema}
           onSubmit={handleAdd}
           onCancel={() => setMode('view')}
         />

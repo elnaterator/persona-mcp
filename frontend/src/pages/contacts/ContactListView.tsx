@@ -10,41 +10,15 @@ import {
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { useToast } from '../../components/toast'
+import { ContactPanel } from './ContactPanel'
+import type { ContactCreateInput } from '../../schemas/contact'
 import styles from './ContactListView.module.css'
-
-const RELATIONSHIP_SUGGESTIONS = [
-  'Colleague',
-  'Recruiter',
-  'Manager',
-  'Mentor',
-  'Peer',
-  'Friend',
-  'Other',
-]
-
-interface FormState {
-  name: string
-  company: string
-  title: string
-  relationship: string
-  tags: string[]
-}
-
-const EMPTY_FORM: FormState = {
-  name: '',
-  company: '',
-  title: '',
-  relationship: '',
-  tags: [],
-}
 
 export default function ContactListView() {
   const navigate = useNavigate()
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState<FormState>(EMPTY_FORM)
-  const [formError, setFormError] = useState('')
 
   // Comm search state
   const [showCommSearch, setShowCommSearch] = useState(false)
@@ -60,7 +34,6 @@ export default function ContactListView() {
 
   const contacts = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
-  const saving = create.isPending
 
   useEffect(() => {
     if (!showCommSearch) return
@@ -79,30 +52,27 @@ export default function ContactListView() {
   const commResults: CommunicationSearchResult[] = commSearch.data ?? []
   const commSearching = commSearch.isFetching
 
-  const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = async () => {
-    if (!form.name.trim()) {
-      setFormError('Name is required')
-      return
-    }
-    setFormError('')
+  const handleCreate = async (data: ContactCreateInput) => {
     try {
       await create.mutateAsync({
-        name: form.name.trim(),
-        company: form.company || undefined,
-        title: form.title || undefined,
-        relationship: form.relationship || undefined,
-        tags: form.tags,
+        name: data.name,
+        email: data.email ?? undefined,
+        phone: data.phone ?? undefined,
+        company: data.company ?? undefined,
+        title: data.title ?? undefined,
+        relationship: data.relationship ?? undefined,
+        linkedin_url: data.linkedin_url ?? undefined,
+        location: data.location ?? undefined,
+        last_contacted_date: data.last_contacted_date ?? null,
+        followup_date: data.followup_date ?? null,
+        notes: data.notes,
+        tags: data.tags ?? [],
       })
-      setForm(EMPTY_FORM)
       setShowForm(false)
       success('Contact created')
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to create contact')
-      setFormError(err instanceof Error ? err.message : 'Failed to create contact')
+      throw err
     }
   }
 
@@ -116,108 +86,19 @@ export default function ContactListView() {
         <h2 className={styles.heading}>Contacts</h2>
         <button
           className={styles.newButton}
-          onClick={() => {
-            setShowForm((v) => !v)
-            setFormError('')
-          }}
+          onClick={() => setShowForm((v) => !v)}
         >
           {showForm ? 'Cancel' : 'New Contact'}
         </button>
       </div>
 
       {showForm && (
-        <div className={styles.newForm}>
-          <p className={styles.formTitle}>New Contact</p>
-          {formError && <p className={styles.formError}>{formError}</p>}
-
-          <div className={styles.formRow}>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="contact-name">Name *</label>
-              <input
-                id="contact-name"
-                className={styles.input}
-                type="text"
-                value={form.name}
-                onChange={(e) => handleFieldChange('name', e.target.value)}
-                placeholder="Full name"
-              />
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="contact-relationship">Relationship</label>
-              <input
-                id="contact-relationship"
-                className={styles.input}
-                type="text"
-                list="relationship-suggestions"
-                value={form.relationship}
-                onChange={(e) => handleFieldChange('relationship', e.target.value)}
-                placeholder="e.g. Recruiter"
-              />
-              <datalist id="relationship-suggestions">
-                {RELATIONSHIP_SUGGESTIONS.map((r) => (
-                  <option key={r} value={r} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-
-          <div className={styles.formRow}>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="contact-company">Company</label>
-              <input
-                id="contact-company"
-                className={styles.input}
-                type="text"
-                value={form.company}
-                onChange={(e) => handleFieldChange('company', e.target.value)}
-                placeholder="Company or organization"
-              />
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="contact-title">Title</label>
-              <input
-                id="contact-title"
-                className={styles.input}
-                type="text"
-                value={form.title}
-                onChange={(e) => handleFieldChange('title', e.target.value)}
-                placeholder="Job title"
-              />
-            </div>
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="contact-tags">Tags</label>
-            <TagInput
-              id="contact-tags"
-              value={form.tags}
-              onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
-              availableTags={allTags}
-              allowCreate={true}
-              placeholder="Add tag..."
-            />
-          </div>
-
-          <div className={styles.formActions}>
-            <button
-              className={styles.submitButton}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              className={styles.cancelButton}
-              onClick={() => {
-                setShowForm(false)
-                setFormError('')
-                setForm(EMPTY_FORM)
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <ContactPanel
+          mode="create"
+          allTags={allTags}
+          onSave={handleCreate}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       {/* Communication Search Panel */}

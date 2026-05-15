@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { Accomplishment } from '../../types'
+import { useParams, useNavigate } from 'react-router'
 import { ApiClientError } from '../../types'
 import { mapGroupedLinks } from '../../services/api'
 import {
@@ -13,11 +11,9 @@ import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { TagInput } from '../../components/TagInput'
 import { useToast } from '../../components/toast'
-import { SectionCard } from '../../components/SectionCard'
-import { MarkdownContent } from '../../components/MarkdownContent'
-import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
+import { AccomplishmentPanel } from './AccomplishmentPanel'
+import type { AccomplishmentCreateInput } from '../../schemas/accomplishment'
 import styles from './AccomplishmentDetailView.module.css'
 
 export default function AccomplishmentDetailView() {
@@ -27,8 +23,6 @@ export default function AccomplishmentDetailView() {
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState<Partial<Accomplishment>>({})
-  const [editError, setEditError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { success, error } = useToast()
 
@@ -47,7 +41,6 @@ export default function AccomplishmentDetailView() {
   const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
   const notFound = errStatus === 404
   const forbidden = errStatus === 403
-  const saving = update.isPending
 
   if (numericId === null) return null
   if (notFound) return <NotFound entityName="Accomplishment" backTo="/accomplishments" backLabel="Back to Accomplishments" />
@@ -56,44 +49,21 @@ export default function AccomplishmentDetailView() {
     return <div>Loading…</div>
   }
 
-  const startEdit = () => {
-    setEditForm({
-      title: acc.title,
-      situation: acc.situation,
-      task: acc.task,
-      action: acc.action,
-      result: acc.result,
-      accomplishment_date: acc.accomplishment_date ?? '',
-      tags: acc.tags,
+  const handleSave = async (data: AccomplishmentCreateInput) => {
+    await update.mutateAsync({
+      id: numericId,
+      data: {
+        title: data.title,
+        situation: data.situation,
+        task: data.task,
+        action: data.action,
+        result: data.result,
+        accomplishment_date: data.accomplishment_date ?? null,
+        tags: data.tags ?? [],
+      },
     })
-    setEditError('')
-    setEditing(true)
-  }
-
-  const handleEditFieldChange = (field: keyof Accomplishment, value: string | string[]) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = async () => {
-    if (!editForm.title?.trim()) {
-      setEditError('Title is required')
-      return
-    }
-    setEditError('')
-    try {
-      await update.mutateAsync({
-        id: numericId,
-        data: {
-          ...editForm,
-          accomplishment_date: editForm.accomplishment_date || null,
-          tags: editForm.tags as string[],
-        },
-      })
-      setEditing(false)
-      success('Saved')
-    } catch (err) {
-      setEditError(err instanceof Error ? err.message : 'Failed to save')
-    }
+    setEditing(false)
+    success('Saved')
   }
 
   const handleDelete = async () => {
@@ -107,13 +77,6 @@ export default function AccomplishmentDetailView() {
     }
   }
 
-  const STAR_FIELDS: { key: keyof Accomplishment; label: string; placeholder: string }[] = [
-    { key: 'situation', label: 'Situation', placeholder: 'Describe the context or background…' },
-    { key: 'task', label: 'Task', placeholder: 'What was your specific responsibility or goal?' },
-    { key: 'action', label: 'Action', placeholder: 'What steps did you take to address the situation?' },
-    { key: 'result', label: 'Result', placeholder: 'What was the outcome or impact? Include metrics where possible.' },
-  ]
-
   return (
     <div className={styles.container}>
       <Breadcrumb
@@ -123,113 +86,26 @@ export default function AccomplishmentDetailView() {
         ]}
       />
 
-      <div className={styles.topBar}>
-        <Link to="/accomplishments" className={styles.backButton}>Back</Link>
-        {editing ? (
-          <input
-            className={styles.titleInput}
-            type="text"
-            value={editForm.title ?? ''}
-            onChange={(e) => handleEditFieldChange('title', e.target.value)}
-            autoFocus
-          />
-        ) : (
-          <h2 className={styles.topBarTitle}>{acc.title}</h2>
-        )}
-        <div className={styles.topBarActions}>
-          {editing ? (
-            <>
-              <button
-                className={styles.saveIconButton}
-                onClick={handleSave}
-                disabled={saving}
-                aria-label="Save accomplishment"
-              >
-                <Check size={14} />
-              </button>
-              <button
-                className={styles.cancelIconButton}
-                onClick={() => setEditing(false)}
-                aria-label="Cancel editing"
-              >
-                <X size={14} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button className={styles.editButton} onClick={startEdit} aria-label="Edit accomplishment">
-                <Pencil size={14} />
-              </button>
-              <button className={styles.deleteButton} onClick={() => setConfirmDelete(true)} aria-label="Delete accomplishment">
-                <Trash2 size={14} />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {editError && <p className={styles.formError}>{editError}</p>}
-
       {editing ? (
-        <div className={styles.metaEdit}>
-          <div className={styles.metaField}>
-            <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
-            <TagInput
-              id="edit-tags"
-              value={(editForm.tags as string[]) ?? []}
-              onChange={(tags) => handleEditFieldChange('tags', tags)}
-              availableTags={allTags}
-              allowCreate={true}
-            />
-          </div>
-          <div className={`${styles.metaField} ${styles.metaFieldDate}`}>
-            <label className={styles.metaLabel} htmlFor="edit-date">Date</label>
-            <input
-              id="edit-date"
-              className={styles.metaInput}
-              type="date"
-              value={(editForm.accomplishment_date as string) ?? ''}
-              onChange={(e) => handleEditFieldChange('accomplishment_date', e.target.value)}
-            />
-          </div>
-        </div>
+        <AccomplishmentPanel
+          key="edit"
+          mode="edit"
+          accomplishment={acc}
+          allTags={allTags}
+          onSave={handleSave}
+          onCancel={() => setEditing(false)}
+          backTo="/accomplishments"
+        />
       ) : (
-        (acc.accomplishment_date || acc.tags.length > 0) && (
-          <div className={styles.meta}>
-            {acc.tags.length > 0 && (
-              <div className={styles.tagList}>
-                {acc.tags.map((tag) => (
-                  <span key={tag} className={styles.tagBadge}>{tag}</span>
-                ))}
-              </div>
-            )}
-            {acc.accomplishment_date && (
-              <span className={styles.accomplishmentDate}>Accomplished {acc.accomplishment_date}</span>
-            )}
-          </div>
-        )
+        <AccomplishmentPanel
+          key="view"
+          mode="view"
+          accomplishment={acc}
+          onEdit={() => setEditing(true)}
+          onDelete={() => setConfirmDelete(true)}
+          backTo="/accomplishments"
+        />
       )}
-
-      <div className={styles.starSections}>
-        {STAR_FIELDS.map(({ key, label, placeholder }) => (
-          <SectionCard key={key} label={label}>
-            {editing ? (
-              <AutoResizeTextarea
-                className={styles.sectionTextarea}
-                value={(editForm[key] as string) ?? ''}
-                onChange={(value) => handleEditFieldChange(key, value)}
-                placeholder={placeholder}
-              />
-            ) : (
-              acc[key] ? (
-                <MarkdownContent>{acc[key] as string}</MarkdownContent>
-              ) : (
-                <p className={styles.placeholderText}>{placeholder}</p>
-              )
-            )}
-          </SectionCard>
-        ))}
-      </div>
 
       <LinksPanel
         resourceType="accomplishment"
