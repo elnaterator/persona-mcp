@@ -5,6 +5,7 @@ import { EntryForm, type FieldConfig } from '../../components/EntryForm'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
+import { workExperienceSchema } from '../../schemas/resumeEntry'
 import styles from './ExperienceSection.module.css'
 
 interface ExperienceSectionProps {
@@ -108,7 +109,8 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
               <EntryForm
                 key={index}
                 fields={experienceFields}
-                initialData={entry as unknown as Record<string, string | string[]>}
+                schema={workExperienceSchema}
+                defaultValues={entry as unknown as Record<string, string | string[]>}
                 onSubmit={handleEdit}
                 onCancel={() => setMode('view')}
               />
@@ -166,6 +168,7 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
       {mode === 'add' && (
         <EntryForm
           fields={experienceFields}
+          schema={workExperienceSchema}
           onSubmit={handleAdd}
           onCancel={() => setMode('view')}
         />

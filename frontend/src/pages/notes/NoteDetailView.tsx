@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { Note } from '../../types'
+import { useParams, useNavigate } from 'react-router'
 import { ApiClientError } from '../../types'
 import { mapGroupedLinks } from '../../services/api'
 import { useAllTags, useNoteDetail, useNoteMutations } from '../../hooks/queries'
-import { TagInput } from '../../components/TagInput'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
-import { SectionCard } from '../../components/SectionCard'
-import { MarkdownContent } from '../../components/MarkdownContent'
-import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
+import { NotePanel } from './NotePanel'
+import type { NoteCreateInput } from '../../schemas/note'
 import styles from './NoteDetailView.module.css'
 
 export default function NoteDetailView() {
@@ -23,8 +19,6 @@ export default function NoteDetailView() {
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState<Partial<Note>>({})
-  const [editError, setEditError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { success, error } = useToast()
 
@@ -43,7 +37,6 @@ export default function NoteDetailView() {
   const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
   const notFound = errStatus === 404
   const forbidden = errStatus === 403
-  const saving = update.isPending
   const reloadNote = () => detailQuery.refetch()
 
   if (numericId === null) return null
@@ -53,40 +46,17 @@ export default function NoteDetailView() {
     return <div>Loading...</div>
   }
 
-  const startEdit = () => {
-    setEditForm({
-      title: note.title,
-      content: note.content,
-      tags: note.tags,
+  const handleSave = async (data: NoteCreateInput) => {
+    await update.mutateAsync({
+      id: numericId,
+      data: {
+        title: data.title,
+        content: data.content,
+        tags: data.tags ?? [],
+      },
     })
-    setEditError('')
-    setEditing(true)
-  }
-
-  const handleEditFieldChange = (field: keyof Note, value: string | string[]) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = async () => {
-    if (!editForm.title?.trim()) {
-      setEditError('Title is required')
-      return
-    }
-    setEditError('')
-    try {
-      await update.mutateAsync({
-        id: numericId,
-        data: {
-          title: editForm.title.trim(),
-          content: editForm.content,
-          tags: editForm.tags as string[],
-        },
-      })
-      setEditing(false)
-      success('Saved')
-    } catch (err) {
-      setEditError(err instanceof Error ? err.message : 'Failed to save')
-    }
+    setEditing(false)
+    success('Saved')
   }
 
   const handleDelete = async () => {
@@ -109,97 +79,26 @@ export default function NoteDetailView() {
         ]}
       />
 
-      <div className={styles.topBar}>
-        <Link to="/notes" className={styles.backButton}>Back</Link>
-        {editing ? (
-          <input
-            className={styles.titleInput}
-            type="text"
-            value={editForm.title ?? ''}
-            onChange={(e) => handleEditFieldChange('title', e.target.value)}
-            autoFocus
-          />
-        ) : (
-          <h2 className={styles.topBarTitle}>{note.title}</h2>
-        )}
-        <div className={styles.topBarActions}>
-          {editing ? (
-            <>
-              <button
-                className={styles.saveIconButton}
-                onClick={handleSave}
-                disabled={saving}
-                aria-label="Save note"
-              >
-                <Check size={14} />
-              </button>
-              <button
-                className={styles.cancelIconButton}
-                onClick={() => setEditing(false)}
-                aria-label="Cancel editing"
-              >
-                <X size={14} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button className={styles.editButton} onClick={startEdit} aria-label="Edit note">
-                <Pencil size={14} />
-              </button>
-              <button className={styles.deleteButton} onClick={() => setConfirmDelete(true)} aria-label="Delete note">
-                <Trash2 size={14} />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {editError && <p className={styles.formError}>{editError}</p>}
-
       {editing ? (
-        <div className={styles.metaEdit}>
-          <div className={styles.metaField}>
-            <label className={styles.metaLabel} htmlFor="edit-tags">Tags</label>
-            <TagInput
-              id="edit-tags"
-              value={(editForm.tags as string[]) ?? []}
-              onChange={(tags) => handleEditFieldChange('tags', tags)}
-              availableTags={allTags}
-              allowCreate={true}
-            />
-          </div>
-        </div>
+        <NotePanel
+          key="edit"
+          mode="edit"
+          note={note}
+          allTags={allTags}
+          onSave={handleSave}
+          onCancel={() => setEditing(false)}
+          backTo="/notes"
+        />
       ) : (
-        <div className={styles.meta}>
-          {note.tags.length > 0 && (
-            <div className={styles.tagList}>
-              {note.tags.map((tag) => (
-                <span key={tag} className={styles.tagBadge}>{tag}</span>
-              ))}
-            </div>
-          )}
-          {note.updated_at && (
-            <span className={styles.updatedDate}>Updated {new Date(note.updated_at).toLocaleDateString()}</span>
-          )}
-        </div>
+        <NotePanel
+          key="view"
+          mode="view"
+          note={note}
+          onEdit={() => setEditing(true)}
+          onDelete={() => setConfirmDelete(true)}
+          backTo="/notes"
+        />
       )}
-
-      <SectionCard>
-        {editing ? (
-          <AutoResizeTextarea
-            className={styles.contentTextarea}
-            value={editForm.content ?? ''}
-            onChange={(value) => handleEditFieldChange('content', value)}
-            placeholder="Write your note here..."
-          />
-        ) : (
-          note.content ? (
-            <MarkdownContent>{note.content}</MarkdownContent>
-          ) : (
-            <p className={styles.placeholderText}>No content yet.</p>
-          )
-        )}
-      </SectionCard>
 
       <LinksPanel
         resourceType="note"

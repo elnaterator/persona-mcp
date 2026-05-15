@@ -1,11 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
-import styles from './InlineCreateForm.module.css';
+import { useEffect, useRef } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z, ZodTypeAny } from 'zod'
+import { FieldError } from './FieldError'
+import styles from './InlineCreateForm.module.css'
+
+const defaultSchema = z.object({
+  name: z.string().trim().min(1, 'Name cannot be empty'),
+})
 
 interface InlineCreateFormProps {
-  onConfirm: (label: string) => Promise<void>;
-  onCancel: () => void;
-  placeholder?: string;
-  confirmLabel?: string;
+  onConfirm: (label: string) => Promise<void>
+  onCancel: () => void
+  placeholder?: string
+  confirmLabel?: string
+  schema?: ZodTypeAny
 }
 
 export function InlineCreateForm({
@@ -13,75 +22,63 @@ export function InlineCreateForm({
   onCancel,
   placeholder = 'Enter name...',
   confirmLabel = 'Create',
+  schema = defaultSchema,
 }: InlineCreateFormProps) {
-  const [value, setValue] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setError } =
+    useForm<{ name: string }>({
+      resolver: zodResolver(schema),
+      mode: 'onSubmit',
+    })
+
+  const { ref: registerRef, ...registerRest } = register('name')
+
+  const mergedRef = (el: HTMLInputElement | null) => {
+    registerRef(el)
+    ;(inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el
+  }
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    inputRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCancel();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!value.trim()) {
-      setError('Name cannot be empty');
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
+  const onSubmit = async (data: { name: string }) => {
     try {
-      await onConfirm(value.trim());
+      await onConfirm(data.name)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create');
-      setSubmitting(false);
+      setError('name', { message: err instanceof Error ? err.message : 'Failed to create' })
     }
-  };
+  }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} data-testid="inline-create-form">
+    <form className={styles.form} onSubmit={handleSubmit(onSubmit)} data-testid="inline-create-form" noValidate>
       <input
-        ref={inputRef}
+        ref={mergedRef}
         type="text"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          if (error) setError(null);
-        }}
+        {...registerRest}
         placeholder={placeholder}
-        className={`${styles.input}${error ? ` ${styles.inputError}` : ''}`}
-        disabled={submitting}
+        className={`${styles.input}${errors.name ? ` ${styles.inputError}` : ''}`}
+        disabled={isSubmitting}
         aria-label="Name"
       />
       <div className={styles.buttons}>
-        <button
-          type="submit"
-          className={styles.confirmBtn}
-          disabled={submitting}
-        >
-          {submitting ? 'Creating...' : confirmLabel}
+        <button type="submit" className={styles.confirmBtn} disabled={isSubmitting}>
+          {isSubmitting ? 'Creating...' : confirmLabel}
         </button>
-        <button
-          type="button"
-          className={styles.cancelBtn}
-          onClick={onCancel}
-          disabled={submitting}
-        >
+        <button type="button" className={styles.cancelBtn} onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </button>
       </div>
-      {error && <p className={styles.error}>{error}</p>}
+      {errors.name && <FieldError error={errors.name} />}
     </form>
-  );
+  )
 }

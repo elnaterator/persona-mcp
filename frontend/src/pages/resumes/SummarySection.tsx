@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { EditableSection } from '../../components/EditableSection';
 import { updateSummary, updateVersionSummary } from '../../services/api';
 import { MarkdownContent } from '../../components/MarkdownContent';
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea';
+import { FieldError } from '../../components/FieldError';
+import { summarySchema, type SummaryInput } from '../../schemas/resumeEntry';
 import styles from './SummarySection.module.css';
 
 interface SummarySectionProps {
@@ -12,31 +15,22 @@ interface SummarySectionProps {
 }
 
 export default function SummarySection({ summary, onUpdate, versionId }: SummarySectionProps) {
-  const [formData, setFormData] = useState<string>(summary);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const { control, trigger, getValues, formState: { errors } } = useForm<SummaryInput>({
+    resolver: zodResolver(summarySchema),
+    mode: 'onChange',
+    defaultValues: { summary },
+  });
 
   const handleSave = async () => {
-    if (!formData.trim()) {
-      setValidationError('Summary cannot be empty');
-      throw new Error('Summary cannot be empty');
-    }
-
-    setValidationError(null);
+    const isValid = await trigger();
+    if (!isValid) throw new Error('Summary cannot be empty');
+    const { summary: value } = summarySchema.parse(getValues());
     if (versionId !== undefined) {
-      await updateVersionSummary(versionId, formData);
+      await updateVersionSummary(versionId, value);
     } else {
-      await updateSummary(formData);
+      await updateSummary(value);
     }
-    if (onUpdate) {
-      onUpdate();
-    }
-  };
-
-  const handleChange = (value: string) => {
-    setFormData(value);
-    if (validationError) {
-      setValidationError(null);
-    }
+    if (onUpdate) onUpdate();
   };
 
   if (!onUpdate) {
@@ -63,15 +57,19 @@ export default function SummarySection({ summary, onUpdate, versionId }: Summary
           <h2 className={styles.sectionLabel}>Summary</h2>
           {isEditing ? (
             <div className={styles.formField}>
-              <AutoResizeTextarea
-                value={formData}
-                onChange={handleChange}
-                className={`${styles.textarea} ${validationError ? styles.textareaError : ''}`}
-                placeholder="Enter your professional summary..."
+              <Controller
+                control={control}
+                name="summary"
+                render={({ field }) => (
+                  <AutoResizeTextarea
+                    value={field.value}
+                    onChange={field.onChange}
+                    className={`${styles.textarea} ${errors.summary ? styles.textareaError : ''}`}
+                    placeholder="Enter your professional summary..."
+                  />
+                )}
               />
-              {validationError && (
-                <span className={styles.errorText}>{validationError}</span>
-              )}
+              <FieldError error={errors.summary} />
             </div>
           ) : (
             <>

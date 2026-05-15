@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Trash2, Pencil, Check, X } from 'lucide-react'
 import { mapGroupedLinks } from '../../services/api'
 import {
@@ -10,6 +12,7 @@ import {
   useResumeMutations,
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
+import { resumeUpdateSchema } from '../../schemas/resume'
 import ContactSection from './ContactSection'
 import SummarySection from './SummarySection'
 import ExperienceSection from './ExperienceSection'
@@ -35,8 +38,17 @@ export default function ResumeDetailView() {
   const [editingTags, setEditingTags] = useState(false)
   const [tagsForm, setTagsForm] = useState<string[]>([])
   const [editingLabel, setEditingLabel] = useState(false)
-  const [labelInput, setLabelInput] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const {
+    register: registerLabel,
+    handleSubmit: handleLabelSubmit,
+    reset: resetLabel,
+    formState: { isSubmitting: labelSubmitting },
+  } = useForm<{ label: string }>({
+    resolver: zodResolver(resumeUpdateSchema.pick({ label: true })),
+    mode: 'onSubmit',
+  })
 
   useEffect(() => {
     if (numericId === null) {
@@ -53,10 +65,6 @@ export default function ResumeDetailView() {
   const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
   const notFound = errStatus === 404
   const forbidden = errStatus === 403
-
-  useEffect(() => {
-    if (version) setLabelInput(version.label)
-  }, [version])
 
   const reloadResume = () => {
     if (numericId !== null) {
@@ -86,15 +94,15 @@ export default function ResumeDetailView() {
     }
   }
 
-  const handleLabelSave = async () => {
-    if (!labelInput.trim() || numericId === null) return
+  const handleLabelSave = handleLabelSubmit(async (data) => {
+    if (numericId === null) return
     try {
-      await updateLabelOrTags.mutateAsync({ id: numericId, label: labelInput.trim() })
+      await updateLabelOrTags.mutateAsync({ id: numericId, label: data.label })
       setEditingLabel(false)
     } catch {
       error('Failed to update label')
     }
-  }
+  })
 
   const handleTagsEdit = () => {
     if (!version) return
@@ -161,15 +169,14 @@ export default function ResumeDetailView() {
           <div className={styles.labelEdit}>
             <input
               className={styles.labelInput}
-              value={labelInput}
-              onChange={(e) => setLabelInput(e.target.value)}
+              autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleLabelSave()
                 if (e.key === 'Escape') setEditingLabel(false)
               }}
-              autoFocus
+              {...registerLabel('label')}
             />
-            <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleLabelSave} aria-label="Save label">
+            <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleLabelSave} disabled={labelSubmitting} aria-label="Save label">
               <Check size={14} />
             </button>
             <button className={`${styles.iconBtn} ${styles.cancelIcon}`} onClick={() => setEditingLabel(false)} aria-label="Cancel editing">
@@ -179,7 +186,7 @@ export default function ResumeDetailView() {
         ) : (
           <div className={styles.labelDisplay}>
             <h2 className={styles.label}>{version.label}</h2>
-            <button className={styles.iconBtn} onClick={() => setEditingLabel(true)} aria-label="Edit label">
+            <button className={styles.iconBtn} onClick={() => { resetLabel({ label: version.label }); setEditingLabel(true) }} aria-label="Edit label">
               <Pencil size={14} />
             </button>
           </div>

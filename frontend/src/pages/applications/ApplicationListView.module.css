@@ -36,113 +36,6 @@
   outline: none;
 }
 
-/* New Application Form */
-.newForm {
-  background-color: var(--bg-hover);
-  border-radius: var(--radius-none);
-  padding: var(--space-7);
-  margin-bottom: var(--space-7);
-}
-
-.formTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 var(--space-6);
-}
-
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4) var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
-.formField {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.formLabel {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.input {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-none);
-  font-size: 0.9375rem;
-  font-family: var(--font-mono);
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-}
-
-.input:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
-
-.select {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-none);
-  font-size: 0.9375rem;
-  font-family: var(--font-mono);
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-}
-
-.select:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
-
-.formActions {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.submitButton {
-  background-color: var(--bg-hover);
-  color: var(--accent-green);
-  border: none;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-none);
-  font-size: 0.875rem;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.submitButton:hover:not(:disabled) {
-  background-color: var(--bg-active);
-}
-
-.submitButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.cancelButton {
-  background-color: var(--bg-hover);
-  color: var(--text-secondary);
-  border: none;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-none);
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-  cursor: pointer;
-}
-
-.cancelButton:hover {
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-}
-
 /* Filters */
 .filters {
   display: flex;
@@ -335,10 +228,6 @@
 }
 
 @media (max-width: 640px) {
-  .formGrid {
-    grid-template-columns: 1fr;
-  }
-
   .filters {
     flex-direction: column;
   }

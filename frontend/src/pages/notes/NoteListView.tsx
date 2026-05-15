@@ -4,26 +4,14 @@ import { Link2 } from 'lucide-react'
 import { useAllTags, useNoteList, useNoteMutations } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { useToast } from '../../components/toast'
+import { NotePanel } from './NotePanel'
+import type { NoteCreateInput } from '../../schemas/note'
 import styles from './NoteListView.module.css'
-
-interface FormState {
-  title: string
-  content: string
-  tags: string[]
-}
-
-const EMPTY_FORM: FormState = {
-  title: '',
-  content: '',
-  tags: [],
-}
 
 export default function NoteListView() {
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState<FormState>(EMPTY_FORM)
-  const [formError, setFormError] = useState('')
 
   const listQuery = useNoteList({ tags: tagFilter, q: searchQuery })
   const tagsQuery = useAllTags()
@@ -32,30 +20,19 @@ export default function NoteListView() {
 
   const notes = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
-  const saving = create.isPending
 
-  const handleFieldChange = (field: Exclude<keyof FormState, 'tags'>, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = async () => {
-    if (!form.title.trim()) {
-      setFormError('Title is required')
-      return
-    }
-    setFormError('')
+  const handleCreate = async (data: NoteCreateInput) => {
     try {
       await create.mutateAsync({
-        title: form.title.trim(),
-        content: form.content,
-        tags: form.tags,
+        title: data.title,
+        content: data.content ?? undefined,
+        tags: data.tags ?? [],
       })
-      setForm(EMPTY_FORM)
       setShowForm(false)
       success('Note created')
     } catch (err) {
       error(err instanceof Error ? err.message : 'Failed to create note')
-      setFormError(err instanceof Error ? err.message : 'Failed to create note')
+      throw err
     }
   }
 
@@ -65,76 +42,19 @@ export default function NoteListView() {
         <h2 className={styles.heading}>Notes</h2>
         <button
           className={styles.newButton}
-          onClick={() => {
-            setShowForm((v) => !v)
-            setFormError('')
-          }}
+          onClick={() => setShowForm((v) => !v)}
         >
           {showForm ? 'Cancel' : 'New Note'}
         </button>
       </div>
 
       {showForm && (
-        <div className={styles.newForm}>
-          <p className={styles.formTitle}>New Note</p>
-          {formError && <p className={styles.formError}>{formError}</p>}
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="note-title">Title *</label>
-            <input
-              id="note-title"
-              className={styles.input}
-              type="text"
-              value={form.title}
-              onChange={(e) => handleFieldChange('title', e.target.value)}
-              placeholder="Note title"
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="note-content">Content</label>
-            <textarea
-              id="note-content"
-              className={styles.textarea}
-              value={form.content}
-              onChange={(e) => handleFieldChange('content', e.target.value)}
-              placeholder="Write your note here..."
-              rows={4}
-            />
-          </div>
-
-          <div className={styles.formField}>
-            <label className={styles.formLabel} htmlFor="note-tags">Tags</label>
-            <TagInput
-              id="note-tags"
-              value={form.tags}
-              onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
-              availableTags={allTags}
-              allowCreate={true}
-              placeholder="Add tag..."
-            />
-          </div>
-
-          <div className={styles.formActions}>
-            <button
-              className={styles.submitButton}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              className={styles.cancelButton}
-              onClick={() => {
-                setShowForm(false)
-                setFormError('')
-                setForm(EMPTY_FORM)
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <NotePanel
+          mode="create"
+          allTags={allTags}
+          onSave={handleCreate}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       <div className={styles.filters}>

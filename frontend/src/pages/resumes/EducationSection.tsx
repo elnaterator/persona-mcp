@@ -5,6 +5,7 @@ import { EntryForm, type FieldConfig } from '../../components/EntryForm'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
+import { educationSchema } from '../../schemas/resumeEntry'
 import styles from './EducationSection.module.css'
 
 interface EducationSectionProps {
@@ -110,7 +111,8 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
               <EntryForm
                 key={index}
                 fields={educationFields}
-                initialData={entry as unknown as Record<string, string | string[]>}
+                schema={educationSchema}
+                defaultValues={entry as unknown as Record<string, string | string[]>}
                 onSubmit={handleEdit}
                 onCancel={() => setMode('view')}
               />
@@ -170,6 +172,7 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
       {mode === 'add' && (
         <EntryForm
           fields={educationFields}
+          schema={educationSchema}
           onSubmit={handleAdd}
           onCancel={() => setMode('view')}
         />

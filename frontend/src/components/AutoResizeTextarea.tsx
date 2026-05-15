@@ -6,9 +6,10 @@ interface AutoResizeTextareaProps {
   placeholder?: string
   className?: string
   id?: string
+  'aria-label'?: string
 }
 
-export function AutoResizeTextarea({ value, onChange, placeholder, className, id }: AutoResizeTextareaProps) {
+export function AutoResizeTextarea({ value, onChange, placeholder, className, id, 'aria-label': ariaLabel }: AutoResizeTextareaProps) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const isManuallyResized = useRef(false)
 
@@ -48,6 +49,7 @@ export function AutoResizeTextarea({ value, onChange, placeholder, className, id
         autoResize(el)
       }}
       id={id}
+      aria-label={ariaLabel}
       className={className}
       placeholder={placeholder}
       value={value}

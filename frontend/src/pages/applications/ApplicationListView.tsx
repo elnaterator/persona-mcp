@@ -5,22 +5,15 @@ import {
   useAllTags,
   useApplicationList,
   useApplicationMutations,
+  useResumeList,
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useToast } from '../../components/toast'
+import { APPLICATION_STATUSES } from '../../schemas/application'
+import { ApplicationPanel } from './ApplicationPanel'
+import type { ApplicationPanelInput } from './ApplicationPanel'
 import styles from './ApplicationListView.module.css'
-
-const ALL_STATUSES = [
-  'Interested',
-  'Applied',
-  'Phone Screen',
-  'Interview',
-  'Offer',
-  'Rejected',
-  'Withdrawn',
-  'Accepted',
-]
 
 const STATUS_COLORS: Record<string, string> = {
   Interested: styles.statusInterested,
@@ -33,33 +26,12 @@ const STATUS_COLORS: Record<string, string> = {
   Accepted: styles.statusAccepted,
 }
 
-interface NewAppForm {
-  company: string
-  position: string
-  status: string
-  url: string
-  notes: string
-  description: string
-  tags: string[]
-}
-
-const emptyForm: NewAppForm = {
-  company: '',
-  position: '',
-  status: 'Interested',
-  url: '',
-  notes: '',
-  description: '',
-  tags: [],
-}
-
 export default function ApplicationListView() {
   const navigate = useNavigate()
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [statusFilter, setStatusFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
-  const [newForm, setNewForm] = useState<NewAppForm>(emptyForm)
   const { success, error } = useToast()
 
   const listQuery = useApplicationList({
@@ -68,10 +40,12 @@ export default function ApplicationListView() {
     tags: tagFilter,
   })
   const tagsQuery = useAllTags()
+  const resumesQuery = useResumeList()
   const { create } = useApplicationMutations()
 
   const applications = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
+  const resumeVersions = resumesQuery.data ?? []
   const loading = listQuery.isPending
 
   useEffect(() => {
@@ -80,29 +54,25 @@ export default function ApplicationListView() {
     }
   }, [listQuery.isError, error])
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newForm.company.trim() || !newForm.position.trim()) return
-
+  const onCreate = async (data: ApplicationPanelInput) => {
     try {
       const created = await create.mutateAsync({
-        company: newForm.company.trim(),
-        position: newForm.position.trim(),
-        status: newForm.status,
-        url: newForm.url.trim() || null,
-        notes: newForm.notes.trim(),
-        description: newForm.description.trim(),
-        tags: newForm.tags,
+        company: data.company,
+        position: data.position,
+        status: data.status,
+        url: data.url ?? undefined,
+        description: data.description ?? undefined,
+        notes: data.notes ?? undefined,
+        tags: data.tags ?? [],
+        resume_version_id: data.resume_version_id ?? null,
       })
       setShowNewForm(false)
-      setNewForm(emptyForm)
       success('Application created')
       navigate(`/applications/${created.id}`)
     } catch {
       error('Failed to create application')
     }
   }
-  const submitting = create.isPending
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, {
@@ -124,81 +94,13 @@ export default function ApplicationListView() {
       </div>
 
       {showNewForm && (
-        <form className={styles.newForm} onSubmit={handleCreateSubmit}>
-          <h3 className={styles.formTitle}>New Application</h3>
-          <div className={styles.formGrid}>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="new-company">
-                Company *
-              </label>
-              <input
-                id="new-company"
-                className={styles.input}
-                value={newForm.company}
-                onChange={(e) => setNewForm((f) => ({ ...f, company: e.target.value }))}
-                placeholder="Company name"
-                required
-              />
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="new-position">
-                Position *
-              </label>
-              <input
-                id="new-position"
-                className={styles.input}
-                value={newForm.position}
-                onChange={(e) => setNewForm((f) => ({ ...f, position: e.target.value }))}
-                placeholder="Job title"
-                required
-              />
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="new-status">
-                Status
-              </label>
-              <select
-                id="new-status"
-                className={styles.select}
-                value={newForm.status}
-                onChange={(e) => setNewForm((f) => ({ ...f, status: e.target.value }))}
-              >
-                {ALL_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel} htmlFor="new-url">
-                URL
-              </label>
-              <input
-                id="new-url"
-                className={styles.input}
-                type="url"
-                value={newForm.url}
-                onChange={(e) => setNewForm((f) => ({ ...f, url: e.target.value }))}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-          <div className={styles.formActions}>
-            <button
-              type="submit"
-              className={styles.submitButton}
-              disabled={submitting || !newForm.company.trim() || !newForm.position.trim()}
-            >
-              {submitting ? 'Creating...' : 'Create Application'}
-            </button>
-            <button
-              type="button"
-              className={styles.cancelButton}
-              onClick={() => { setShowNewForm(false); setNewForm(emptyForm) }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <ApplicationPanel
+          mode="create"
+          allTags={allTags}
+          resumeVersions={resumeVersions}
+          onSave={onCreate}
+          onCancel={() => setShowNewForm(false)}
+        />
       )}
 
       <div className={styles.filters}>
@@ -209,7 +111,7 @@ export default function ApplicationListView() {
           aria-label="Filter by status"
         >
           <option value="">All statuses</option>
-          {ALL_STATUSES.map((s) => (
+          {APPLICATION_STATUSES.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>

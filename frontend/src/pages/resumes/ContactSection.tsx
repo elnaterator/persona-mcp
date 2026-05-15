@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { ContactInfo } from '../../types';
 import { EditableSection } from '../../components/EditableSection';
 import { updateResumeContact, updateVersionContact } from '../../services/api';
+import { FieldError } from '../../components/FieldError';
+import { contactInfoSchema, type ContactInfoInput } from '../../schemas/resumeEntry';
 import styles from './ContactSection.module.css';
 
 interface ContactSectionProps {
@@ -46,56 +50,46 @@ function ContactReadView({ contact }: { contact: ContactInfo }) {
   );
 }
 
+const toDefaults = (c: ContactInfo): ContactInfoInput => ({
+  name: c.name ?? '',
+  email: c.email ?? '',
+  phone: c.phone ?? '',
+  location: c.location ?? '',
+  linkedin: c.linkedin ?? '',
+  website: c.website ?? '',
+  github: c.github ?? '',
+})
+
 export default function ContactSection({ contact, onUpdate, versionId }: ContactSectionProps) {
-  const [formData, setFormData] = useState<ContactInfo>(contact);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const { register, trigger, getValues, reset, formState: { errors } } = useForm<ContactInfoInput>({
+    resolver: zodResolver(contactInfoSchema),
+    mode: 'onChange',
+    defaultValues: toDefaults(contact),
+  });
 
   useEffect(() => {
-    setFormData(contact);
-    setValidationErrors({});
-  }, [contact]);
-
-  const validateEmail = (email: string): boolean => {
-    if (!email) return true;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+    reset(toDefaults(contact));
+  }, [contact, reset]);
 
   const handleSave = async () => {
-    const errors: Record<string, string> = {};
-
-    if (formData.email && !validateEmail(formData.email)) {
-      errors.email = 'Invalid email format';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      throw new Error('Please fix validation errors');
-    }
-
-    setValidationErrors({});
+    const isValid = await trigger();
+    if (!isValid) throw new Error('Please fix validation errors');
+    const parsed = contactInfoSchema.parse(getValues());
+    const contactData: ContactInfo = {
+      name: parsed.name ?? null,
+      email: parsed.email ?? null,
+      phone: parsed.phone ?? null,
+      location: parsed.location ?? null,
+      linkedin: parsed.linkedin ?? null,
+      website: parsed.website ?? null,
+      github: parsed.github ?? null,
+    };
     if (versionId !== undefined) {
-      await updateVersionContact(versionId, formData);
+      await updateVersionContact(versionId, contactData);
     } else {
-      await updateResumeContact(formData);
+      await updateResumeContact(contactData);
     }
-    if (onUpdate) {
-      onUpdate();
-    }
-  };
-
-  const handleFieldChange = (field: keyof ContactInfo, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value || null,
-    }));
-    if (validationErrors[field]) {
-      setValidationErrors((prev) => {
-        const updated = { ...prev };
-        delete updated[field];
-        return updated;
-      });
-    }
+    if (onUpdate) onUpdate();
   };
 
   if (!onUpdate) {
@@ -112,41 +106,34 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
         <div data-testid="contact-section">
           {isEditing ? (
             <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
-              {/* Row 1: Name — mirrors the large heading */}
               <div className={styles.formField}>
                 <label htmlFor="name" className={styles.formLabel}>Name</label>
                 <input
                   type="text"
                   id="name"
-                  value={formData.name || ''}
-                  onChange={(e) => handleFieldChange('name', e.target.value)}
                   className={`${styles.input} ${styles.inputName}`}
+                  {...register('name')}
                 />
               </div>
 
-              {/* Row 2: Email · Phone · Location — mirrors the contact detail row */}
               <div className={styles.formRow}>
                 <div className={styles.formField}>
                   <label htmlFor="email" className={styles.formLabel}>Email</label>
                   <input
                     type="email"
                     id="email"
-                    value={formData.email || ''}
-                    onChange={(e) => handleFieldChange('email', e.target.value)}
-                    className={`${styles.input} ${validationErrors.email ? styles.inputError : ''}`}
+                    className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
+                    {...register('email')}
                   />
-                  {validationErrors.email && (
-                    <span className={styles.errorText}>{validationErrors.email}</span>
-                  )}
+                  <FieldError error={errors.email} />
                 </div>
                 <div className={styles.formField}>
                   <label htmlFor="phone" className={styles.formLabel}>Phone</label>
                   <input
                     type="tel"
                     id="phone"
-                    value={formData.phone || ''}
-                    onChange={(e) => handleFieldChange('phone', e.target.value)}
                     className={styles.input}
+                    {...register('phone')}
                   />
                 </div>
                 <div className={styles.formField}>
@@ -154,47 +141,45 @@ export default function ContactSection({ contact, onUpdate, versionId }: Contact
                   <input
                     type="text"
                     id="location"
-                    value={formData.location || ''}
-                    onChange={(e) => handleFieldChange('location', e.target.value)}
                     className={styles.input}
+                    {...register('location')}
                   />
                 </div>
               </div>
 
-              {/* Row 3: LinkedIn · Website · GitHub — mirrors the links row */}
               <div className={styles.formRow}>
                 <div className={styles.formField}>
                   <label htmlFor="linkedin" className={styles.formLabel}>LinkedIn</label>
                   <input
                     type="url"
                     id="linkedin"
-                    value={formData.linkedin || ''}
-                    onChange={(e) => handleFieldChange('linkedin', e.target.value)}
                     className={styles.input}
                     placeholder="https://linkedin.com/in/username"
+                    {...register('linkedin')}
                   />
+                  <FieldError error={errors.linkedin} />
                 </div>
                 <div className={styles.formField}>
                   <label htmlFor="website" className={styles.formLabel}>Website</label>
                   <input
                     type="url"
                     id="website"
-                    value={formData.website || ''}
-                    onChange={(e) => handleFieldChange('website', e.target.value)}
                     className={styles.input}
                     placeholder="https://example.com"
+                    {...register('website')}
                   />
+                  <FieldError error={errors.website} />
                 </div>
                 <div className={styles.formField}>
                   <label htmlFor="github" className={styles.formLabel}>GitHub</label>
                   <input
                     type="url"
                     id="github"
-                    value={formData.github || ''}
-                    onChange={(e) => handleFieldChange('github', e.target.value)}
                     className={styles.input}
                     placeholder="https://github.com/username"
+                    {...register('github')}
                   />
+                  <FieldError error={errors.github} />
                 </div>
               </div>
             </form>

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
-import type { Application } from '../../types'
+import { useParams, useNavigate } from 'react-router'
 import { ApiClientError } from '../../types'
 import { mapGroupedLinks } from '../../services/api'
 import {
@@ -10,41 +8,15 @@ import {
   useApplicationMutations,
   useResumeList,
 } from '../../hooks/queries'
-import { TagInput } from '../../components/TagInput'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { SectionCard } from '../../components/SectionCard'
-import { MarkdownContent } from '../../components/MarkdownContent'
-import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
+import { ApplicationPanel } from './ApplicationPanel'
+import type { ApplicationPanelInput } from './ApplicationPanel'
 import styles from './ApplicationDetailView.module.css'
-
-const ALL_STATUSES = [
-  'Interested',
-  'Applied',
-  'Phone Screen',
-  'Interview',
-  'Offer',
-  'Rejected',
-  'Withdrawn',
-  'Accepted',
-]
-
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  Interested:     { bg: 'rgba(136,136,220,0.12)', color: '#9898d8' },
-  Applied:        { bg: 'rgba(86,156,214,0.12)',  color: '#76c0f0' },
-  'Phone Screen': { bg: 'rgba(220,180,80,0.12)',  color: '#d4b060' },
-  Interview:      { bg: 'rgba(180,120,220,0.12)', color: '#c080e0' },
-  Offer:          { bg: 'rgba(82,183,136,0.12)',  color: '#52b788' },
-  Rejected:       { bg: 'rgba(255,68,68,0.10)',   color: '#ff6868' },
-  Withdrawn:      { bg: 'rgba(120,120,120,0.10)', color: '#888888' },
-  Accepted:       { bg: 'rgba(82,183,136,0.22)',  color: '#52b788' },
-}
-
-type EditSection = 'details' | 'description' | 'notes' | 'resume' | 'tags' | null
 
 export default function ApplicationDetailView() {
   const { id } = useParams<{ id: string }>()
@@ -52,8 +24,7 @@ export default function ApplicationDetailView() {
 
   const numericId = id && /^\d+$/.test(id) ? Number(id) : null
 
-  const [editingSection, setEditingSection] = useState<EditSection>(null)
-  const [sectionForm, setSectionForm] = useState<Partial<Application>>({})
+  const [editing, setEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { success, error } = useToast()
 
@@ -75,7 +46,6 @@ export default function ApplicationDetailView() {
   const notFound = errStatus === 404
   const forbidden = errStatus === 403
   const loading = detailQuery.isPending
-  const saving = update.isPending
 
   useEffect(() => {
     if (detailQuery.isError && !notFound && !forbidden) {
@@ -83,54 +53,28 @@ export default function ApplicationDetailView() {
     }
   }, [detailQuery.isError, notFound, forbidden, error])
 
-  const startEdit = (section: EditSection) => {
-    if (!app) return
-    setSectionForm({ ...app })
-    setEditingSection(section)
-  }
-
-  const cancelEdit = () => {
-    setEditingSection(null)
-    setSectionForm({})
-  }
-
-  const saveSection = async () => {
+  const handleSave = async (data: ApplicationPanelInput) => {
     if (!app || numericId === null) return
-    if (editingSection === 'details' && (!sectionForm.company?.trim() || !sectionForm.position?.trim())) return
     try {
-      const payload: Partial<Application> = editingSection === 'tags'
-        ? { tags: sectionForm.tags ?? app.tags }
-        : {
-            company: sectionForm.company?.trim() ?? app.company,
-            position: sectionForm.position?.trim() ?? app.position,
-            status: sectionForm.status ?? app.status,
-            url: sectionForm.url?.trim() || null,
-            description: sectionForm.description?.trim() ?? app.description,
-            notes: sectionForm.notes?.trim() ?? app.notes,
-            resume_version_id: 'resume_version_id' in sectionForm
-              ? sectionForm.resume_version_id ?? null
-              : app.resume_version_id,
-          }
-      await update.mutateAsync({ id: numericId, data: payload })
-      setEditingSection(null)
-      setSectionForm({})
+      await update.mutateAsync({
+        id: numericId,
+        data: {
+          company: data.company,
+          position: data.position,
+          status: data.status,
+          url: data.url ?? null,
+          description: data.description ?? undefined,
+          notes: data.notes ?? undefined,
+          tags: data.tags ?? [],
+          resume_version_id: data.resume_version_id ?? null,
+        },
+      })
+      setEditing(false)
       success('Saved')
     } catch {
       error('Failed to save')
     }
   }
-
-  const setField =
-    (field: keyof Application) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      setSectionForm((prev) => ({ ...prev, [field]: e.target.value }))
-    }
-
-  const setFieldValue =
-    (field: keyof Application) =>
-    (value: string) => {
-      setSectionForm((prev) => ({ ...prev, [field]: value }))
-    }
 
   const handleDelete = async () => {
     if (numericId === null) return
@@ -166,9 +110,6 @@ export default function ApplicationDetailView() {
     )
   if (!app) return null
 
-  const statusStyle = STATUS_COLORS[app.status] ?? { bg: 'rgba(120,120,120,0.10)', color: '#888888' }
-  const linkedResume = resumeVersions.find((rv) => rv.id === app.resume_version_id)
-
   return (
     <div className={styles.container} data-testid="application-detail-view">
       <Breadcrumb
@@ -178,289 +119,35 @@ export default function ApplicationDetailView() {
         ]}
       />
 
-      <div className={styles.topBar}>
-        <Link to="/applications" className={styles.backButton}>
-          Back
-        </Link>
-        <h2 className={styles.topBarTitle}>{app.company} — {app.position}</h2>
-        <div className={styles.topBarActions}>
-          <button className={styles.deleteButton} onClick={() => setShowDeleteConfirm(true)} aria-label="Delete application">
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.meta}>
-        {editingSection === 'tags' ? (
-          <div className={styles.tagsEdit}>
-            <TagInput
-              value={(sectionForm.tags as string[]) ?? []}
-              onChange={(tags) => setSectionForm((prev) => ({ ...prev, tags }))}
-              availableTags={allTags}
-              allowCreate={true}
-            />
-            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
-              <Check size={14} />
-            </button>
-            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <div className={styles.tagsRow}>
-            {app.tags && app.tags.length > 0 && (
-              <div className={styles.tagList}>
-                {app.tags.map((tag) => (
-                  <span key={tag} className={styles.tagBadge}>{tag}</span>
-                ))}
-              </div>
-            )}
-            <button className={styles.editButton} onClick={() => startEdit('tags')} aria-label="Edit tags">
-              <Pencil size={14} />
-            </button>
-          </div>
-        )}
-        {app.updated_at && (
-          <span className={styles.updatedDate}>Updated {new Date(app.updated_at).toLocaleDateString()}</span>
-        )}
-      </div>
-
-      <div className={styles.sections}>
-      {/* Details section */}
-      <SectionCard
-        label="Details"
-        action={editingSection === 'details' ? (
-          <div className={styles.sectionActions}>
-            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving || !sectionForm.company?.trim() || !sectionForm.position?.trim()} aria-label="Save">
-              <Check size={14} />
-            </button>
-            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button className={styles.editButton} onClick={() => startEdit('details')} aria-label="Edit details">
-            <Pencil size={14} />
-          </button>
-        )}
-      >
-        {editingSection === 'details' ? (
-          <div className={styles.sectionForm}>
-            <div className={styles.formRow}>
-              <div className={styles.formField}>
-                <label className={styles.formLabel} htmlFor="det-company">Company *</label>
-                <input
-                  id="det-company"
-                  className={styles.input}
-                  value={sectionForm.company ?? ''}
-                  onChange={setField('company')}
-                  placeholder="Company name"
-                />
-              </div>
-              <div className={styles.formField}>
-                <label className={styles.formLabel} htmlFor="det-position">Position *</label>
-                <input
-                  id="det-position"
-                  className={styles.input}
-                  value={sectionForm.position ?? ''}
-                  onChange={setField('position')}
-                  placeholder="Job title"
-                />
-              </div>
-            </div>
-            <div className={styles.formRow}>
-              <div className={styles.formField}>
-                <label className={styles.formLabel} htmlFor="det-status">Status</label>
-                <select
-                  id="det-status"
-                  className={styles.select}
-                  value={sectionForm.status ?? 'Interested'}
-                  onChange={setField('status')}
-                >
-                  {ALL_STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.formField}>
-                <label className={styles.formLabel} htmlFor="det-url">URL</label>
-                <input
-                  id="det-url"
-                  type="url"
-                  className={styles.input}
-                  value={sectionForm.url ?? ''}
-                  onChange={setField('url')}
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <dl className={styles.fieldList}>
-            <div className={styles.fieldRow}>
-              <dt className={styles.fieldKey}>Company</dt>
-              <dd className={styles.fieldVal}>{app.company}</dd>
-            </div>
-            <div className={styles.fieldRow}>
-              <dt className={styles.fieldKey}>Position</dt>
-              <dd className={styles.fieldVal}>{app.position}</dd>
-            </div>
-            <div className={styles.fieldRow}>
-              <dt className={styles.fieldKey}>Status</dt>
-              <dd className={styles.fieldVal}>
-                <span
-                  className={styles.statusBadgeInline}
-                  style={{ background: statusStyle.bg, color: statusStyle.color }}
-                >
-                  {app.status}
-                </span>
-              </dd>
-            </div>
-            <div className={styles.fieldRow}>
-              <dt className={styles.fieldKey}>URL</dt>
-              <dd className={styles.fieldVal}>
-                {app.url ? (
-                  <a
-                    href={app.url}
-                    className={styles.urlLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {app.url}
-                  </a>
-                ) : (
-                  <span className={styles.emptyText}>—</span>
-                )}
-              </dd>
-            </div>
-          </dl>
-        )}
-      </SectionCard>
-
-      {/* Description section */}
-      <SectionCard
-        label="Description"
-        action={editingSection === 'description' ? (
-          <div className={styles.sectionActions}>
-            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
-              <Check size={14} />
-            </button>
-            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button className={styles.editButton} onClick={() => startEdit('description')} aria-label="Edit description">
-            <Pencil size={14} />
-          </button>
-        )}
-      >
-        {editingSection === 'description' ? (
-          <div className={styles.sectionForm}>
-            <AutoResizeTextarea
-              className={styles.textarea}
-              value={sectionForm.description ?? ''}
-              onChange={setFieldValue('description')}
-              placeholder="Job description, requirements…"
-            />
-          </div>
-        ) : app.description ? (
-          <MarkdownContent>{app.description}</MarkdownContent>
-        ) : (
-          <p className={styles.emptyText}>Job description, requirements…</p>
-        )}
-      </SectionCard>
-
-      {/* Notes section */}
-      <SectionCard
-        label="Notes"
-        action={editingSection === 'notes' ? (
-          <div className={styles.sectionActions}>
-            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
-              <Check size={14} />
-            </button>
-            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button className={styles.editButton} onClick={() => startEdit('notes')} aria-label="Edit notes">
-            <Pencil size={14} />
-          </button>
-        )}
-      >
-        {editingSection === 'notes' ? (
-          <div className={styles.sectionForm}>
-            <AutoResizeTextarea
-              className={styles.textarea}
-              value={sectionForm.notes ?? ''}
-              onChange={setFieldValue('notes')}
-              placeholder="Personal notes…"
-            />
-          </div>
-        ) : app.notes ? (
-          <MarkdownContent>{app.notes}</MarkdownContent>
-        ) : (
-          <p className={styles.emptyText}>Personal notes…</p>
-        )}
-      </SectionCard>
-
-      {/* Resume section */}
-      <SectionCard
-        label="Resume"
-        action={editingSection === 'resume' ? (
-          <div className={styles.sectionActions}>
-            <button className={styles.saveIconButton} onClick={saveSection} disabled={saving} aria-label="Save">
-              <Check size={14} />
-            </button>
-            <button className={styles.cancelIconButton} onClick={cancelEdit} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button className={styles.editButton} onClick={() => startEdit('resume')} aria-label="Edit resume">
-            <Pencil size={14} />
-          </button>
-        )}
-      >
-        {editingSection === 'resume' ? (
-          <div className={styles.sectionForm}>
-            <select
-              className={styles.select}
-              value={sectionForm.resume_version_id ?? ''}
-              onChange={(e) =>
-                setSectionForm((prev) => ({
-                  ...prev,
-                  resume_version_id: e.target.value ? Number(e.target.value) : null,
-                }))
-              }
-            >
-              <option value="">— None —</option>
-              {resumeVersions.map((rv) => (
-                <option key={rv.id} value={rv.id}>
-                  {rv.label}{rv.is_default ? ' (default)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : linkedResume ? (
-          <p className={styles.bodyText}>
-            {linkedResume.label}{linkedResume.is_default ? ' (default)' : ''}
-          </p>
-        ) : (
-          <p className={styles.emptyText}>No resume linked</p>
-        )}
-      </SectionCard>
-      </div>
-
-      <div className={styles.panels}>
-        <LinksPanel
-          resourceType="application"
-          resourceId={numericId}
-          links={mapGroupedLinks(app.links as Record<string, unknown[]>)}
-          onChange={() => detailQuery.refetch()}
+      {editing ? (
+        <ApplicationPanel
+          key="edit"
+          mode="edit"
+          application={app}
+          allTags={allTags}
+          resumeVersions={resumeVersions}
+          onSave={handleSave}
+          onCancel={() => setEditing(false)}
+          backTo="/applications"
         />
-      </div>
+      ) : (
+        <ApplicationPanel
+          key="view"
+          mode="view"
+          application={app}
+          resumeVersions={resumeVersions}
+          onEdit={() => setEditing(true)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          backTo="/applications"
+        />
+      )}
+
+      <LinksPanel
+        resourceType="application"
+        resourceId={numericId}
+        links={mapGroupedLinks(app.links as Record<string, unknown[]>)}
+        onChange={() => detailQuery.refetch()}
+      />
 
       {showDeleteConfirm && (
         <ConfirmDialog

@@ -2,6 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EntryForm } from '../../components/EntryForm'
+import { workExperienceSchema, skillSchema } from '../../schemas/resumeEntry'
+import { z } from 'zod'
+
+const simpleSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required'),
+  company: z.string().trim().min(1, 'Company is required'),
+  location: z.string().trim().optional(),
+})
 
 describe('EntryForm', () => {
   const mockOnSubmit = vi.fn()
@@ -17,10 +25,18 @@ describe('EntryForm', () => {
     { name: 'summary', label: 'Summary', type: 'textarea' as const, required: true },
   ]
 
+  const summarySchema = z.object({
+    summary: z.string().trim().min(1, 'Summary is required'),
+  })
+
   const highlightsFieldConfig = [
     { name: 'title', label: 'Title', type: 'text' as const, required: true },
     { name: 'highlights', label: 'Highlights', type: 'highlights' as const, required: false },
   ]
+
+  const highlightsSchema = z.object({
+    title: z.string().trim().min(1, 'Title is required'),
+  })
 
   beforeEach(() => {
     mockOnSubmit.mockClear()
@@ -31,6 +47,7 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={simpleFieldConfig}
+        schema={simpleSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -45,6 +62,7 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={simpleFieldConfig}
+        schema={simpleSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -59,8 +77,8 @@ describe('EntryForm', () => {
     expect(locationLabel.textContent).not.toContain('*')
   })
 
-  it('pre-fills form with initial data', () => {
-    const initialData = {
+  it('pre-fills form with defaultValues', () => {
+    const defaultValues = {
       title: 'Software Engineer',
       company: 'Tech Corp',
       location: 'San Francisco',
@@ -69,7 +87,8 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={simpleFieldConfig}
-        initialData={initialData}
+        schema={simpleSchema}
+        defaultValues={defaultValues}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -80,12 +99,13 @@ describe('EntryForm', () => {
     expect(screen.getByLabelText(/location/i)).toHaveValue('San Francisco')
   })
 
-  it('validates required fields on submit', async () => {
+  it('shows zod error messages on submit', async () => {
     const user = userEvent.setup()
 
     render(
       <EntryForm
         fields={simpleFieldConfig}
+        schema={simpleSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -95,11 +115,31 @@ describe('EntryForm', () => {
     await user.click(submitButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/title is required/i)).toBeInTheDocument()
-      expect(screen.getByText(/company is required/i)).toBeInTheDocument()
+      expect(screen.getByText('Title is required')).toBeInTheDocument()
+      expect(screen.getByText('Company is required')).toBeInTheDocument()
     })
 
     expect(mockOnSubmit).not.toHaveBeenCalled()
+  })
+
+  it('error messages have role="alert"', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <EntryForm
+        fields={simpleFieldConfig}
+        schema={simpleSchema}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      const alerts = screen.getAllByRole('alert')
+      expect(alerts.length).toBeGreaterThan(0)
+    })
   })
 
   it('submits valid data with correct shape', async () => {
@@ -108,6 +148,7 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={simpleFieldConfig}
+        schema={simpleSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -134,6 +175,7 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={simpleFieldConfig}
+        schema={simpleSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -149,6 +191,7 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={textareaFieldConfig}
+        schema={summarySchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -158,12 +201,13 @@ describe('EntryForm', () => {
     expect(summaryInput.tagName).toBe('TEXTAREA')
   })
 
-  it('handles highlights field as dynamic list', async () => {
+  it('handles highlights field as dynamic list via useFieldArray', async () => {
     const user = userEvent.setup()
 
     render(
       <EntryForm
         fields={highlightsFieldConfig}
+        schema={highlightsSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -190,6 +234,7 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={highlightsFieldConfig}
+        schema={highlightsSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -209,12 +254,13 @@ describe('EntryForm', () => {
     expect(highlightInputs).toHaveLength(1)
   })
 
-  it('submits highlights as array', async () => {
+  it('submits highlights as string array', async () => {
     const user = userEvent.setup()
 
     render(
       <EntryForm
         fields={highlightsFieldConfig}
+        schema={highlightsSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -233,15 +279,17 @@ describe('EntryForm', () => {
     await user.click(screen.getByRole('button', { name: /save/i }))
 
     await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        title: 'Engineer',
-        highlights: ['First highlight', 'Second highlight'],
-      })
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Engineer',
+          highlights: ['First highlight', 'Second highlight'],
+        })
+      )
     })
   })
 
-  it('pre-fills highlights from initial data', () => {
-    const initialData = {
+  it('pre-fills highlights from defaultValues', () => {
+    const defaultValues = {
       title: 'Engineer',
       highlights: ['Highlight one', 'Highlight two', 'Highlight three'],
     }
@@ -249,7 +297,8 @@ describe('EntryForm', () => {
     render(
       <EntryForm
         fields={highlightsFieldConfig}
-        initialData={initialData}
+        schema={highlightsSchema}
+        defaultValues={defaultValues}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -262,12 +311,13 @@ describe('EntryForm', () => {
     expect(highlightInputs[2]).toHaveValue('Highlight three')
   })
 
-  it('handles empty highlights array in submission', async () => {
+  it('submits empty highlights array when no highlights added', async () => {
     const user = userEvent.setup()
 
     render(
       <EntryForm
         fields={highlightsFieldConfig}
+        schema={highlightsSchema}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
       />
@@ -281,6 +331,53 @@ describe('EntryForm', () => {
         title: 'Engineer',
         highlights: [],
       })
+    })
+  })
+
+  it('uses workExperienceSchema for experience forms', async () => {
+    const user = userEvent.setup()
+    const fields = [
+      { name: 'title', label: 'Title', type: 'text' as const, required: true },
+      { name: 'company', label: 'Company', type: 'text' as const, required: true },
+      { name: 'highlights', label: 'Highlights', type: 'highlights' as const, required: false },
+    ]
+
+    render(
+      <EntryForm
+        fields={fields}
+        schema={workExperienceSchema}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Title is required')).toBeInTheDocument()
+    })
+  })
+
+  it('uses skillSchema for skill forms', async () => {
+    const user = userEvent.setup()
+    const fields = [
+      { name: 'name', label: 'Skill Name', type: 'text' as const, required: true, group: 'main' },
+      { name: 'category', label: 'Category', type: 'text' as const, required: false, group: 'main' },
+    ]
+
+    render(
+      <EntryForm
+        fields={fields}
+        schema={skillSchema}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Skill name is required')).toBeInTheDocument()
     })
   })
 })
