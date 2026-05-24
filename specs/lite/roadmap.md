@@ -61,26 +61,23 @@ Replace per-view `StatusMessage` state + auto-dismiss timers with single `<Toast
 Replace hand-rolled field state + validation in `EntryForm`, `ContactDetailView`, `ApplicationDetailView` with `react-hook-form` (uncontrolled, fast) + `zod` schemas (single source of truth, infer TS types). Kills validation drift between client + server.
 
 
-## R012 Storybook and playwright for shared components and e2e UI tests
+## R012 Storybook and playwright for shared components and e2e UI tests - DEFERRED
 
-Set up Storybook targeting `frontend/src/components/`. Stories per primitive (`Breadcrumb`, `ConfirmDialog`, `EditableSection`, `LinkPickerModal`, `TagInput`, `LinksPanel`, etc.) with props matrix + a11y addon. Enables isolated visual review and future visual-regression testing (Chromatic). Defer until shared component set stabilizes.
+Set up Storybook targeting `frontend/src/components/`. Stories per primitive (`Breadcrumb`, `ConfirmDialog`, `EditableSection`, `LinkPickerModal`, `TagInput`, `LinksPanel`, etc.) with props matrix + a11y addon. Enables isolated visual review and future visual-regression testing (Chromatic). Defer until shared component set stabilizes. I want to set up a playwright test suite to validate the behavior of the running UI as well as validation of look and feel. It should not be part of the CI pipeline yet.
 
-
-## R013 UI test suite with playwright
-
-I want to set up a playwright test suite to validate the behavior of the running UI as well as validation of look and feel. It should not be part of the CI pipeline yet.
+**Deferred (2026-05-23):** Too early. The shared component set is still churning — R015 (compact lists) and R016 (reusable search component) will reshape the exact primitives Storybook would document, so stories + visual baselines would rot immediately. Playwright e2e has standalone value, but keeping it out of CI on a solo project means it won't run and will rot. Revisit after R014/R015/R016 settle the UI; then add a thin CI-gated Playwright smoke suite first, and Storybook only if a real shared-primitive library or collaborators emerge. Plan drafted at `specs/lite/012-storybook-playwright-plan.md` (on hold).
 
 
-## R014 Remove application to resume duplicate linking mechanism, use generic links
+## R013 Remove application to resume duplicate linking mechanism, use generic links - DONE
 
 `application.resume_version_id` FK duplicates the generic `link` table edge `application↔resume`. Drop the column and the matching `Application.resume_version_id` / `ApplicationSummary.resume_version_id` model fields, the `resume_version_id` param on `application_tools.py` create/update, and the resume-picker UI in `ApplicationDetailView` (replace with the standard `LinksPanel` resume entries). Replace `ResumeVersion.app_count` (currently a JOIN aggregate over the FK) with the existing generic `link_count` filtered to `type=application`, and update the resume list-card "X applications" badge accordingly. Migration must backfill existing `resume_version_id` values into `link` rows before dropping the column. No "primary resume per application" semantics preserved — generic links allow many resumes per app with no primary; revisit with a `primary_resume_link_id` flag only if the UX requires it.
 
 
-# R015 Render lists in more compact form
+# R014 Render lists in more compact form
 
 Resume list items look good, make other list items similar, more compact, fit all on one line where possible, 2 if not, float right for things like dates, link counts, etc. The goal is clean, good looking, and compact to show more items at once.
 
 
-## R016 Consistent search experience
+## R015 Consistent search experience
 
 Create a single search input that is conistent across the application and allows including tags and text in a single bar. When you search, it recommends tags, tab adds the tag as a chip in the search text bar, and also has search. For all object types we can search by tags or text, consistent experience. There should also be a generic search API across all resources, and search capability on the home page for any resource.  Refactor to reusable search component for UI.

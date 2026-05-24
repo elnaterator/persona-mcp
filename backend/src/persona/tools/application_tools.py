@@ -48,7 +48,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         status: str = "Interested",
         url: str | None = None,
         notes: str = "",
-        resume_version_id: int | None = None,
         tags: list[str] | None = None,
     ) -> str:
         """Create a new job application.
@@ -60,7 +59,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             status: Initial status (default: Interested).
             url: Job posting URL.
             notes: Free-text notes.
-            resume_version_id: Associated resume version.
             tags: Tags for categorizing the application.
         """
         user_id = require_user_id()
@@ -73,7 +71,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
                 "status": status,
                 "url": url,
                 "notes": notes,
-                "resume_version_id": resume_version_id,
                 "tags": tags or [],
             },
             user_id=user_id,
@@ -89,7 +86,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
         status: str | None = None,
         url: str | None = None,
         notes: str | None = None,
-        resume_version_id: int | None = None,
         tags: list[str] | None = None,
     ) -> str:
         """Update an existing application's fields.
@@ -102,7 +98,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             status: Updated status.
             url: Updated URL.
             notes: Updated notes.
-            resume_version_id: Updated resume version.
             tags: Updated tags.
         """
         user_id = require_user_id()
@@ -115,7 +110,6 @@ def register_application_tools(mcp: FastMCP, get_service: Any) -> None:
             ("status", status),
             ("url", url),
             ("notes", notes),
-            ("resume_version_id", resume_version_id),
             ("tags", tags),
         ]:
             if value is not None:

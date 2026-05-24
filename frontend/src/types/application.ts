@@ -12,7 +12,6 @@ export interface Application {
   status: string
   url: string | null
   notes: string
-  resume_version_id: number | null
   tags: string[]
   created_at: string
   updated_at: string
@@ -26,7 +25,6 @@ export interface ApplicationSummary {
   position: string
   status: string
   url: string | null
-  resume_version_id: number | null
   tags: string[]
   created_at: string
   updated_at: string

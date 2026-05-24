@@ -6,6 +6,7 @@ from typing import Any
 from persona.database import (
     create_resume_version,
     delete_resume_version,
+    link_counts_by_type,
     load_default_resume_version,
     load_resume_version,
     load_resume_version_tags,
@@ -64,6 +65,11 @@ class ResumeService:
             counts = self._links.count_links("resume", ids, uid)
             for r in resumes:
                 r["link_count"] = counts.get(r["id"], 0)
+            app_counts = link_counts_by_type(
+                self._conn, "resume", ids, "application", uid
+            )
+            for r in resumes:
+                r["app_count"] = app_counts.get(r["id"], 0)
         return resumes
 
     def get_resume(

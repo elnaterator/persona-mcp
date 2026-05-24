@@ -237,3 +237,85 @@ class TestFullMigrationChain:
         apply_migrations(pg_conn)
         version = _get_version(pg_conn)
         assert version == SCHEMA_VERSION
+
+    def test_application_has_no_resume_version_id_column(self, pg_conn) -> None:
+        """After v12, application table must not have resume_version_id column."""
+        from persona.migrations import _column_exists, apply_migrations
+
+        apply_migrations(pg_conn)
+        assert not _column_exists(pg_conn, "application", "resume_version_id")
+
+
+class TestMigrateV11ToV12:
+    """Verify v11→v12 migration backfills FK into resource_link then drops column."""
+
+    def test_backfills_fk_into_resource_link(self, pg_conn) -> None:
+        from persona.migrations import (
+            MIGRATIONS,
+            apply_migrations,
+            migrate_v11_to_v12,
+        )
+
+        # Apply all migrations up to v11.
+        original = MIGRATIONS.copy()
+        MIGRATIONS_UP_TO_V11 = original[:11]
+        MIGRATIONS.clear()
+        MIGRATIONS.extend(MIGRATIONS_UP_TO_V11)
+        try:
+            apply_migrations(pg_conn)
+        finally:
+            MIGRATIONS.clear()
+            MIGRATIONS.extend(original)
+
+        # Seed a user, resume, and application with resume_version_id set.
+        pg_conn.execute("INSERT INTO users (id) VALUES ('u1')")
+        pg_conn.execute(
+            "INSERT INTO resume_version (user_id, label, is_default, resume_data) "
+            "VALUES ('u1', 'R1', 1, '{}')"
+        )
+        rv_id = pg_conn.execute(
+            "SELECT id FROM resume_version WHERE user_id = 'u1'"
+        ).fetchone()["id"]
+        pg_conn.execute(
+            "INSERT INTO application (user_id, company, position, resume_version_id) "
+            "VALUES ('u1', 'Co', 'Dev', %s)",
+            (rv_id,),
+        )
+        app_id = pg_conn.execute(
+            "SELECT id FROM application WHERE user_id = 'u1'"
+        ).fetchone()["id"]
+        pg_conn.commit()
+
+        # Run the migration.
+        migrate_v11_to_v12(pg_conn)
+
+        # Canonical link must exist (application < resume lexicographically).
+        row = pg_conn.execute(
+            "SELECT * FROM resource_link "
+            "WHERE left_type = 'application' AND left_id = %s "
+            "AND right_type = 'resume' AND right_id = %s",
+            (app_id, rv_id),
+        ).fetchone()
+        assert row is not None
+
+    def test_drops_resume_version_id_column(self, pg_conn) -> None:
+        from persona.migrations import (
+            MIGRATIONS,
+            _column_exists,
+            apply_migrations,
+            migrate_v11_to_v12,
+        )
+
+        original = MIGRATIONS.copy()
+        MIGRATIONS_UP_TO_V11 = original[:11]
+        MIGRATIONS.clear()
+        MIGRATIONS.extend(MIGRATIONS_UP_TO_V11)
+        try:
+            apply_migrations(pg_conn)
+        finally:
+            MIGRATIONS.clear()
+            MIGRATIONS.extend(original)
+
+        pg_conn.commit()
+        migrate_v11_to_v12(pg_conn)
+        assert not _column_exists(pg_conn, "application", "resume_version_id")

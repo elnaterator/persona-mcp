@@ -1,6 +1,5 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { FieldError } from '../../components/FieldError'
@@ -9,13 +8,11 @@ import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
 import { SectionCard } from '../../components/SectionCard'
 import { MarkdownContent } from '../../components/MarkdownContent'
 import { applicationCreateSchema, APPLICATION_STATUSES } from '../../schemas/application'
+import type { ApplicationCreateInput } from '../../schemas/application'
 import type { Application } from '../../types'
 import styles from './ApplicationPanel.module.css'
 
-const panelSchema = applicationCreateSchema.extend({
-  resume_version_id: z.number().int().nullable().optional(),
-})
-export type ApplicationPanelInput = z.infer<typeof panelSchema>
+export type ApplicationPanelInput = ApplicationCreateInput
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   Interested:     { bg: 'rgba(136,136,220,0.12)', color: '#9898d8' },
@@ -28,17 +25,10 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   Accepted:       { bg: 'rgba(82,183,136,0.22)',  color: '#52b788' },
 }
 
-interface ResumeOption {
-  id: number
-  label: string
-  is_default: boolean
-}
-
 interface ApplicationPanelProps {
   mode: 'view' | 'edit' | 'create'
   application?: Application
   allTags?: string[]
-  resumeVersions?: ResumeOption[]
   onSave?: (data: ApplicationPanelInput) => Promise<void>
   onCancel?: () => void
   onEdit?: () => void
@@ -50,7 +40,6 @@ export function ApplicationPanel({
   mode,
   application,
   allTags = [],
-  resumeVersions = [],
   onSave,
   onCancel,
   onEdit,
@@ -65,7 +54,7 @@ export function ApplicationPanel({
     control,
     formState: { errors, isSubmitting },
   } = useForm<ApplicationPanelInput>({
-    resolver: zodResolver(panelSchema),
+    resolver: zodResolver(applicationCreateSchema),
     mode: 'onBlur',
     defaultValues: {
       company: application?.company ?? '',
@@ -75,7 +64,6 @@ export function ApplicationPanel({
       tags: application?.tags ?? [],
       description: application?.description ?? '',
       notes: application?.notes ?? '',
-      resume_version_id: application?.resume_version_id ?? null,
     },
   })
 
@@ -86,7 +74,6 @@ export function ApplicationPanel({
   const statusStyle = application
     ? (STATUS_COLORS[application.status] ?? { bg: 'rgba(120,120,120,0.10)', color: '#888888' })
     : null
-  const linkedResume = resumeVersions.find((rv) => rv.id === application?.resume_version_id)
 
   return (
     <div className={mode === 'create' ? styles.panelCreate : undefined}>
@@ -309,35 +296,6 @@ export function ApplicationPanel({
           )}
         </SectionCard>
 
-        {(!isEditable || resumeVersions.length > 0) && (
-          <SectionCard label="Resume">
-            {isEditable ? (
-              <Controller
-                name="resume_version_id"
-                control={control}
-                render={({ field }) => (
-                  <select
-                    id="ap-resume"
-                    className={styles.select}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">— None —</option>
-                    {resumeVersions.map((rv) => (
-                      <option key={rv.id} value={rv.id}>
-                        {rv.label}{rv.is_default ? ' (default)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              />
-            ) : linkedResume ? (
-              <p className={styles.bodyText}>{linkedResume.label}{linkedResume.is_default ? ' (default)' : ''}</p>
-            ) : (
-              <p className={styles.placeholderText}>No resume linked.</p>
-            )}
-          </SectionCard>
-        )}
       </div>
     </div>
   )

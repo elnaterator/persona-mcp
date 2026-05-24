@@ -17,10 +17,10 @@ const mockApplications: Application[] = [
     status: 'Applied',
     url: 'https://acme.com/job',
     notes: 'Looks promising',
-    resume_version_id: 1,
     tags: ['python', 'backend'],
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-15T00:00:00Z',
+    links: {},
   },
   {
     id: 2,
@@ -30,10 +30,10 @@ const mockApplications: Application[] = [
     status: 'Interview',
     url: null,
     notes: '',
-    resume_version_id: null,
     tags: [],
     created_at: '2024-02-01T00:00:00Z',
     updated_at: '2024-02-10T00:00:00Z',
+    links: {},
   },
 ]
 
