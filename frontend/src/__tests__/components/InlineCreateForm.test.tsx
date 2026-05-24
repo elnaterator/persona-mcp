@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { InlineCreateForm } from '../../components/InlineCreateForm';
 
@@ -93,7 +93,12 @@ describe('InlineCreateForm', () => {
       expect(screen.getByRole('button', { name: /creating/i })).toBeDisabled();
     });
 
-    resolveConfirm!();
+    await act(async () => {
+      resolveConfirm!();
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /creating/i })).not.toBeInTheDocument();
+    });
   });
 
   it('shows inline error when onConfirm throws', async () => {

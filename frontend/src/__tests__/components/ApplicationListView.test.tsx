@@ -49,6 +49,7 @@ describe('ApplicationListView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.listAllTags).mockResolvedValue([])
+    vi.mocked(api.listResumes).mockResolvedValue([])
   })
 
   it('shows loading spinner while fetching', () => {
