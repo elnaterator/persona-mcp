@@ -35,6 +35,7 @@ function renderView(id = '1') {
 describe('AccomplishmentDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(api.listAllTags).mockResolvedValue([])
   })
 
   it('renders all four STAR sections with their labels', async () => {

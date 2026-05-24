@@ -5,7 +5,6 @@ import {
   useAllTags,
   useApplicationList,
   useApplicationMutations,
-  useResumeList,
 } from '../../hooks/queries'
 import { TagInput } from '../../components/TagInput'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -40,12 +39,10 @@ export default function ApplicationListView() {
     tags: tagFilter,
   })
   const tagsQuery = useAllTags()
-  const resumesQuery = useResumeList()
   const { create } = useApplicationMutations()
 
   const applications = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
-  const resumeVersions = resumesQuery.data ?? []
   const loading = listQuery.isPending
 
   useEffect(() => {
@@ -64,7 +61,6 @@ export default function ApplicationListView() {
         description: data.description ?? undefined,
         notes: data.notes ?? undefined,
         tags: data.tags ?? [],
-        resume_version_id: data.resume_version_id ?? null,
       })
       setShowNewForm(false)
       success('Application created')
@@ -97,7 +93,6 @@ export default function ApplicationListView() {
         <ApplicationPanel
           mode="create"
           allTags={allTags}
-          resumeVersions={resumeVersions}
           onSave={onCreate}
           onCancel={() => setShowNewForm(false)}
         />

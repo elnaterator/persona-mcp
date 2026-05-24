@@ -35,6 +35,9 @@ describe('Route: /', () => {
     vi.mocked(api.listResumes).mockResolvedValue(mockResumes)
     vi.mocked(api.listApplications).mockResolvedValue([])
     vi.mocked(api.listNotes).mockResolvedValue([])
+    vi.mocked(api.listAccomplishments).mockResolvedValue([])
+    vi.mocked(api.listContacts).mockResolvedValue([])
+    vi.mocked(api.listAllTags).mockResolvedValue([])
   })
 
   it('renders HomeView at /', async () => {
@@ -82,6 +85,7 @@ describe('Route: /resumes/:id', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.getResumeVersion).mockResolvedValue(mockResume)
+    vi.mocked(api.listAllTags).mockResolvedValue([])
   })
 
   it('renders ResumeDetailView at /resumes/1', async () => {

@@ -6,7 +6,6 @@ import {
   useAllTags,
   useApplicationDetail,
   useApplicationMutations,
-  useResumeList,
 } from '../../hooks/queries'
 import { LinksPanel } from '../../components/LinksPanel'
 import Breadcrumb from '../../components/Breadcrumb'
@@ -35,12 +34,10 @@ export default function ApplicationDetailView() {
   }, [numericId, navigate])
 
   const detailQuery = useApplicationDetail(numericId ?? undefined)
-  const resumesQuery = useResumeList()
   const tagsQuery = useAllTags()
   const { update, remove } = useApplicationMutations()
 
   const app = detailQuery.data ?? null
-  const resumeVersions = resumesQuery.data ?? []
   const allTags = tagsQuery.data ?? []
   const errStatus = (detailQuery.error as ApiClientError | undefined)?.status
   const notFound = errStatus === 404
@@ -66,7 +63,6 @@ export default function ApplicationDetailView() {
           description: data.description ?? undefined,
           notes: data.notes ?? undefined,
           tags: data.tags ?? [],
-          resume_version_id: data.resume_version_id ?? null,
         },
       })
       setEditing(false)
@@ -125,7 +121,6 @@ export default function ApplicationDetailView() {
           mode="edit"
           application={app}
           allTags={allTags}
-          resumeVersions={resumeVersions}
           onSave={handleSave}
           onCancel={() => setEditing(false)}
           backTo="/applications"
@@ -135,7 +130,6 @@ export default function ApplicationDetailView() {
           key="view"
           mode="view"
           application={app}
-          resumeVersions={resumeVersions}
           onEdit={() => setEditing(true)}
           onDelete={() => setShowDeleteConfirm(true)}
           backTo="/applications"

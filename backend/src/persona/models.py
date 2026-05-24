@@ -133,7 +133,6 @@ class Application(BaseModel):
     status: str = "Interested"
     url: str | None = None
     notes: str = ""
-    resume_version_id: int | None = None
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""
@@ -156,7 +155,6 @@ class ApplicationSummary(BaseModel):
     position: str
     status: str = "Interested"
     url: str | None = None
-    resume_version_id: int | None = None
     tags: list[str] = []
     created_at: str = ""
     updated_at: str = ""

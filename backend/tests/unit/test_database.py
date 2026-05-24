@@ -391,9 +391,8 @@ class TestCreateApplication:
     """Tests for create_application."""
 
     def test_creates_with_all_fields(self, db_conn) -> None:
-        from persona.database import create_application, load_default_resume_version
+        from persona.database import create_application
 
-        default = load_default_resume_version(db_conn)
         data = {
             "company": "Acme",
             "position": "Engineer",
@@ -401,7 +400,6 @@ class TestCreateApplication:
             "status": "Applied",
             "url": "https://example.com",
             "notes": "Great company",
-            "resume_version_id": default["id"],
         }
         result = create_application(db_conn, data)
 
@@ -410,7 +408,6 @@ class TestCreateApplication:
         assert result["position"] == "Engineer"
         assert result["status"] == "Applied"
         assert result["url"] == "https://example.com"
-        assert result["resume_version_id"] == default["id"]
 
     def test_creates_with_minimal_fields(self, db_conn) -> None:
         from persona.database import create_application
@@ -429,16 +426,24 @@ class TestCreateApplication:
 
         assert a1["id"] != a2["id"]
 
-    def test_resume_version_id_fk(self, db_conn) -> None:
-        from persona.database import create_application, load_default_resume_version
-
-        default = load_default_resume_version(db_conn)
-        result = create_application(
-            db_conn,
-            {"company": "X", "position": "Y", "resume_version_id": default["id"]},
+    def test_link_to_resume_via_resource_link(self, db_conn) -> None:
+        from persona.database import (
+            create_application,
+            link_insert,
+            links_for_resource,
+            load_default_resume_version,
         )
 
-        assert result["resume_version_id"] == default["id"]
+        default = load_default_resume_version(db_conn)
+        app = create_application(db_conn, {"company": "X", "position": "Y"})
+        link_insert(
+            db_conn, "application", app["id"], "resume", default["id"], "legacy"
+        )
+        linked = links_for_resource(db_conn, "application", app["id"], "legacy")
+        assert any(
+            r["other_type"] == "resume" and r["other_id"] == default["id"]
+            for r in linked
+        )
 
     def test_returning_id_is_integer(self, db_conn) -> None:
         """RETURNING id must yield an integer (not lastrowid)."""

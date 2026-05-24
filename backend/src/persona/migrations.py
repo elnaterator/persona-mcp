@@ -81,6 +81,12 @@ def _detect_actual_version(conn) -> int:
     Checked newest-to-oldest; returns the first version whose structural
     marker is present.
     """
+    if (
+        _table_exists(conn, "resource_link")
+        and not _column_exists(conn, "communication", "app_id")
+        and not _column_exists(conn, "application", "resume_version_id")
+    ):
+        return 12
     if _table_exists(conn, "resource_link") and not _column_exists(
         conn, "communication", "app_id"
     ):
@@ -617,6 +623,20 @@ def migrate_v10_to_v11(conn) -> None:
     conn.commit()
 
 
+def migrate_v11_to_v12(conn) -> None:
+    """Backfill application.resume_version_id into resource_link, then drop it."""
+    conn.execute(
+        "INSERT INTO resource_link "
+        "(left_type, left_id, right_type, right_id, user_id) "
+        "SELECT 'application', id, 'resume', resume_version_id, user_id "
+        "FROM application WHERE resume_version_id IS NOT NULL "
+        "ON CONFLICT (left_type, left_id, right_type, right_id) DO NOTHING"
+    )
+    conn.execute("ALTER TABLE application DROP COLUMN resume_version_id")
+    conn.execute("UPDATE schema_version SET version = %s", (12,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -629,6 +649,7 @@ MIGRATIONS: list = [
     migrate_v8_to_v9,
     migrate_v9_to_v10,
     migrate_v10_to_v11,
+    migrate_v11_to_v12,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)

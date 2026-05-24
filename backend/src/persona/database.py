@@ -122,20 +122,17 @@ def load_resume_versions(
     conn: DBConnection,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Load all resume versions with metadata and app_count."""
+    """Load all resume versions (app_count set to 0; populated by caller)."""
     query = (
-        "SELECT rv.id, rv.label, rv.is_default, rv.tags, rv.created_at, rv.updated_at, "
-        "COUNT(a.id) AS app_count "
-        "FROM resume_version rv "
-        "LEFT JOIN application a ON a.resume_version_id = rv.id"
+        "SELECT id, label, is_default, tags, created_at, updated_at FROM resume_version"
     )
     params: list[Any] = []
 
     if user_id is not None:
-        query += " WHERE rv.user_id = %s"
+        query += " WHERE user_id = %s"
         params.append(user_id)
 
-    query += " GROUP BY rv.id ORDER BY rv.id"
+    query += " ORDER BY id"
 
     rows = conn.execute(query, params).fetchall()
     return [
@@ -143,7 +140,7 @@ def load_resume_versions(
             "id": row["id"],
             "label": row["label"],
             "is_default": bool(row["is_default"]),
-            "app_count": row["app_count"],
+            "app_count": 0,
             "tags": json.loads(row["tags"]),
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
@@ -366,9 +363,8 @@ def create_application(
     effective_uid = user_id or "legacy"
     row = conn.execute(
         "INSERT INTO application "
-        "(user_id, company, position, description, status, url, notes, "
-        "resume_version_id, tags) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+        "(user_id, company, position, description, status, url, notes, tags) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (
             effective_uid,
             data["company"],
@@ -377,7 +373,6 @@ def create_application(
             data.get("status", "Interested"),
             data.get("url"),
             data.get("notes") or "",
-            data.get("resume_version_id"),
             json.dumps(data.get("tags", [])),
         ),
     ).fetchone()
@@ -408,7 +403,7 @@ def load_applications(
     """Load applications with optional status/tag filter and search."""
     query = (
         "SELECT id, company, position, status, url, "
-        "resume_version_id, tags, created_at, updated_at "
+        "tags, created_at, updated_at "
         "FROM application"
     )
     conditions: list[str] = []
@@ -454,7 +449,6 @@ def update_application(
         "status",
         "url",
         "notes",
-        "resume_version_id",
     )
     sets: list[str] = []
     params: list[Any] = []
@@ -1321,6 +1315,40 @@ def link_counts(
         "  WHERE user_id = %s AND right_type = %s AND right_id = ANY(%s)"
         ") t GROUP BY resource_id",
         (user_id, resource_type, resource_ids, user_id, resource_type, resource_ids),
+    ).fetchall()
+    return {r["resource_id"]: r["cnt"] for r in rows}
+
+
+def link_counts_by_type(
+    conn: DBConnection,
+    resource_type: str,
+    resource_ids: list[int],
+    other_type: str,
+    user_id: str,
+) -> dict[int, int]:
+    """Return {resource_id: count} filtered to links with a specific other_type."""
+    if not resource_ids:
+        return {}
+    rows = conn.execute(
+        "SELECT resource_id, COUNT(*) AS cnt FROM ("
+        "  SELECT left_id AS resource_id FROM resource_link "
+        "  WHERE user_id = %s AND left_type = %s AND left_id = ANY(%s) "
+        "  AND right_type = %s "
+        "  UNION ALL "
+        "  SELECT right_id AS resource_id FROM resource_link "
+        "  WHERE user_id = %s AND right_type = %s AND right_id = ANY(%s) "
+        "  AND left_type = %s"
+        ") t GROUP BY resource_id",
+        (
+            user_id,
+            resource_type,
+            resource_ids,
+            other_type,
+            user_id,
+            resource_type,
+            resource_ids,
+            other_type,
+        ),
     ).fetchall()
     return {r["resource_id"]: r["cnt"] for r in rows}
 

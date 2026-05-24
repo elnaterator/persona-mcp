@@ -38,6 +38,7 @@ function renderView() {
 describe('AccomplishmentListView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(api.listAllTags).mockResolvedValue([])
   })
 
   it('renders accomplishments after loading', async () => {

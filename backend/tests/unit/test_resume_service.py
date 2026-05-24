@@ -474,6 +474,29 @@ class TestResumeServiceListResumes:
         assert "Alpha" in labels
         assert "Beta" in labels
 
+    def test_app_count_from_linked_applications(
+        self, resume_service: object, db_conn: object
+    ) -> None:
+        from psycopg import Connection
+
+        from persona.database import (
+            create_application,
+            link_insert,
+            load_default_resume_version,
+        )
+        from persona.resume_service import ResumeService
+
+        service: ResumeService = resume_service  # type: ignore[assignment]
+        conn: Connection = db_conn  # type: ignore[assignment]
+
+        default = load_default_resume_version(conn)  # type: ignore[arg-type]
+        app = create_application(conn, {"company": "Co", "position": "Dev"})  # type: ignore[arg-type]
+        link_insert(conn, "application", app["id"], "resume", default["id"], "legacy")  # type: ignore[arg-type]
+
+        versions = service.list_resumes()
+        target = next(v for v in versions if v["id"] == default["id"])
+        assert target["app_count"] == 1
+
 
 class TestResumeServiceCreateResume:
     """Tests for ResumeService.create_resume."""
