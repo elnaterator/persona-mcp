@@ -136,26 +136,24 @@ export default function ApplicationListView() {
           {applications.map((app) => (
             <li key={app.id} className={styles.item}>
               <Link to={`/applications/${app.id}`} className={styles.itemLink}>
-                <div className={styles.itemHeader}>
-                  <div className={styles.itemTitle}>
-                    <span className={styles.position}>{app.position}</span>
-                    <span className={styles.company}>{app.company}</span>
-                  </div>
+                <div className={styles.itemMain}>
+                  <span className={styles.position}>{app.position}</span>
+                  <span className={styles.company}>{app.company}</span>
                   <span className={`${styles.statusBadge} ${STATUS_COLORS[app.status] || ''}`}>
                     {app.status}
                   </span>
                 </div>
+                {app.tags && app.tags.length > 0 && (
+                  <div className={styles.tagList}>
+                    {app.tags.map((tag) => (
+                      <span key={tag} className={styles.tagBadge}>{tag}</span>
+                    ))}
+                  </div>
+                )}
                 <div className={styles.itemMeta}>
-                  <span className={styles.metaDate}>Updated {formatDate(app.updated_at)}</span>
+                  <span>Updated {formatDate(app.updated_at)}</span>
                   {!!app.link_count && (
                     <span className={styles.linkCount}><Link2 size={11} />{app.link_count}</span>
-                  )}
-                  {app.tags && app.tags.length > 0 && (
-                    <div className={styles.tagList}>
-                      {app.tags.map((tag) => (
-                        <span key={tag} className={styles.tagBadge}>{tag}</span>
-                      ))}
-                    </div>
                   )}
                 </div>
               </Link>

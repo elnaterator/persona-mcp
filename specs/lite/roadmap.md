@@ -73,7 +73,7 @@ Set up Storybook targeting `frontend/src/components/`. Stories per primitive (`B
 `application.resume_version_id` FK duplicates the generic `link` table edge `application↔resume`. Drop the column and the matching `Application.resume_version_id` / `ApplicationSummary.resume_version_id` model fields, the `resume_version_id` param on `application_tools.py` create/update, and the resume-picker UI in `ApplicationDetailView` (replace with the standard `LinksPanel` resume entries). Replace `ResumeVersion.app_count` (currently a JOIN aggregate over the FK) with the existing generic `link_count` filtered to `type=application`, and update the resume list-card "X applications" badge accordingly. Migration must backfill existing `resume_version_id` values into `link` rows before dropping the column. No "primary resume per application" semantics preserved — generic links allow many resumes per app with no primary; revisit with a `primary_resume_link_id` flag only if the UX requires it.
 
 
-# R014 Render lists in more compact form
+## R014 Render lists in more compact form - DONE
 
 Resume list items look good, make other list items similar, more compact, fit all on one line where possible, 2 if not, float right for things like dates, link counts, etc. The goal is clean, good looking, and compact to show more items at once.
 
