@@ -82,70 +82,39 @@
 }
 
 .list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  composes: list from '../../components/listRow.module.css';
 }
 
 .item {
-  background-color: var(--bg-hover);
-  border-radius: var(--radius-none);
-  padding: var(--space-6) var(--space-7);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.item:hover {
-  background-color: var(--bg-active);
+  composes: item from '../../components/listRow.module.css';
 }
 
 .itemLink {
-  text-decoration: none;
-  color: inherit;
-  display: block;
+  composes: itemLink from '../../components/listRow.module.css';
+}
+
+.itemMain {
+  composes: itemMain from '../../components/listRow.module.css';
 }
 
 .itemTitle {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 1rem;
-  margin-bottom: var(--space-1);
+  composes: title from '../../components/listRow.module.css';
 }
 
 .itemMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-  margin-bottom: var(--space-2);
+  composes: itemMeta from '../../components/listRow.module.css';
 }
 
 .linkCount {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  composes: linkCount from '../../components/listRow.module.css';
 }
 
-.itemTags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+.tagList {
+  composes: tagList from '../../components/listRow.module.css';
 }
 
 .tagBadge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-none);
-  background-color: var(--accent-green-bg);
-  color: var(--accent-green);
+  composes: tagBadge from '../../components/listRow.module.css';
 }
 
 @media (max-width: 640px) {

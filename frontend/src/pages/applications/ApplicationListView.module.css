@@ -82,54 +82,35 @@
 }
 
 .list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  composes: list from '../../components/listRow.module.css';
 }
 
 .item {
-  background-color: var(--bg-hover);
-  border-radius: var(--radius-none);
-  padding: var(--space-6) var(--space-7);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
+  composes: item from '../../components/listRow.module.css';
 }
 
-.item:hover {
-  background-color: var(--bg-active);
+.itemLink {
+  composes: itemLink from '../../components/listRow.module.css';
 }
 
-.item:focus {
-  outline: none;
-}
-
-.itemHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-2);
-}
-
-.itemTitle {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
+.itemMain {
+  composes: itemMain from '../../components/listRow.module.css';
 }
 
 .position {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .company {
   color: var(--text-secondary);
   font-size: 0.9375rem;
+  white-space: nowrap;
 }
 
 .statusBadge {
@@ -142,7 +123,7 @@
   font-family: var(--font-mono);
 }
 
-/* Status badge colors — muted on dark background */
+/* Status badge colors */
 .statusInterested {
   background-color: var(--status-green-dim-bg);
   color: var(--accent-green-dim);
@@ -183,48 +164,27 @@
   color: var(--accent-green);
 }
 
-.itemMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  font-size: 0.8125rem;
-  color: var(--text-muted);
+.tagList {
+  composes: tagList from '../../components/listRow.module.css';
 }
 
-.metaDate {
-  /* inherits itemMeta color */
+.tagBadge {
+  composes: tagBadge from '../../components/listRow.module.css';
+}
+
+.itemMeta {
+  composes: itemMeta from '../../components/listRow.module.css';
 }
 
 .linkCount {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  composes: linkCount from '../../components/listRow.module.css';
 }
 
 .metaLink {
   color: var(--accent-green);
   text-decoration: none;
-}
-
-.metaLink:hover {
-  /* no underline */
-}
-
-.tagList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.tagBadge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-none);
-  background-color: var(--accent-green-bg);
-  color: var(--accent-green);
+  white-space: nowrap;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 640px) {
@@ -234,10 +194,5 @@
 
   .filterSelect {
     min-width: unset;
-  }
-
-  .itemHeader {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

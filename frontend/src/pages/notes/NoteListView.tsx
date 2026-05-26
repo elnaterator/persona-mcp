@@ -81,22 +81,22 @@ export default function NoteListView() {
           {notes.map((note) => (
             <li key={note.id} className={styles.item}>
               <Link to={`/notes/${note.id}`} className={styles.itemLink}>
-                <div className={styles.itemTitle}>{note.title}</div>
+                <div className={styles.itemMain}>
+                  <span className={styles.itemTitle}>{note.title}</span>
+                </div>
+                {note.tags.length > 0 && (
+                  <div className={styles.tagList}>
+                    {note.tags.map((tag) => (
+                      <span key={tag} className={styles.tagBadge}>{tag}</span>
+                    ))}
+                  </div>
+                )}
                 <div className={styles.itemMeta}>
                   <span>{new Date(note.updated_at).toLocaleDateString()}</span>
                   {!!note.link_count && (
                     <span className={styles.linkCount}><Link2 size={11} />{note.link_count}</span>
                   )}
                 </div>
-                {note.tags.length > 0 && (
-                  <div className={styles.itemTags}>
-                    {note.tags.map((tag) => (
-                      <span key={tag} className={styles.tagBadge}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </Link>
             </li>
           ))}

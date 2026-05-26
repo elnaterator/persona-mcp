@@ -66,18 +66,13 @@
 }
 
 .list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  composes: list from '../../components/listRow.module.css';
 }
 
 .item {
   background-color: var(--bg-hover);
   border-radius: var(--radius-none);
-  padding: var(--space-6) var(--space-7);
+  padding: var(--space-4) var(--space-7);
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
@@ -87,22 +82,37 @@
 }
 
 .itemLink {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   text-decoration: none;
   color: inherit;
-  display: block;
 }
 
-.itemHeader {
+/* Row 1: name+badge left, tags+date right */
+.itemRow1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.itemLeft {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-1);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .itemName {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .relationshipBadge {
@@ -112,49 +122,54 @@
   border-radius: var(--radius-none);
   background-color: var(--bg-surface);
   color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.itemSub {
+.itemRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.tagList {
+  composes: tagList from '../../components/listRow.module.css';
+}
+
+.tagBadge {
+  composes: tagBadge from '../../components/listRow.module.css';
+}
+
+.updatedDate {
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin-bottom: var(--space-1);
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
-.itemMeta {
+/* Row 2: sub-line, followup, link count */
+.itemRow2 {
   display: flex;
   align-items: center;
   gap: var(--space-6);
   font-size: 0.8125rem;
   color: var(--text-muted);
-  margin-bottom: var(--space-2);
+}
+
+.itemSub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
 }
 
 .followupDate {
   color: var(--accent-green-dim);
+  white-space: nowrap;
 }
 
 .linkCount {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.itemTags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.tagBadge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-none);
-  background-color: var(--accent-green-bg);
-  color: var(--accent-green);
+  composes: linkCount from '../../components/listRow.module.css';
 }
 
 /* Communication Search Panel */
@@ -330,5 +345,17 @@
   .commSearchRow {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .itemRow1 {
+    flex-wrap: wrap;
+  }
+
+  .itemRight {
+    flex-wrap: wrap;
+  }
+
+  .itemRow2 {
+    flex-wrap: wrap;
   }
 }

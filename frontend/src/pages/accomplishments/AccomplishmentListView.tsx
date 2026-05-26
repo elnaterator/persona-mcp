@@ -81,7 +81,16 @@ export default function AccomplishmentListView() {
           {accomplishments.map((acc) => (
             <li key={acc.id} className={styles.item}>
               <Link to={`/accomplishments/${acc.id}`} className={styles.itemLink}>
-                <div className={styles.itemTitle}>{acc.title}</div>
+                <div className={styles.itemMain}>
+                  <span className={styles.itemTitle}>{acc.title}</span>
+                </div>
+                {acc.tags.length > 0 && (
+                  <div className={styles.tagList}>
+                    {acc.tags.map((tag) => (
+                      <span key={tag} className={styles.tagBadge}>{tag}</span>
+                    ))}
+                  </div>
+                )}
                 <div className={styles.itemMeta}>
                   {acc.accomplishment_date && (
                     <span>{acc.accomplishment_date}</span>
@@ -90,15 +99,6 @@ export default function AccomplishmentListView() {
                     <span className={styles.linkCount}><Link2 size={11} />{acc.link_count}</span>
                   )}
                 </div>
-                {acc.tags.length > 0 && (
-                  <div className={styles.itemTags}>
-                    {acc.tags.map((tag) => (
-                      <span key={tag} className={styles.tagBadge}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </Link>
             </li>
           ))}

@@ -177,33 +177,39 @@ export default function ContactListView() {
           {contacts.map((contact) => (
             <li key={contact.id} className={styles.item}>
               <Link to={`/contacts/${contact.id}`} className={styles.itemLink}>
-                <div className={styles.itemHeader}>
-                  <span className={styles.itemName}>{contact.name}</span>
-                  {contact.relationship && (
-                    <span className={styles.relationshipBadge}>{contact.relationship}</span>
-                  )}
-                </div>
-                {(contact.company || contact.title) && (
-                  <div className={styles.itemSub}>
-                    {[contact.title, contact.company].filter(Boolean).join(' · ')}
+                <div className={styles.itemRow1}>
+                  <div className={styles.itemLeft}>
+                    <span className={styles.itemName}>{contact.name}</span>
+                    {contact.relationship && (
+                      <span className={styles.relationshipBadge}>{contact.relationship}</span>
+                    )}
                   </div>
-                )}
-                <div className={styles.itemMeta}>
-                  {contact.followup_date && (
-                    <span className={styles.followupDate}>
-                      Follow up: {contact.followup_date}
-                    </span>
-                  )}
-                  <span>{new Date(contact.updated_at).toLocaleDateString()}</span>
-                  {!!contact.link_count && (
-                    <span className={styles.linkCount}><Link2 size={11} />{contact.link_count}</span>
-                  )}
+                  <div className={styles.itemRight}>
+                    {contact.tags.length > 0 && (
+                      <div className={styles.tagList}>
+                        {contact.tags.map((tag) => (
+                          <span key={tag} className={styles.tagBadge}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                    <span className={styles.updatedDate}>Updated {new Date(contact.updated_at).toLocaleDateString()}</span>
+                  </div>
                 </div>
-                {contact.tags.length > 0 && (
-                  <div className={styles.itemTags}>
-                    {contact.tags.map((tag) => (
-                      <span key={tag} className={styles.tagBadge}>{tag}</span>
-                    ))}
+                {((contact.company || contact.title) || contact.followup_date || !!contact.link_count) && (
+                  <div className={styles.itemRow2}>
+                    {(contact.company || contact.title) && (
+                      <span className={styles.itemSub}>
+                        {[contact.title, contact.company].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
+                    {contact.followup_date && (
+                      <span className={styles.followupDate}>
+                        Follow up: {contact.followup_date}
+                      </span>
+                    )}
+                    {!!contact.link_count && (
+                      <span className={styles.linkCount}><Link2 size={11} />{contact.link_count}</span>
+                    )}
                   </div>
                 )}
               </Link>
