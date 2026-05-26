@@ -37,6 +37,12 @@
   outline-offset: 2px;
 }
 
+.filters {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
 .empty {
   color: var(--text-muted);
   font-style: italic;

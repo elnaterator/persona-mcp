@@ -78,6 +78,10 @@ Set up Storybook targeting `frontend/src/components/`. Stories per primitive (`B
 Resume list items look good, make other list items similar, more compact, fit all on one line where possible, 2 if not, float right for things like dates, link counts, etc. The goal is clean, good looking, and compact to show more items at once.
 
 
-## R015 Consistent search experience
+## R015 Consistent search experience - DONE
 
-Create a single search input that is conistent across the application and allows including tags and text in a single bar. When you search, it recommends tags, tab adds the tag as a chip in the search text bar, and also has search. For all object types we can search by tags or text, consistent experience. There should also be a generic search API across all resources, and search capability on the home page for any resource.  Refactor to reusable search component for UI.
+Create a single search bar as a reusable component that is consistent across the application. Both tags and text in a single search bar. As you type it should recommend tags, use tab to complete the tag, or click on item from recommendations list.  When tag added, add as a chip in search bar, float left.  Any typed text that is not part a tag is used as search text. For all object types we can search by tags or text, consistent experience. There should also be a generic search API across all resources, and a search bar on the home page tha returns results for any resource.
+
+## R016 Use standard OAuth2 flow for MCP server auth, rather than API keys
+
+Shouldn’t have to configure API keys to connect to MCP server, should use OAuth2 flow. The MCP command should just point at URL, Unauthenticated request returns WWW-Authenticate header with Protected Resource Metadata at `/.well-known/oauth-protected-resource/mcp`, use clerk as OAuth2 provider.  Ask good questions to guide any good design.  Include tasks in plan for manual setup steps in clerk (clearly indicate these are human, manual steps). Clean up API key handling on home page.

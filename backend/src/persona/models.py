@@ -107,6 +107,18 @@ class ResumeVersionSummary(BaseModel):
     link_count: int = 0
 
 
+class SearchResult(BaseModel):
+    """A unified search result across all resource types."""
+
+    type: str
+    id: int
+    title: str
+    subtitle: str | None = None
+    snippet: str | None = None
+    tags: list[str] = []
+    url: str
+
+
 APPLICATION_STATUSES = (
     "Interested",
     "Applied",
