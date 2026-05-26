@@ -121,8 +121,15 @@ export async function removeEntry(
 /**
  * List all resume versions (summaries without full resume data)
  */
-export async function listResumes(): Promise<ResumeVersionSummary[]> {
-  const response = await fetchWithErrorHandling(`${API_BASE}/resumes`)
+export async function listResumes(
+  tags?: string[],
+  q?: string
+): Promise<ResumeVersionSummary[]> {
+  const params = new URLSearchParams()
+  if (tags && tags.length > 0) tags.forEach((t) => params.append('tag', t))
+  if (q) params.set('q', q)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  const response = await fetchWithErrorHandling(`${API_BASE}/resumes${query}`)
   return handleResponse<ResumeVersionSummary[]>(response)
 }
 

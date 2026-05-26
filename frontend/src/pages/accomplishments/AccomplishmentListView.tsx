@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
 import {
@@ -6,23 +6,32 @@ import {
   useAccomplishmentMutations,
   useAllTags,
 } from '../../hooks/queries'
-import { TagInput } from '../../components/TagInput'
+import { SearchBar } from '../../components/SearchBar'
 import { useToast } from '../../components/toast'
 import { AccomplishmentPanel } from './AccomplishmentPanel'
 import type { AccomplishmentCreateInput } from '../../schemas/accomplishment'
+import type { SearchValue } from '../../types'
 import styles from './AccomplishmentListView.module.css'
 
 export default function AccomplishmentListView() {
-  const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const listQuery = useAccomplishmentList({ tags: tagFilter })
+  const listQuery = useAccomplishmentList({ tags: search.tags, q: debouncedQ || undefined })
   const tagsQuery = useAllTags()
   const { create } = useAccomplishmentMutations()
   const { success, error } = useToast()
 
   const accomplishments = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
+
+  const handleSearchChange = (v: SearchValue) => {
+    setSearch(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(v.text), 300)
+  }
 
   const handleCreate = async (data: AccomplishmentCreateInput) => {
     try {
@@ -65,12 +74,11 @@ export default function AccomplishmentListView() {
       )}
 
       <div className={styles.filters}>
-        <TagInput
-          value={tagFilter}
-          onChange={setTagFilter}
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
           availableTags={allTags}
-          allowCreate={false}
-          placeholder="Filter by tag..."
+          placeholder="Search accomplishments..."
         />
       </div>
 

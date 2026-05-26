@@ -36,7 +36,8 @@ describe('query keys', () => {
 
   it('resume keys', () => {
     expect(resumeKeys.detail(9)).toEqual(['resumes', 'detail', 9])
-    expect(resumeKeys.list()).toEqual(['resumes', 'list'])
+    expect(resumeKeys.list()).toEqual(['resumes', 'list', {}])
+    expect(resumeKeys.list({ q: 'foo' })).toEqual(['resumes', 'list', { q: 'foo' }])
   })
 
   it('tag keys', () => {

@@ -1,25 +1,33 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
 import { useAllTags, useNoteList, useNoteMutations } from '../../hooks/queries'
-import { TagInput } from '../../components/TagInput'
+import { SearchBar } from '../../components/SearchBar'
 import { useToast } from '../../components/toast'
 import { NotePanel } from './NotePanel'
 import type { NoteCreateInput } from '../../schemas/note'
+import type { SearchValue } from '../../types'
 import styles from './NoteListView.module.css'
 
 export default function NoteListView() {
-  const [tagFilter, setTagFilter] = useState<string[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const listQuery = useNoteList({ tags: tagFilter, q: searchQuery })
+  const listQuery = useNoteList({ tags: search.tags, q: debouncedQ || undefined })
   const tagsQuery = useAllTags()
   const { create } = useNoteMutations()
   const { success, error } = useToast()
 
   const notes = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
+
+  const handleSearchChange = (v: SearchValue) => {
+    setSearch(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(v.text), 300)
+  }
 
   const handleCreate = async (data: NoteCreateInput) => {
     try {
@@ -58,18 +66,10 @@ export default function NoteListView() {
       )}
 
       <div className={styles.filters}>
-        <TagInput
-          value={tagFilter}
-          onChange={setTagFilter}
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
           availableTags={allTags}
-          allowCreate={false}
-          placeholder="Filter by tag..."
-        />
-        <input
-          className={styles.searchInput}
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search notes..."
         />
       </div>

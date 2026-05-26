@@ -139,7 +139,7 @@ describe('ApplicationListView', () => {
     vi.mocked(api.listApplications).mockResolvedValue([])
     renderView()
     await waitFor(() => {
-      expect(screen.getByRole('searchbox', { name: /search applications/i })).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
   })
 

@@ -56,9 +56,14 @@ class ResumeService:
 
     # --- Version management ---
 
-    def list_resumes(self, user_id: str | None = None) -> list[dict[str, Any]]:
+    def list_resumes(
+        self,
+        user_id: str | None = None,
+        tags: list[str] | None = None,
+        q: str | None = None,
+    ) -> list[dict[str, Any]]:
         """List all resume versions with metadata."""
-        resumes = load_resume_versions(self._conn, user_id=user_id)
+        resumes = load_resume_versions(self._conn, user_id=user_id, tags=tags, q=q)
         if resumes:
             uid = user_id or "legacy"
             ids = [r["id"] for r in resumes]

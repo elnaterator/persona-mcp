@@ -6,6 +6,7 @@ from typing import Any
 from persona.database import (
     create_contact_communication,
     delete_communication_owned,
+    load_communication_tags,
     load_contact,
     load_contact_communications,
     search_communications,
@@ -134,6 +135,9 @@ class ContactCommunicationService:
 
     def remove(self, comm_id: int, user_id: str | None = None) -> str:
         return delete_communication_owned(self._conn, comm_id, user_id=user_id)
+
+    def list_tags(self, user_id: str | None = None) -> list[str]:
+        return load_communication_tags(self._conn, user_id=user_id)
 
     def search(
         self,
