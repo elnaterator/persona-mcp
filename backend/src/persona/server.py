@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Any, cast
 
 import uvicorn
-from fastapi import FastAPI, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
@@ -16,16 +16,20 @@ from psycopg_pool import ConnectionPool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
-from starlette.responses import JSONResponse
 
 from persona.accomplishment_service import AccomplishmentService
 from persona.api.routes import create_router
 from persona.application_service import ApplicationService
-from persona.auth import build_get_current_user
+from persona.auth import (
+    UserContextToolMiddleware,
+    build_get_current_user,
+    build_mcp_auth,
+    current_user_id_var,
+    verify_clerk_jwt,
+)
 from persona.communication_service import ContactCommunicationService
 from persona.config import (
     configure_logging,
-    resolve_clerk_secret_key,
     resolve_cors_origins,
     resolve_db_url,
     resolve_frontend_dir,
@@ -34,7 +38,7 @@ from persona.config import (
     resolve_port,
 )
 from persona.contact_service import ContactService
-from persona.database import init_pool, upsert_user
+from persona.database import init_pool
 from persona.db import DBConnection
 from persona.link_service import LinkService
 from persona.note_service import NoteService
@@ -68,8 +72,6 @@ class SPAStaticFiles(StaticFiles):
                 return await super().get_response("index.html", scope)
             raise
 
-
-mcp = FastMCP("persona")
 
 # Resolved at startup, used by MCP tool handlers.
 _pool: ConnectionPool[Any] | None = None
@@ -126,13 +128,26 @@ def get_db() -> Generator[DBConnection, None, None]:
         yield cast(DBConnection, conn)
 
 
-# Register MCP tools from modules
-register_resume_tools(mcp, _get_resume_service)
-register_application_tools(mcp, _get_app_service)
-register_accomplishment_tools(mcp, _get_acc_service)
-register_note_tools(mcp, _get_note_service)
-register_contact_tools(mcp, _get_contact_service, _get_comm_service)
-register_link_tools(mcp, _get_link_service)
+def _build_mcp(production: bool) -> FastMCP:
+    """Create FastMCP instance, register all tools, and wire auth/middleware."""
+    import persona.auth as auth_module
+
+    mcp_auth = build_mcp_auth() if production else None
+    m = FastMCP("persona", auth=mcp_auth)
+
+    register_resume_tools(m, _get_resume_service)
+    register_application_tools(m, _get_app_service)
+    register_accomplishment_tools(m, _get_acc_service)
+    register_note_tools(m, _get_note_service)
+    register_contact_tools(m, _get_contact_service, _get_comm_service)
+    register_link_tools(m, _get_link_service)
+
+    if production:
+        m.add_middleware(UserContextToolMiddleware())
+        # Expose the shared conn reference to the tool middleware
+        auth_module._conn = _conn
+
+    return m
 
 
 # --- UserContextMiddleware ---
@@ -141,85 +156,26 @@ register_link_tools(mcp, _get_link_service)
 class UserContextMiddleware(BaseHTTPMiddleware):
     """Set current_user_id_var from Bearer token or PERSONA_USER_ID env var.
 
-    For /mcp paths: enforces dual-auth (JWT + API key) via the Clerk SDK.
-      - Missing or invalid token → 401 Unauthorized.
-      - Valid token → sets current_user_id_var and calls next handler.
-
-    For all other paths: attempts JWT-only auth (backward compat for REST API
-    callers that also set the context var) but never blocks the request.
+    REST API paths: attempts JWT-only auth (sets context var), never blocks.
+    stdio mode: reads PERSONA_USER_ID env var.
+    MCP paths are handled by UserContextToolMiddleware via FastMCP middleware.
     """
 
     async def dispatch(self, request: StarletteRequest, call_next):  # type: ignore[override]
-        from persona.auth import (
-            authenticate_mcp_request,
-            build_clerk_client,
-            current_user_id_var,
-            extract_user_id_from_request_state,
-            verify_clerk_jwt,
-        )
-
-        # -------------------------------------------------------------------
-        # /mcp paths: enforce dual-auth (Clerk SDK — JWT + API key)
-        # -------------------------------------------------------------------
-        if request.url.path.startswith("/mcp"):
-            auth_header = request.headers.get("authorization", "")
-            if not auth_header.startswith("Bearer "):
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": "Not authenticated"},
-                )
-
-            try:
-                secret_key = resolve_clerk_secret_key()
-                clerk_client = build_clerk_client(secret_key)
-                request_state = authenticate_mcp_request(request, clerk_client)
-            except RuntimeError as exc:
-                logger.error("Clerk configuration error: %s", exc)
-                return JSONResponse(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    content={"detail": "Authentication service not configured"},
-                )
-            except Exception as exc:
-                logger.exception("Clerk authentication error: %s", exc)
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": "Authentication failed"},
-                )
-
-            if not request_state.is_signed_in:
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": request_state.message or "Not authenticated"},
-                )
-
-            user_id = extract_user_id_from_request_state(request_state)
-            if user_id and _conn is not None:
-                try:
-                    upsert_user(_conn, user_id, email=None, display_name=None)
-                except Exception as exc:
-                    logger.warning("upsert_user failed in MCP auth: %s", exc)
-
-            token_ctx = current_user_id_var.set(user_id)
-            try:
-                return await call_next(request)
-            finally:
-                current_user_id_var.reset(token_ctx)
-
-        # -------------------------------------------------------------------
         # Non-/mcp paths: try JWT auth (sets context var), never blocks
-        # -------------------------------------------------------------------
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-            try:
-                claims = verify_clerk_jwt(token)
-                token_ctx = current_user_id_var.set(claims.get("sub"))
+        if not request.url.path.startswith("/mcp"):
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]
                 try:
-                    return await call_next(request)
-                finally:
-                    current_user_id_var.reset(token_ctx)
-            except Exception:
-                pass
+                    claims = verify_clerk_jwt(token)
+                    token_ctx = current_user_id_var.set(claims.get("sub"))
+                    try:
+                        return await call_next(request)
+                    finally:
+                        current_user_id_var.reset(token_ctx)
+                except Exception:
+                    pass
 
         # Also support stdio mode: check env var
         stdio_user = os.environ.get("PERSONA_USER_ID")
@@ -257,7 +213,6 @@ def create_app(
 
     if service is None:
         logger = configure_logging()
-        resolve_clerk_secret_key()  # Startup validation — fail fast if key is missing
         _pool = init_pool(resolve_db_url(), resolve_pool_min(), resolve_pool_max())
         raw = _pool.getconn()
         raw.autocommit = True
@@ -274,6 +229,8 @@ def create_app(
     _contact_service = ContactService(conn) if conn else None
     _comm_service = ContactCommunicationService(conn) if conn else None
     _link_service = LinkService(conn) if conn else None
+
+    mcp = _build_mcp(production=_production_mode)
 
     # Get MCP HTTP app — use path="/mcp" so the Route is registered at /mcp.
     # We add this route directly to FastAPI's router (not via app.mount)
@@ -306,7 +263,7 @@ def create_app(
             allow_headers=["*"],
         )
 
-    # UserContextMiddleware: populate current_user_id_var for MCP tool handlers
+    # UserContextMiddleware: populate current_user_id_var for REST API handlers
     app.add_middleware(UserContextMiddleware)
 
     # Wire auth in production mode only; test callers that inject a pre-built
@@ -373,6 +330,7 @@ def main() -> None:
         _comm_service = ContactCommunicationService(_conn)
         _link_service = LinkService(_conn)
         logger.info("Persona MCP server starting (stdio, PostgreSQL pool initialized)")
+        mcp = _build_mcp(production=False)
         try:
             mcp.run(transport="stdio")
         finally:

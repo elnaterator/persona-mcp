@@ -81,3 +81,8 @@ Resume list items look good, make other list items similar, more compact, fit al
 ## R015 Consistent search experience
 
 Create a single search input that is conistent across the application and allows including tags and text in a single bar. When you search, it recommends tags, tab adds the tag as a chip in the search text bar, and also has search. For all object types we can search by tags or text, consistent experience. There should also be a generic search API across all resources, and search capability on the home page for any resource.  Refactor to reusable search component for UI.
+
+
+## R016 OAuth2 MCP server auth (drop API keys) - DONE
+
+Replace MCP API-key/dual-auth with standard OAuth2. MCP client points at URL only; unauthenticated request returns 401 + `WWW-Authenticate` pointing to RFC 9728 protected-resource metadata. Clerk is the authorization server (Dynamic Client Registration). Server is a resource server only: validates bearer tokens via FastMCP `RemoteAuthProvider` + `JWTVerifier`, no key config. Home page connect UI simplified to bare URL snippets with OAuth browser sign-in copy.

@@ -66,6 +66,14 @@ def resolve_frontend_dir() -> Path | None:
     return path
 
 
+def resolve_public_url() -> str:
+    """Resolve PERSONA_PUBLIC_URL env var. Raises on missing."""
+    value = os.environ.get("PERSONA_PUBLIC_URL", "")
+    if not value.strip():
+        raise ValueError("PERSONA_PUBLIC_URL environment variable is required")
+    return value.strip().rstrip("/")
+
+
 def resolve_clerk_jwks_url() -> str:
     """Resolve CLERK_JWKS_URL env var. Raises on missing."""
     value = os.environ.get("CLERK_JWKS_URL", "")

@@ -1,7 +1,8 @@
 """Contract tests for authentication and authorisation on all API routes.
 
 Phase 3 tests (T009): 401 on missing token, 200 on valid mock JWT.
-Phase 4 tests (T016, T035, T036): 403 on cross-user access; MCP tool auth.
+Phase 4 tests (T016, T035, T036): 403 on cross-user access.
+Plan 016 (T15-T19): MCP OAuth2 resource server contract tests.
 """
 
 import time
@@ -296,135 +297,216 @@ class TestCrossUserOwnershipContract:
 
 
 # ---------------------------------------------------------------------------
-# Phase 3 (011) — T-MCP-01 through T-MCP-05: /mcp endpoint dual-auth contract
+# Plan 016 — T15-T19: MCP OAuth2 resource server contract tests
 # ---------------------------------------------------------------------------
 
+_TEST_PUBLIC_URL = "https://persona.test"
+_TEST_ISSUER = "https://clerk.test"
+_TEST_RESOURCE = f"{_TEST_PUBLIC_URL}/mcp"
 
-class TestMCPDualAuth:
-    """T-MCP-01 through T-MCP-05: /mcp dual-auth (JWT + API key) contract tests."""
 
-    @pytest.fixture
-    def mcp_test_app(self) -> TestClient:
-        """Minimal FastAPI app with UserContextMiddleware and mock /mcp endpoint.
+def _build_mcp_oauth_app(private_key: Any) -> Any:
+    """Build a FastMCP ASGI app with JWT auth wired for testing."""
+    from fastmcp import FastMCP
+    from fastmcp.server.auth import RemoteAuthProvider
+    from fastmcp.server.auth.providers.jwt import JWTVerifier
 
-        The mock endpoint always returns 200 with the current_user_id_var value;
-        the middleware is responsible for returning 401 on auth failure.
-        """
-        from persona.server import UserContextMiddleware
+    pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
+    verifier = JWTVerifier(
+        public_key=pem,
+        issuer=_TEST_ISSUER,
+        audience=_TEST_RESOURCE,
+        base_url=_TEST_PUBLIC_URL,
+    )
+    provider = RemoteAuthProvider(
+        token_verifier=verifier,
+        authorization_servers=[_TEST_ISSUER],  # type: ignore[arg-type]
+        base_url=_TEST_PUBLIC_URL,
+        resource_name="Persona",
+    )
+    m = FastMCP("persona", auth=provider)
 
-        app = FastAPI()
-        app.add_middleware(UserContextMiddleware)
+    @m.tool()
+    def ping() -> str:
+        return "pong"
 
-        @app.post("/mcp")
-        async def mock_mcp() -> dict:
-            from persona.auth import current_user_id_var
+    return m.http_app(path="/mcp", stateless_http=True)
 
-            return {"user_id": current_user_id_var.get()}
 
-        return TestClient(app, raise_server_exceptions=False)
+def _make_mcp_token(
+    private_key: Any,
+    kid: str = "ck1",
+    sub: str = "user_alice",
+    issuer: str = _TEST_ISSUER,
+    audience: str = _TEST_RESOURCE,
+    exp_offset: int = 3600,
+) -> str:
+    now = int(time.time())
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    claims: dict[str, Any] = {
+        "sub": sub,
+        "iss": issuer,
+        "aud": audience,
+        "iat": now,
+        "exp": now + exp_offset,
+    }
+    return jwt.encode(claims, pem, algorithm="RS256", headers={"kid": kid})
 
-    def _signed_in_state(self, user_id: str = "user_123") -> Any:
-        """Build a mock RequestState with is_signed_in=True."""
-        from unittest.mock import MagicMock
 
-        from clerk_backend_api.security.types import SessionAuthObjectV2
+@pytest.fixture(scope="module")
+def mcp_oauth_key_pair() -> tuple[Any, Any]:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return private_key, private_key.public_key()
 
-        state = MagicMock()
-        state.is_signed_in = True
-        auth = MagicMock(spec=SessionAuthObjectV2)
-        auth.sub = user_id
-        state.to_auth.return_value = auth
-        return state
 
-    def _signed_out_state(self, message: str = "Token invalid") -> Any:
-        """Build a mock RequestState with is_signed_in=False."""
-        from unittest.mock import MagicMock
+class TestMCPOAuth2ProtectedResourceMetadata:
+    """T15: /.well-known/oauth-protected-resource/mcp returns RFC 9728 metadata."""
 
-        state = MagicMock()
-        state.is_signed_in = False
-        state.message = message
-        return state
-
-    def test_mcp_01_valid_jwt_returns_200_with_user_id(
-        self, mcp_test_app: TestClient
-    ) -> None:
-        """T-MCP-01: /mcp with valid Clerk session JWT → 200 and user_id set."""
-        signed_in = self._signed_in_state("user_jwt_123")
-        with (
-            patch("persona.auth.authenticate_mcp_request", return_value=signed_in),
-            patch("persona.auth.build_clerk_client"),
-            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
-            patch("persona.server.upsert_user"),
-        ):
-            resp = mcp_test_app.post(
-                "/mcp", headers={"Authorization": "Bearer eyJ.valid.jwt"}
-            )
+    def test_metadata_route_returns_200(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.get("/.well-known/oauth-protected-resource/mcp")
         assert resp.status_code == 200
-        assert resp.json()["user_id"] == "user_jwt_123"
 
-    def test_mcp_02_valid_api_key_returns_200_with_user_id(
-        self, mcp_test_app: TestClient
+    def test_metadata_body_has_resource(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.get("/.well-known/oauth-protected-resource/mcp")
+        body = resp.json()
+        assert "resource" in body
+
+    def test_metadata_body_has_authorization_servers(
+        self, mcp_oauth_key_pair: tuple
     ) -> None:
-        """T-MCP-02: /mcp with valid Clerk API key (ak_...) → 200 and user_id set."""
-        signed_in = self._signed_in_state("user_api_456")
-        with (
-            patch("persona.auth.authenticate_mcp_request", return_value=signed_in),
-            patch("persona.auth.build_clerk_client"),
-            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
-            patch("persona.server.upsert_user"),
-        ):
-            resp = mcp_test_app.post(
-                "/mcp", headers={"Authorization": "Bearer ak_live_fakeapikey12345"}
-            )
-        assert resp.status_code == 200
-        assert resp.json()["user_id"] == "user_api_456"
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.get("/.well-known/oauth-protected-resource/mcp")
+        body = resp.json()
+        assert "authorization_servers" in body
+        # FastMCP may normalize URLs with a trailing slash
+        servers = [s.rstrip("/") for s in body["authorization_servers"]]
+        assert _TEST_ISSUER.rstrip("/") in servers
 
-    def test_mcp_03_no_auth_header_returns_401(self, mcp_test_app: TestClient) -> None:
-        """T-MCP-03: /mcp with no Authorization header → 401."""
-        resp = mcp_test_app.post("/mcp")
+
+class TestMCPOAuth2Unauthenticated:
+    """T16: Unauthenticated POST /mcp → 401 with WWW-Authenticate header."""
+
+    def test_unauth_post_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post(
+            "/mcp", json={"jsonrpc": "2.0", "method": "tools/list", "id": 1}
+        )
         assert resp.status_code == 401
 
-    def test_mcp_04_expired_token_returns_401(self, mcp_test_app: TestClient) -> None:
-        """T-MCP-04: /mcp with expired/invalid token → 401."""
-        signed_out = self._signed_out_state("Token has expired")
-        with (
-            patch("persona.auth.authenticate_mcp_request", return_value=signed_out),
-            patch("persona.auth.build_clerk_client"),
-            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
-        ):
-            resp = mcp_test_app.post(
-                "/mcp", headers={"Authorization": "Bearer expired.token.here"}
-            )
-        assert resp.status_code == 401
+    def test_unauth_post_has_www_authenticate_header(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post(
+            "/mcp", json={"jsonrpc": "2.0", "method": "tools/list", "id": 1}
+        )
+        assert "www-authenticate" in {k.lower(): v for k, v in resp.headers.items()}
 
-    def test_mcp_05_malformed_token_returns_401(self, mcp_test_app: TestClient) -> None:
-        """T-MCP-05: /mcp with malformed token → 401."""
-        signed_out = self._signed_out_state("Malformed token")
-        with (
-            patch("persona.auth.authenticate_mcp_request", return_value=signed_out),
-            patch("persona.auth.build_clerk_client"),
-            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
-        ):
-            resp = mcp_test_app.post(
-                "/mcp", headers={"Authorization": "Bearer not-valid"}
-            )
-        assert resp.status_code == 401
+    def test_www_authenticate_references_metadata_url(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post(
+            "/mcp", json={"jsonrpc": "2.0", "method": "tools/list", "id": 1}
+        )
+        www_auth = resp.headers.get("www-authenticate", "")
+        assert "/.well-known/oauth-protected-resource/mcp" in www_auth
 
-    def test_mcp_06_revoked_api_key_returns_401(self, mcp_test_app: TestClient) -> None:
-        """T-MCP-06: /mcp with a revoked Clerk API key → 401.
 
-        After key regeneration the old key is invalidated by Clerk. When a
-        previously-valid ak_ token is presented, Clerk returns is_signed_in=False
-        and UserContextMiddleware must reject the request with 401.
-        """
-        signed_out = self._signed_out_state("API key has been revoked")
-        with (
-            patch("persona.auth.authenticate_mcp_request", return_value=signed_out),
-            patch("persona.auth.build_clerk_client"),
-            patch("persona.server.resolve_clerk_secret_key", return_value="sk_test"),
-        ):
-            resp = mcp_test_app.post(
+class TestMCPOAuth2TokenValidation:
+    """T17: JWT validation — valid token ok; wrong aud → 401; expired → 401."""
+
+    def test_valid_token_allows_request(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        token = _make_mcp_token(private_key)
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = client.post(
                 "/mcp",
-                headers={"Authorization": "Bearer ak_live_revokedkey99999"},
+                json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/json, text/event-stream",
+                },
             )
+        # 200 or 202 means auth passed; 401/403 means auth failed
+        assert resp.status_code not in (401, 403)
+
+    def test_wrong_audience_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        token = _make_mcp_token(private_key, audience="https://wrong.example.com/mcp")
+        resp = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
         assert resp.status_code == 401
+
+    def test_expired_token_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        token = _make_mcp_token(private_key, exp_offset=-3600)
+        resp = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+        assert resp.status_code == 401
+
+
+class TestMCPWellKnownRouteOrdering:
+    """T19: Well-known route not shadowed by SPA static catch-all."""
+
+    def test_well_known_route_in_mcp_app_routes(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        """The /.well-known/... route is present in mcp_app.routes before any mount."""
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        assert any("/.well-known/oauth-protected-resource/mcp" in p for p in paths)
+
+    def test_well_known_route_precedes_mcp_route(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        """Well-known route index < /mcp route index in mcp_app.routes."""
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        wk_idx = next(i for i, p in enumerate(paths) if "/.well-known" in p)
+        mcp_idx = next(i for i, p in enumerate(paths) if p == "/mcp")
+        assert wk_idx < mcp_idx
