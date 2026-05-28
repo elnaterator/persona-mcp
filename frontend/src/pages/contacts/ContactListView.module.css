@@ -43,22 +43,6 @@
   margin-bottom: var(--space-6);
 }
 
-.searchInput {
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-none);
-  font-size: 0.9375rem;
-  font-family: var(--font-mono);
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-}
-
-.searchInput:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
-
 /* List */
 .empty {
   color: var(--text-muted);
@@ -205,29 +189,6 @@
   gap: var(--space-4);
 }
 
-.commSearchRow {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.commSearchInput {
-  flex: 1;
-  min-width: 160px;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-none);
-  padding: var(--space-2) var(--space-4);
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-}
-
-.commSearchInput:focus {
-  outline: none;
-  border-color: var(--accent-green);
-}
 
 .parentToggle {
   display: flex;
@@ -340,11 +301,6 @@
 @media (max-width: 640px) {
   .filters {
     flex-direction: column;
-  }
-
-  .commSearchRow {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .itemRow1 {

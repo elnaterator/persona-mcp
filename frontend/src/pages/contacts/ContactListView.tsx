@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Link2 } from 'lucide-react'
 import type { CommunicationSearchResult } from '../../types'
@@ -8,26 +8,27 @@ import {
   useContactList,
   useContactMutations,
 } from '../../hooks/queries'
-import { TagInput } from '../../components/TagInput'
+import { SearchBar } from '../../components/SearchBar'
 import { useToast } from '../../components/toast'
 import { ContactPanel } from './ContactPanel'
 import type { ContactCreateInput } from '../../schemas/contact'
+import type { SearchValue } from '../../types'
 import styles from './ContactListView.module.css'
 
 export default function ContactListView() {
   const navigate = useNavigate()
-  const [tagFilter, setTagFilter] = useState<string[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Comm search state
   const [showCommSearch, setShowCommSearch] = useState(false)
-  const [commQ, setCommQ] = useState('')
-  const [commTags, setCommTags] = useState<string[]>([])
-  const [debouncedCommQ, setDebouncedCommQ] = useState('')
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [commSearch, setCommSearch] = useState<SearchValue>({ tags: [], text: '' })
+  const [debouncedComm, setDebouncedComm] = useState<SearchValue>({ tags: [], text: '' })
+  const commDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const listQuery = useContactList({ tags: tagFilter, q: searchQuery })
+  const listQuery = useContactList({ tags: search.tags, q: debouncedQ || undefined })
   const tagsQuery = useAllTags()
   const { create } = useContactMutations()
   const { success, error } = useToast()
@@ -35,22 +36,26 @@ export default function ContactListView() {
   const contacts = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
 
-  useEffect(() => {
-    if (!showCommSearch) return
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedCommQ(commQ), 300)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [commQ, showCommSearch])
+  const handleCommSearchChange = (v: SearchValue) => {
+    setCommSearch(v)
+    if (commDebounceRef.current) clearTimeout(commDebounceRef.current)
+    commDebounceRef.current = setTimeout(() => setDebouncedComm(v), 300)
+  }
 
-  const commSearch = useCommunicationSearch({
-    q: debouncedCommQ || undefined,
-    tags: commTags,
+  const commQuery = useCommunicationSearch({
+    q: debouncedComm.text || undefined,
+    tags: debouncedComm.tags,
     enabled: showCommSearch,
   })
-  const commResults: CommunicationSearchResult[] = commSearch.data ?? []
-  const commSearching = commSearch.isFetching
+  const commResults: CommunicationSearchResult[] = commQuery.data ?? []
+  const commSearching = commQuery.isFetching
+  const commHasInput = commSearch.text.length > 0 || commSearch.tags.length > 0
+
+  const handleSearchChange = (v: SearchValue) => {
+    setSearch(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(v.text), 300)
+  }
 
   const handleCreate = async (data: ContactCreateInput) => {
     try {
@@ -111,27 +116,17 @@ export default function ContactListView() {
         </button>
         {showCommSearch && (
           <div className={styles.commSearchBody}>
-            <div className={styles.commSearchRow}>
-              <input
-                className={styles.commSearchInput}
-                type="text"
-                value={commQ}
-                onChange={(e) => setCommQ(e.target.value)}
-                placeholder="Search subject, body, contact..."
-              />
-            </div>
-            <TagInput
-              value={commTags}
-              onChange={setCommTags}
+            <SearchBar
+              value={commSearch}
+              onChange={handleCommSearchChange}
               availableTags={allTags}
-              allowCreate={false}
-              placeholder="Filter by tag..."
+              placeholder="Search subject, body, contact..."
             />
             {commSearching && <p className={styles.commSearchHint}>Searching...</p>}
-            {!commSearching && commResults.length === 0 && (commQ || commTags.length > 0) && (
+            {!commSearching && commResults.length === 0 && commHasInput && (
               <p className={styles.commSearchHint}>No results found.</p>
             )}
-            {!commSearching && !commQ && commTags.length === 0 && (
+            {!commSearching && !commHasInput && (
               <p className={styles.commSearchHint}>Enter a search term or tag to find communications.</p>
             )}
             {commResults.length > 0 && (
@@ -154,18 +149,10 @@ export default function ContactListView() {
       </div>
 
       <div className={styles.filters}>
-        <TagInput
-          value={tagFilter}
-          onChange={setTagFilter}
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
           availableTags={allTags}
-          allowCreate={false}
-          placeholder="Filter by tag..."
-        />
-        <input
-          className={styles.searchInput}
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search contacts..."
         />
       </div>

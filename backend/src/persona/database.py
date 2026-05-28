@@ -14,6 +14,45 @@ from persona.migrations import apply_migrations
 logger = logging.getLogger("persona")
 
 
+def build_filters(
+    user_id: str | None,
+    tags: list[str] | None,
+    q: str | None,
+    q_columns: list[str],
+    *,
+    user_id_column: str = "user_id",
+    tags_column: str = "tags",
+) -> tuple[list[str], list[Any]]:
+    """Build WHERE conditions + params for user_id, tag, and q filters.
+
+    Returns (conditions, params). Caller appends any extra conditions then
+    joins with " AND " and prepends " WHERE ".
+
+    q is split into words; each word must match at least one q_column (AND
+    semantics across words, OR across columns). Tags use JSON-text matching:
+    ``tags ILIKE '%"tag"%'``.
+    """
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if user_id is not None:
+        conditions.append(f"{user_id_column} = %s")
+        params.append(user_id)
+
+    for tag in tags or []:
+        conditions.append(f"{tags_column} ILIKE %s")
+        params.append(f'%"{tag}"%')
+
+    if q:
+        for word in q.strip().split():
+            pattern = f"%{word}%"
+            col_expr = " OR ".join(f"{col} ILIKE %s" for col in q_columns)
+            conditions.append(f"({col_expr})")
+            params.extend([pattern] * len(q_columns))
+
+    return conditions, params
+
+
 def init_pool(dsn: str, min_size: int = 1, max_size: int = 10) -> ConnectionPool[Any]:
     """Initialize a PostgreSQL connection pool and run pending migrations.
 
@@ -121,16 +160,17 @@ def load_resume_version(
 def load_resume_versions(
     conn: DBConnection,
     user_id: str | None = None,
+    tags: list[str] | None = None,
+    q: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load all resume versions (app_count set to 0; populated by caller)."""
     query = (
         "SELECT id, label, is_default, tags, created_at, updated_at FROM resume_version"
     )
-    params: list[Any] = []
+    conditions, params = build_filters(user_id, tags, q, ["label"])
 
-    if user_id is not None:
-        query += " WHERE user_id = %s"
-        params.append(user_id)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
 
     query += " ORDER BY id"
 
@@ -406,23 +446,11 @@ def load_applications(
         "tags, created_at, updated_at "
         "FROM application"
     )
-    conditions: list[str] = []
-    params: list[Any] = []
+    conditions, params = build_filters(user_id, tags, q, ["company", "position"])
 
-    if user_id is not None:
-        conditions.append("user_id = %s")
-        params.append(user_id)
     if status:
         conditions.append("status = %s")
         params.append(status)
-    if tags:
-        for tag in tags:
-            conditions.append("tags ILIKE %s")
-            params.append(f'%"{tag}"%')
-    if q:
-        conditions.append("(company ILIKE %s OR position ILIKE %s)")
-        pattern = f"%{q}%"
-        params.extend([pattern, pattern])
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -636,21 +664,14 @@ def search_communications(
         "FROM communication c "
         "JOIN contact ct ON c.contact_ref_id = ct.id"
     )
-    conditions: list[str] = []
-    params: list[Any] = []
-
-    if user_id is not None:
-        conditions.append("ct.user_id = %s")
-        params.append(user_id)
-
-    if q:
-        pattern = f"%{q}%"
-        conditions.append("(c.subject ILIKE %s OR c.body ILIKE %s OR ct.name ILIKE %s)")
-        params.extend([pattern, pattern, pattern])
-
-    for tag in tags or []:
-        conditions.append("c.tags ILIKE %s")
-        params.append(f'%"{tag}"%')
+    conditions, params = build_filters(
+        user_id,
+        tags,
+        q,
+        ["c.subject", "c.body", "ct.name"],
+        user_id_column="ct.user_id",
+        tags_column="c.tags",
+    )
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -776,23 +797,9 @@ def load_accomplishments(
         "SELECT id, title, accomplishment_date, tags, created_at, updated_at "
         "FROM accomplishment"
     )
-    conditions: list[str] = []
-    params: list[Any] = []
-
-    if user_id is not None:
-        conditions.append("user_id = %s")
-        params.append(user_id)
-    if tags:
-        for tag in tags:
-            conditions.append("tags ILIKE %s")
-            params.append(f'%"{tag}"%')
-    if q:
-        pattern = f"%{q}%"
-        conditions.append(
-            "(title ILIKE %s OR situation ILIKE %s "
-            "OR task ILIKE %s OR action ILIKE %s OR result ILIKE %s)"
-        )
-        params.extend([pattern, pattern, pattern, pattern, pattern])
+    conditions, params = build_filters(
+        user_id, tags, q, ["title", "situation", "task", "action", "result"]
+    )
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -949,22 +956,7 @@ def load_notes(
 ) -> list[dict[str, Any]]:
     """List notes as summaries ordered by updated_at DESC."""
     query = "SELECT id, title, tags, created_at, updated_at FROM note"
-    conditions: list[str] = []
-    params: list[Any] = []
-
-    if user_id is not None:
-        conditions.append("user_id = %s")
-        params.append(user_id)
-    if tags:
-        for tag in tags:
-            conditions.append("tags ILIKE %s")
-            params.append(f'%"{tag}"%')
-    if q:
-        words = q.strip().split()
-        for word in words:
-            pattern = f"%{word}%"
-            conditions.append("(title ILIKE %s OR content ILIKE %s)")
-            params.extend([pattern, pattern])
+    conditions, params = build_filters(user_id, tags, q, ["title", "content"])
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -1147,25 +1139,9 @@ def load_contacts(
         "SELECT id, name, company, title, relationship, "
         "followup_date, tags, updated_at FROM contact"
     )
-    conditions: list[str] = []
-    params: list[Any] = []
-
-    if user_id is not None:
-        conditions.append("user_id = %s")
-        params.append(user_id)
-    if tags:
-        for tag in tags:
-            conditions.append("tags ILIKE %s")
-            params.append(f'%"{tag}"%')
-    if q:
-        words = q.strip().split()
-        for word in words:
-            pattern = f"%{word}%"
-            conditions.append(
-                "(name ILIKE %s OR company ILIKE %s "
-                "OR title ILIKE %s OR notes ILIKE %s)"
-            )
-            params.extend([pattern, pattern, pattern, pattern])
+    conditions, params = build_filters(
+        user_id, tags, q, ["name", "company", "title", "notes"]
+    )
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)

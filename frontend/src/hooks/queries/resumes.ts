@@ -19,18 +19,27 @@ import {
   updateVersionSummary,
 } from '../../services/api'
 
+export interface ResumeFilters {
+  tags?: string[]
+  q?: string
+}
+
 export const resumeKeys = {
   all: ['resumes'] as const,
   lists: () => [...resumeKeys.all, 'list'] as const,
-  list: () => [...resumeKeys.lists()] as const,
+  list: (filters?: ResumeFilters) => [...resumeKeys.lists(), filters ?? {}] as const,
   details: () => [...resumeKeys.all, 'detail'] as const,
   detail: (id: number) => [...resumeKeys.details(), id] as const,
 }
 
-export function useResumeList() {
+export function useResumeList(filters?: ResumeFilters) {
   return useQuery({
-    queryKey: resumeKeys.list(),
-    queryFn: listResumes,
+    queryKey: resumeKeys.list(filters),
+    queryFn: () =>
+      listResumes(
+        filters?.tags?.length ? filters.tags : undefined,
+        filters?.q || undefined,
+      ),
   })
 }
 

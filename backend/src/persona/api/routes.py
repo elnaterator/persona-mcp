@@ -14,6 +14,7 @@ from persona.link_service import RESOURCE_TYPES, LinkService
 from persona.models import Resume
 from persona.note_service import NoteService
 from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
+from persona.search_service import SearchService
 
 
 def _make_user_dep(get_current_user: Callable | None) -> Callable:
@@ -78,10 +79,12 @@ def create_router(
 
     @api.get("/api/resumes")
     def list_resumes(
+        tag: list[str] | None = Query(default=None),
+        q: str | None = None,
         current_user: UserContext | None = Depends(_user_dep),
     ) -> list[dict[str, Any]]:
         uid = current_user.id if current_user is not None else None
-        return service.list_resumes(user_id=uid)
+        return service.list_resumes(user_id=uid, tags=tag, q=q)
 
     @api.post("/api/resumes", status_code=201)
     def create_resume(
@@ -914,26 +917,50 @@ def create_router(
     # Unified Tags Route
     # ==========================================================
 
+    # Service registry: all non-None services that expose list_tags(user_id)
+    _all_svcs = [
+        service,
+        app_service,
+        acc_service,
+        note_service,
+        contact_service,
+        comm_service,
+    ]
+    _tag_registry = [svc for svc in _all_svcs if svc is not None]
+
     @api.get("/api/tags")
     def list_all_tags(
         current_user: UserContext | None = Depends(_user_dep),
     ) -> list[str]:
         uid = current_user.id if current_user is not None else None
         all_tags: set[str] = set()
-        all_tags.update(service.list_tags(user_id=uid))
-        if app_service is not None:
-            all_tags.update(app_service.list_tags(user_id=uid))
-        if acc_service is not None:
-            all_tags.update(acc_service.list_tags(user_id=uid))
-        if note_service is not None:
-            all_tags.update(note_service.list_tags(user_id=uid))
-        if contact_service is not None:
-            all_tags.update(contact_service.list_tags(user_id=uid))
-        if comm_service is not None:
-            from persona.database import load_communication_tags
-
-            all_tags.update(load_communication_tags(comm_service._conn, user_id=uid))
+        for svc in _tag_registry:
+            all_tags.update(svc.list_tags(user_id=uid))
         return sorted(all_tags)
+
+    # ==========================================================
+    # Global Search Route
+    # ==========================================================
+
+    _search_service = SearchService(
+        resume_service=service,
+        app_service=app_service,
+        acc_service=acc_service,
+        note_service=note_service,
+        contact_service=contact_service,
+        comm_service=comm_service,
+    )
+
+    @api.get("/api/search")
+    def global_search(
+        q: str | None = None,
+        tag: list[str] | None = Query(default=None),
+        type: list[str] | None = Query(default=None, alias="type"),
+        current_user: UserContext | None = Depends(_user_dep),
+    ) -> list[dict[str, Any]]:
+        uid = current_user.id if current_user is not None else None
+        results = _search_service.search(q=q, tags=tag, types=type, user_id=uid)
+        return [r.model_dump() for r in results]
 
     # ==========================================================
     # Webhook Routes (no auth — verified via Svix signature)

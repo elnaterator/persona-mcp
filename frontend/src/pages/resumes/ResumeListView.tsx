@@ -1,23 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Link2 } from 'lucide-react'
-import { useResumeList, useResumeMutations } from '../../hooks/queries'
+import { useAllTags, useResumeList, useResumeMutations } from '../../hooks/queries'
+import { SearchBar } from '../../components/SearchBar'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { InlineCreateForm } from '../../components/InlineCreateForm'
 import { useToast } from '../../components/toast'
+import type { SearchValue } from '../../types'
 import styles from './ResumeListView.module.css'
 
 export default function ResumeListView() {
-  const { data: resumes = [], isPending, isError } = useResumeList()
+  const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
+  const [debouncedQ, setDebouncedQ] = useState('')
+  const [creating, setCreating] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const { data: resumes = [], isPending, isError } = useResumeList({
+    tags: search.tags,
+    q: debouncedQ || undefined,
+  })
+  const tagsQuery = useAllTags()
   const { create } = useResumeMutations()
   const { success, error } = useToast()
-  const [creating, setCreating] = useState(false)
+
+  const allTags = tagsQuery.data ?? []
 
   useEffect(() => {
     if (isError) {
       error('Failed to load resume versions')
     }
   }, [isError, error])
+
+  const handleSearchChange = (v: SearchValue) => {
+    setSearch(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(v.text), 300)
+  }
 
   const handleCreateConfirm = async (label: string) => {
     try {
@@ -56,6 +74,15 @@ export default function ResumeListView() {
           confirmLabel="Create"
         />
       )}
+
+      <div className={styles.filters}>
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          availableTags={allTags}
+          placeholder="Search resume versions..."
+        />
+      </div>
 
       {resumes.length === 0 ? (
         <p className={styles.empty}>No resume versions found.</p>

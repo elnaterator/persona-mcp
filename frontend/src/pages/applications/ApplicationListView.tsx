@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Link2 } from 'lucide-react'
 import {
@@ -6,12 +6,13 @@ import {
   useApplicationList,
   useApplicationMutations,
 } from '../../hooks/queries'
-import { TagInput } from '../../components/TagInput'
+import { SearchBar } from '../../components/SearchBar'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useToast } from '../../components/toast'
 import { APPLICATION_STATUSES } from '../../schemas/application'
 import { ApplicationPanel } from './ApplicationPanel'
 import type { ApplicationPanelInput } from './ApplicationPanel'
+import type { SearchValue } from '../../types'
 import styles from './ApplicationListView.module.css'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -27,16 +28,17 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function ApplicationListView() {
   const navigate = useNavigate()
-  const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
   const { success, error } = useToast()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const listQuery = useApplicationList({
     status: statusFilter || undefined,
-    q: searchQuery || undefined,
-    tags: tagFilter,
+    q: debouncedQ || undefined,
+    tags: search.tags,
   })
   const tagsQuery = useAllTags()
   const { create } = useApplicationMutations()
@@ -50,6 +52,12 @@ export default function ApplicationListView() {
       error('Failed to load applications')
     }
   }, [listQuery.isError, error])
+
+  const handleSearchChange = (v: SearchValue) => {
+    setSearch(v)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQ(v.text), 300)
+  }
 
   const onCreate = async (data: ApplicationPanelInput) => {
     try {
@@ -110,20 +118,11 @@ export default function ApplicationListView() {
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        <input
-          className={styles.searchInput}
-          type="search"
-          placeholder="Search company or position..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search applications"
-        />
-        <TagInput
-          value={tagFilter}
-          onChange={setTagFilter}
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
           availableTags={allTags}
-          allowCreate={false}
-          placeholder="Filter by tag..."
+          placeholder="Search company or position..."
         />
       </div>
 
