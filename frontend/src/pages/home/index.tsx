@@ -1,5 +1,4 @@
-import { Component, useRef, useState } from 'react'
-import type { ErrorInfo, ReactNode } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useUser } from '@clerk/clerk-react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
