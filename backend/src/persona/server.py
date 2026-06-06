@@ -266,6 +266,19 @@ def create_app(
     # UserContextMiddleware: populate current_user_id_var for REST API handlers
     app.add_middleware(UserContextMiddleware)
 
+    # Re-apply the MCP auth middleware that mcp.http_app() installs at the app
+    # level. Below we graft only `mcp_app.routes` into this FastAPI app (to keep
+    # POST /mcp working without a trailing slash); that drops the app-level
+    # AuthenticationMiddleware (runs BearerAuthBackend → verify_token) and
+    # AuthContextMiddleware (powers get_access_token() for tool user-scoping).
+    # Without them every /mcp request is treated as unauthenticated and the
+    # per-route RequireAuthMiddleware 401s as invalid_token before our verifier
+    # ever runs. Add in reverse so AuthenticationMiddleware stays outermost and
+    # populates request auth before AuthContextMiddleware reads it.
+    if _production_mode and mcp.auth is not None:
+        for mw in reversed(mcp.auth.get_middleware()):
+            app.add_middleware(mw.cls, *mw.args, **mw.kwargs)
+
     # Wire auth in production mode only; test callers that inject a pre-built
     # service bypass auth so existing cross-interface tests keep working.
     get_user = (

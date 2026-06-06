@@ -319,10 +319,12 @@ def _build_mcp_oauth_app(private_key: Any) -> Any:
         )
         .decode()
     )
+    # Mirror production build_mcp_auth: audience is NOT validated because Clerk
+    # DCR mints tokens with aud=client_id. Signature + issuer stay strict.
     verifier = JWTVerifier(
         public_key=pem,
         issuer=_TEST_ISSUER,
-        audience=_TEST_RESOURCE,
+        audience=None,
         base_url=_TEST_PUBLIC_URL,
     )
     provider = RemoteAuthProvider(
@@ -439,7 +441,7 @@ class TestMCPOAuth2Unauthenticated:
 
 
 class TestMCPOAuth2TokenValidation:
-    """T17: JWT validation — valid token ok; wrong aud → 401; expired → 401."""
+    """T17: valid token ok; foreign aud accepted (DCR); expired → 401."""
 
     def test_valid_token_allows_request(self, mcp_oauth_key_pair: tuple) -> None:
         private_key, _ = mcp_oauth_key_pair
@@ -457,20 +459,25 @@ class TestMCPOAuth2TokenValidation:
         # 200 or 202 means auth passed; 401/403 means auth failed
         assert resp.status_code not in (401, 403)
 
-    def test_wrong_audience_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
+    def test_foreign_audience_is_accepted(self, mcp_oauth_key_pair: tuple) -> None:
+        # Clerk DCR sets aud=client_id, so audience is intentionally not
+        # validated. A token with a foreign aud but valid signature + issuer
+        # must still authenticate.
         private_key, _ = mcp_oauth_key_pair
         app = _build_mcp_oauth_app(private_key)
-        client = TestClient(app, raise_server_exceptions=False)
-        token = _make_mcp_token(private_key, audience="https://wrong.example.com/mcp")
-        resp = client.post(
-            "/mcp",
-            json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/json, text/event-stream",
-            },
-        )
-        assert resp.status_code == 401
+        with TestClient(app, raise_server_exceptions=False) as client:
+            token = _make_mcp_token(
+                private_key, audience="https://wrong.example.com/mcp"
+            )
+            resp = client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/json, text/event-stream",
+                },
+            )
+        assert resp.status_code not in (401, 403)
 
     def test_expired_token_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
         private_key, _ = mcp_oauth_key_pair

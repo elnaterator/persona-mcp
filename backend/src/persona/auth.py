@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastmcp.server.auth import RemoteAuthProvider
+from fastmcp.server.auth import AccessToken, RemoteAuthProvider
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import Middleware
@@ -204,11 +204,52 @@ def build_get_current_user(conn: DBConnection):  # type: ignore[no-untyped-def]
 # ---------------------------------------------------------------------------
 
 
+class _DiagnosticJWTVerifier(JWTVerifier):
+    """JWTVerifier that records why a token was rejected, for diagnosis.
+
+    FastMCP's JWTVerifier swallows validation failures, returns ``None``, and
+    logs the reason only on its own logger — so our logs show a bare 401
+    invalid_token with no cause. This subclass re-logs the rejection on the
+    ``persona`` logger at DEBUG, including the token's unverified header/claims
+    next to the expected issuer, making a mismatch (alg, kid, issuer, or an
+    opaque non-JWT token) diagnosable. Verification behaviour is unchanged.
+    """
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        result = await super().verify_token(token)
+        if result is None and logger.isEnabledFor(logging.DEBUG):
+            self._log_rejection(token)
+        return result
+
+    def _log_rejection(self, token: str) -> None:
+        try:
+            header = jwt.get_unverified_header(token)
+        except JWTError as exc:
+            logger.debug("MCP token rejected: not a parseable JWT (%s)", exc)
+            return
+        try:
+            claims = jwt.get_unverified_claims(token)
+        except JWTError:
+            claims = {}
+        logger.debug(
+            "MCP token rejected: alg=%s kid=%s token_iss=%s token_aud=%s exp=%s "
+            "(expected_iss=%s jwks=%s)",
+            header.get("alg"),
+            header.get("kid"),
+            claims.get("iss"),
+            claims.get("aud"),
+            claims.get("exp"),
+            self.issuer,
+            self.jwks_uri,
+        )
+
+
 def build_mcp_auth() -> RemoteAuthProvider:
     """Build the FastMCP auth provider for the /mcp endpoint.
 
     Requires PERSONA_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER env vars.
-    Token audience is bound to <public_url>/mcp (RFC 8707).
+    Token audience is NOT validated (Clerk DCR sets aud=client_id); signature
+    and issuer are still strictly enforced.
     """
     from persona.config import (
         resolve_clerk_issuer,
@@ -217,16 +258,28 @@ def build_mcp_auth() -> RemoteAuthProvider:
     )
 
     public = resolve_public_url()
-    resource = f"{public}/mcp"
-    verifier = JWTVerifier(
-        jwks_uri=resolve_clerk_jwks_url(),
-        issuer=resolve_clerk_issuer(),
-        audience=resource,
+    issuer = resolve_clerk_issuer()
+    jwks_uri = resolve_clerk_jwks_url()
+    # Audience is intentionally not bound to <public_url>/mcp. Dynamic Client
+    # Registration via Clerk mints tokens whose `aud` is the generated client_id
+    # (e.g. Claude Code), not our resource URL; pinning it would reject every
+    # token with 401 invalid_token. audience=None skips the aud check (the
+    # equivalent of verify_aud=False) while issuer and JWKS signature stay strict.
+    verifier = _DiagnosticJWTVerifier(
+        jwks_uri=jwks_uri,
+        issuer=issuer,
+        audience=None,
         base_url=public,
+    )
+    logger.info(
+        "MCP auth configured: issuer=%s jwks_uri=%s resource=%s/mcp",
+        issuer,
+        jwks_uri,
+        public,
     )
     return RemoteAuthProvider(
         token_verifier=verifier,
-        authorization_servers=[resolve_clerk_issuer()],  # type: ignore[arg-type]
+        authorization_servers=[issuer],  # type: ignore[arg-type]
         base_url=public,
         resource_name="Persona",
     )
