@@ -7,9 +7,9 @@ Personal data server for resume + job application management. AI workflow suppor
 - **Accomplishment Tracking**: Record career accomplishments in STAR format (Situation, Task, Action, Result). Tag for filtering. Use to craft job application materials.
 - **Job Application Tracking**: Track applications from "Interested" to "Offer".
 - **Resume Versioning**: Multiple resume versions, tailored per job.
-- **Connect Tab**: Generate Clerk API key + copy-ready config commands for Claude Code, Cursor, GitHub Copilot, Amazon Kiro. Connect any AI coding assistant via MCP.
+- **Connect Tab**: Copy-ready config for Claude Code, Cursor, GitHub Copilot, Amazon Kiro. MCP client opens a browser to sign in via OAuth — no API key to manage.
 - **Web UI**: Clean interface for data management. Deep links + bookmarks supported — navigate directly via URL. Refresh stays on current view.
-- **REST + MCP APIs**: Programmatic access via REST or MCP. `/mcp` endpoint supports dual auth: Clerk session JWTs (browser) and Clerk API keys (AI coding assistants).
+- **REST + MCP APIs**: Programmatic access via REST or MCP. `/mcp` uses standard OAuth2 bearer tokens (RFC 9728 resource server); assistant authenticates via PKCE + browser sign-in.
 - **Docker Support**: Run entire app with single command.
 
 ## Quick Start
@@ -38,10 +38,35 @@ Once running:
 |---|---|
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_test_...`) |
 | `VITE_MCP_SERVER_URL` | MCP server URL for Connect tab (e.g. `https://your-server.com/mcp`) |
+| `PERSONA_PUBLIC_URL` | Externally reachable base URL (e.g. `https://persona.example.com`) — required; used as OAuth2 resource identifier and metadata base |
 | `CLERK_JWKS_URL` | Clerk JWKS endpoint |
 | `CLERK_ISSUER` | Clerk issuer URL |
-| `CLERK_SECRET_KEY` | Clerk secret key — required, server fails to start if missing |
 | `CLERK_WEBHOOK_SECRET` | Webhook signing secret from Clerk dashboard |
+
+### Keyless OAuth connect flow
+
+MCP clients (Claude Code, Cursor, etc.) connect via standard OAuth2 (RFC 9728 + DCR):
+
+1. Client sends unauthenticated request to `/mcp` → server returns `401` with `WWW-Authenticate` header pointing to `/.well-known/oauth-protected-resource/mcp`.
+2. Client fetches the metadata document → discovers the Clerk authorization server.
+3. Client registers itself dynamically (RFC 7591) and performs a PKCE browser sign-in.
+4. Client receives a resource-bound access token and calls `/mcp` with `Bearer <token>`.
+
+No API key to generate or paste. Add the bare URL in your assistant's MCP config:
+
+```bash
+# Claude Code
+claude mcp add --transport http persona https://your-persona-server.com/mcp
+
+# Cursor / Kiro — .cursor/mcp.json or .kiro/settings/mcp.json
+{ "mcpServers": { "persona": { "url": "https://your-persona-server.com/mcp" } } }
+```
+
+### Clerk manual setup (required before MCP auth works end-to-end)
+
+1. Enable Dynamic Client Registration in Clerk Dashboard (OAuth Applications / OAuth2 server settings). Confirm `https://<frontend-api>/.well-known/oauth-authorization-server` advertises `registration_endpoint` + `code_challenge_methods_supported`.
+2. Confirm Clerk allows DCR loopback/dynamic redirect URIs (CLI clients use `http://localhost:<port>/callback`).
+3. Confirm Clerk honors `resource` indicator → mints access tokens with `aud=<PERSONA_PUBLIC_URL>/mcp`.
 
 Copy `.env.example` to `.env` and fill in values.
 

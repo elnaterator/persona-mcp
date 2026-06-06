@@ -82,6 +82,12 @@ Resume list items look good, make other list items similar, more compact, fit al
 
 Create a single search bar as a reusable component that is consistent across the application. Both tags and text in a single search bar. As you type it should recommend tags, use tab to complete the tag, or click on item from recommendations list.  When tag added, add as a chip in search bar, float left.  Any typed text that is not part a tag is used as search text. For all object types we can search by tags or text, consistent experience. There should also be a generic search API across all resources, and a search bar on the home page tha returns results for any resource.
 
-## R016 Use standard OAuth2 flow for MCP server auth, rather than API keys
 
-Shouldn’t have to configure API keys to connect to MCP server, should use OAuth2 flow. The MCP command should just point at URL, Unauthenticated request returns WWW-Authenticate header with Protected Resource Metadata at `/.well-known/oauth-protected-resource/mcp`, use clerk as OAuth2 provider.  Ask good questions to guide any good design.  Include tasks in plan for manual setup steps in clerk (clearly indicate these are human, manual steps). Clean up API key handling on home page.
+## R016 OAuth2 MCP server auth (drop API keys) - DONE
+
+Replace MCP API-key/dual-auth with standard OAuth2. MCP client points at URL only; unauthenticated request returns 401 + `WWW-Authenticate` pointing to RFC 9728 protected-resource metadata. Clerk is the authorization server (Dynamic Client Registration). Server is a resource server only: validates bearer tokens via FastMCP `RemoteAuthProvider` + `JWTVerifier`, no key config. Home page connect UI simplified to bare URL snippets with OAuth browser sign-in copy.
+
+
+## R017 Adopt Clerk mcp-tools proxy for DCR loopback handling
+
+Native MCP clients (Claude Desktop, Cursor, VS Code) register one loopback redirect (`http://localhost:PORT/callback`) but send the other (`http://127.0.0.1:PORT/callback`) — per the OAuth spec these are distinct strings, so Clerk's `redirect_uri` validation fails even though they're the same address. Adopt Clerk's `mcp-tools` proxy layer, which expands and registers both `localhost`/`127.0.0.1` variants, normalizes `redirect_uri` on both authorize and token exchange, and overrides the auth method. Removes the loopback friction in the R016 OAuth flow without migrating off Clerk. Watch the Nov 2025 MCP spec shift from DCR to CIMD (Client ID Metadata Documents) — DCR still works but is no longer the default, so confirm target clients before investing further in DCR-specific behavior. Refs: https://github.com/clerk/mcp-tools, https://blog.modelcontextprotocol.io/posts/client_registration/

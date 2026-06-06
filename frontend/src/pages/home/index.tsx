@@ -1,8 +1,6 @@
-import { Component, useRef, useState } from 'react'
-import type { ErrorInfo, ReactNode } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useUser } from '@clerk/clerk-react'
-import { APIKeys } from '@clerk/clerk-react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import {
   useAccomplishmentList,
@@ -19,46 +17,14 @@ import styles from './HomeView.module.css'
 
 // ─── Connect section ──────────────────────────────────────────────────────────
 
-class APIKeysErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: { children: ReactNode }) {
-    super(props)
-    this.state = { hasError: false }
-  }
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.warn('APIKeys component error:', error.message, info.componentStack)
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className={styles.apiKeysDisabled} role="alert">
-          <strong>API keys are not enabled.</strong> Enable native API keys in your{' '}
-          <a href="https://dashboard.clerk.com" target="_blank" rel="noopener noreferrer">
-            Clerk Dashboard
-          </a>{' '}
-          under <em>Configure &rarr; API Keys</em>, then refresh.
-        </div>
-      )
-    }
-    return this.props.children
-  }
-}
-
 const MCP_SERVER_URL =
   import.meta.env.VITE_MCP_SERVER_URL ?? 'https://your-persona-server.com/mcp'
-
-const KEY_PLACEHOLDER = 'YOUR_API_KEY'
 
 interface Assistant {
   id: string
   name: string
   filePath: string | null
-  snippet: (key: string) => string
+  snippet: string
 }
 
 const ASSISTANTS: Assistant[] = [
@@ -66,52 +32,45 @@ const ASSISTANTS: Assistant[] = [
     id: 'claude-code',
     name: 'Claude Code',
     filePath: null,
-    snippet: (key) =>
-      `claude mcp add --transport http persona ${MCP_SERVER_URL} \\\n  --header "Authorization: Bearer ${key}"`,
+    snippet: `claude mcp add --transport http persona ${MCP_SERVER_URL}`,
   },
   {
     id: 'cursor',
     name: 'Cursor',
     filePath: '.cursor/mcp.json',
-    snippet: (key) =>
-      JSON.stringify(
-        { mcpServers: { persona: { url: MCP_SERVER_URL, headers: { Authorization: `Bearer ${key}` } } } },
-        null,
-        2,
-      ),
+    snippet: JSON.stringify(
+      { mcpServers: { persona: { url: MCP_SERVER_URL } } },
+      null,
+      2,
+    ),
   },
   {
     id: 'github-copilot',
     name: 'GitHub Copilot',
     filePath: '.vscode/mcp.json',
-    snippet: (key) =>
-      JSON.stringify(
-        { servers: { persona: { type: 'http', url: MCP_SERVER_URL, headers: { Authorization: `Bearer ${key}` } } } },
-        null,
-        2,
-      ),
+    snippet: JSON.stringify(
+      { servers: { persona: { type: 'http', url: MCP_SERVER_URL } } },
+      null,
+      2,
+    ),
   },
   {
     id: 'amazon-kiro',
     name: 'Amazon Kiro',
     filePath: '.kiro/settings/mcp.json',
-    snippet: (key) =>
-      JSON.stringify(
-        { mcpServers: { persona: { url: MCP_SERVER_URL, headers: { Authorization: `Bearer ${key}` } } } },
-        null,
-        2,
-      ),
+    snippet: JSON.stringify(
+      { mcpServers: { persona: { url: MCP_SERVER_URL } } },
+      null,
+      2,
+    ),
   },
 ]
 
 function ConnectSection() {
-  const [apiKey, setApiKey] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(ASSISTANTS[0].id)
 
-  const displayKey = apiKey.trim() !== '' ? apiKey.trim() : KEY_PLACEHOLDER
   const activeAssistant = ASSISTANTS.find((a) => a.id === activeTab) ?? ASSISTANTS[0]
-  const activeSnippet = activeAssistant.snippet(displayKey)
 
   const handleCopy = async (assistantId: string, text: string) => {
     try {
@@ -126,58 +85,10 @@ function ConnectSection() {
   return (
     <div className={styles.connect}>
       <div className={styles.connectStep}>
-        <span className={styles.stepNumber}>01</span>
-        <h3 className={styles.stepTitle}>Generate an API key</h3>
-        <p className={styles.stepHint}>Copy it immediately — you will only see it once.</p>
-        <APIKeysErrorBoundary>
-          <APIKeys
-            appearance={{
-              variables: {
-                colorBackground: '#1e1e1e',
-                colorForeground: '#e0e0e0',
-                colorInput: '#111111',
-                colorInputForeground: '#e0e0e0',
-                colorMutedForeground: '#888888',
-                colorNeutral: '#aaaaaa',
-                colorPrimary: '#52b788',
-                colorDanger: '#ff4444',
-                fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace",
-                borderRadius: '0px',
-              },
-              elements: {
-                tableHead: { color: '#555555' },
-                tableCell: { color: '#e0e0e0' },
-                menuButton: { color: '#aaaaaa' },
-                menuItem: { color: '#e0e0e0', backgroundColor: '#1e1e1e' },
-                selectButton: { backgroundColor: '#111111', color: '#e0e0e0' },
-                selectOption: { backgroundColor: '#1e1e1e', color: '#e0e0e0' },
-              },
-            }}
-          />
-        </APIKeysErrorBoundary>
-      </div>
-
-      <div className={styles.connectStep}>
-        <span className={styles.stepNumber}>02</span>
-        <h3 className={styles.stepTitle}>Paste your key</h3>
-        <div className={styles.pasteRow}>
-          <input
-            type="text"
-            className={styles.pasteInput}
-            placeholder="Paste your API key here (ak_...)"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            aria-label="Paste API key"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <span className={styles.pasteHint}>Stored only in this browser tab.</span>
-        </div>
-      </div>
-
-      <div className={styles.connectStep}>
-        <span className={styles.stepNumber}>03</span>
         <h3 className={styles.stepTitle}>Add to your assistant</h3>
+        <p className={styles.stepHint}>
+          Your assistant will open a browser window to sign in (OAuth). No API key to manage.
+        </p>
         <div className={styles.tabList} role="tablist" aria-label="AI coding assistants">
           {ASSISTANTS.map((a) => (
             <button
@@ -196,11 +107,11 @@ function ConnectSection() {
             <span className={styles.filePath}>{activeAssistant.filePath}</span>
           )}
           <div className={styles.snippetRow}>
-            <pre className={styles.codeBlock}>{activeSnippet}</pre>
+            <pre className={styles.codeBlock}>{activeAssistant.snippet}</pre>
             <button
               className={`${styles.copyBtn} ${copiedId === activeAssistant.id ? styles.copyBtnDone : ''}`}
               aria-label={`Copy ${activeAssistant.name} config`}
-              onClick={() => handleCopy(activeAssistant.id, activeSnippet)}
+              onClick={() => handleCopy(activeAssistant.id, activeAssistant.snippet)}
             >
               {copiedId === activeAssistant.id ? 'Copied!' : 'Copy'}
             </button>

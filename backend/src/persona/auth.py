@@ -8,13 +8,14 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from clerk_backend_api import AuthenticateRequestOptions, Clerk
-from clerk_backend_api.security.types import RequestState, SessionAuthObjectV2
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastmcp.server.auth import AccessToken, RemoteAuthProvider
+from fastmcp.server.auth.providers.jwt import JWTVerifier
+from fastmcp.server.dependencies import get_access_token
+from fastmcp.server.middleware import Middleware
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
-from starlette.requests import Request as StarletteRequest
 
 from persona.database import upsert_user
 from persona.db import DBConnection
@@ -42,7 +43,7 @@ def require_user_id() -> str:
 
 
 # ---------------------------------------------------------------------------
-# JWKS in-memory cache
+# JWKS in-memory cache (used by REST API JWT path)
 # ---------------------------------------------------------------------------
 
 _JWKS_CACHE: dict[str, Any] = {}  # kid -> key dict
@@ -100,7 +101,7 @@ def _get_jwks_key(kid: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# JWT verification
+# JWT verification (REST API path)
 # ---------------------------------------------------------------------------
 
 
@@ -157,7 +158,7 @@ def verify_clerk_jwt(token: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# UserContext and FastAPI dependency
+# UserContext and FastAPI dependency (REST API)
 # ---------------------------------------------------------------------------
 
 
@@ -173,105 +174,8 @@ class UserContext:
 _bearer = HTTPBearer(auto_error=False)
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    conn: DBConnection | None = None,
-) -> UserContext:
-    """FastAPI dependency: validate Bearer JWT, upsert user row, return UserContext.
-
-    This function is called as a dependency factory; the actual FastAPI
-    dependency is built via ``build_get_current_user(conn)`` below.
-    """
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header missing",
-        )
-
-    claims = verify_clerk_jwt(credentials.credentials)
-
-    user_id: str = claims["sub"]
-    # Clerk puts primary email in email_addresses or the "email" custom claim
-    email: str | None = claims.get("email") or claims.get("primary_email_address")
-    display_name: str | None = (
-        claims.get("name") or claims.get("display_name") or claims.get("username")
-    )
-
-    if conn is not None:
-        upsert_user(conn, user_id, email, display_name)
-
-    return UserContext(id=user_id, email=email, display_name=display_name)
-
-
-# ---------------------------------------------------------------------------
-# Clerk SDK dual-auth helpers (session JWTs + native API keys)
-# ---------------------------------------------------------------------------
-
-
-def build_clerk_client(secret_key: str) -> Clerk:
-    """Initialise a Clerk SDK client with the given secret key."""
-    return Clerk(bearer_auth=secret_key)
-
-
-def authenticate_mcp_request(
-    request: StarletteRequest, clerk_client: Clerk
-) -> RequestState:
-    """Authenticate a FastAPI/Starlette request via the Clerk SDK.
-
-    Supports both Clerk session JWTs (``Bearer eyJ...``) and native Clerk API
-    keys (``Bearer ak_...``).  Returns a ``RequestState`` whose ``is_signed_in``
-    property is ``True`` on success.
-
-    The incoming Starlette request is wrapped as an ``httpx.Request`` to ensure
-    full compatibility with the Clerk SDK's ``Requestish`` protocol.
-
-    The ``to_auth()`` helper on the returned state can be used to extract the
-    user identity:
-    - ``SessionAuthObjectV2``: ``auth.sub``  (Clerk user ID)
-    - ``SessionAuthObjectV1`` or ``APIKeyMachineAuthObject``: ``auth.user_id``
-    """
-    # Wrap Starlette request as httpx.Request for Clerk SDK compatibility.
-    httpx_req = httpx.Request(
-        method=request.method,
-        url=str(request.url),
-        headers=dict(request.headers),
-    )
-    opts = AuthenticateRequestOptions(accepts_token=["session_token", "api_key"])
-    result = clerk_client.authenticate_request(httpx_req, opts)
-    if not result.is_signed_in:
-        logger.warning(
-            "MCP auth failed: reason=%s message=%s",
-            result.reason,
-            result.message,
-        )
-    return result
-
-
-def extract_user_id_from_request_state(request_state: RequestState) -> str | None:
-    """Return the Clerk user ID from an authenticated RequestState, or None."""
-    if not request_state.is_signed_in:
-        return None
-    auth = request_state.to_auth()
-    if isinstance(auth, SessionAuthObjectV2):
-        return auth.sub
-    user_id: str | None = getattr(auth, "user_id", None)
-    return user_id
-
-
 def build_get_current_user(conn: DBConnection):  # type: ignore[no-untyped-def]
-    """Return a FastAPI dependency that validates JWTs and upserts users.
-
-    Usage::
-
-        router.add_api_route(
-            "/api/foo", handler,
-            dependencies=[Depends(build_get_current_user(conn))]
-        )
-
-        # Or as a parameter:
-        def handler(current_user: UserContext = Depends(build_get_current_user(conn))):
-            ...
-    """
+    """Return a FastAPI dependency that validates JWTs and upserts users."""
 
     def _dep(
         credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
@@ -293,3 +197,115 @@ def build_get_current_user(conn: DBConnection):  # type: ignore[no-untyped-def]
         return UserContext(id=user_id, email=email, display_name=display_name)
 
     return _dep
+
+
+# ---------------------------------------------------------------------------
+# MCP OAuth2 resource server auth (FastMCP RemoteAuthProvider + JWTVerifier)
+# ---------------------------------------------------------------------------
+
+
+class _DiagnosticJWTVerifier(JWTVerifier):
+    """JWTVerifier that records why a token was rejected, for diagnosis.
+
+    FastMCP's JWTVerifier swallows validation failures, returns ``None``, and
+    logs the reason only on its own logger — so our logs show a bare 401
+    invalid_token with no cause. This subclass re-logs the rejection on the
+    ``persona`` logger at DEBUG, including the token's unverified header/claims
+    next to the expected issuer, making a mismatch (alg, kid, issuer, or an
+    opaque non-JWT token) diagnosable. Verification behaviour is unchanged.
+    """
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        result = await super().verify_token(token)
+        if result is None and logger.isEnabledFor(logging.DEBUG):
+            self._log_rejection(token)
+        return result
+
+    def _log_rejection(self, token: str) -> None:
+        try:
+            header = jwt.get_unverified_header(token)
+        except JWTError as exc:
+            logger.debug("MCP token rejected: not a parseable JWT (%s)", exc)
+            return
+        try:
+            claims = jwt.get_unverified_claims(token)
+        except JWTError:
+            claims = {}
+        logger.debug(
+            "MCP token rejected: alg=%s kid=%s token_iss=%s token_aud=%s exp=%s "
+            "(expected_iss=%s jwks=%s)",
+            header.get("alg"),
+            header.get("kid"),
+            claims.get("iss"),
+            claims.get("aud"),
+            claims.get("exp"),
+            self.issuer,
+            self.jwks_uri,
+        )
+
+
+def build_mcp_auth() -> RemoteAuthProvider:
+    """Build the FastMCP auth provider for the /mcp endpoint.
+
+    Requires PERSONA_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER env vars.
+    Token audience is NOT validated (Clerk DCR sets aud=client_id); signature
+    and issuer are still strictly enforced.
+    """
+    from persona.config import (
+        resolve_clerk_issuer,
+        resolve_clerk_jwks_url,
+        resolve_public_url,
+    )
+
+    public = resolve_public_url()
+    issuer = resolve_clerk_issuer()
+    jwks_uri = resolve_clerk_jwks_url()
+    # Audience is intentionally not bound to <public_url>/mcp. Dynamic Client
+    # Registration via Clerk mints tokens whose `aud` is the generated client_id
+    # (e.g. Claude Code), not our resource URL; pinning it would reject every
+    # token with 401 invalid_token. audience=None skips the aud check (the
+    # equivalent of verify_aud=False) while issuer and JWKS signature stay strict.
+    verifier = _DiagnosticJWTVerifier(
+        jwks_uri=jwks_uri,
+        issuer=issuer,
+        audience=None,
+        base_url=public,
+    )
+    logger.info(
+        "MCP auth configured: issuer=%s jwks_uri=%s resource=%s/mcp",
+        issuer,
+        jwks_uri,
+        public,
+    )
+    return RemoteAuthProvider(
+        token_verifier=verifier,
+        authorization_servers=[issuer],  # type: ignore[arg-type]
+        base_url=public,
+        resource_name="Persona",
+    )
+
+
+# ---------------------------------------------------------------------------
+# MCP tool middleware: bridge access token sub → current_user_id_var
+# ---------------------------------------------------------------------------
+
+# Module-level reference to DB connection, set by server.py at startup.
+_conn: DBConnection | None = None
+
+
+class UserContextToolMiddleware(Middleware):
+    """Set current_user_id_var from the FastMCP access token for each tool call."""
+
+    async def on_call_tool(self, context, call_next):  # type: ignore[override]
+        tok = get_access_token()
+        sub = (tok.claims or {}).get("sub") if tok else None
+        reset = current_user_id_var.set(sub)
+        try:
+            if sub and _conn is not None:
+                try:
+                    upsert_user(_conn, sub, None, None)
+                except Exception as exc:
+                    logger.warning("upsert_user failed in MCP tool middleware: %s", exc)
+            return await call_next(context)
+        finally:
+            current_user_id_var.reset(reset)

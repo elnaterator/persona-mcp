@@ -29,9 +29,9 @@ services:
       - PERSONA_DB_URL=postgresql://persona:persona@postgres:5432/persona
       - PERSONA_FRONTEND_DIR=/app/frontend-dist
       - LOG_LEVEL=INFO
+      - PERSONA_PUBLIC_URL=${PERSONA_PUBLIC_URL}
       - CLERK_JWKS_URL=${CLERK_JWKS_URL}
       - CLERK_ISSUER=${CLERK_ISSUER}
-      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
