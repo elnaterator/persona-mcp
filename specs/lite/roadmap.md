@@ -86,3 +86,8 @@ Create a single search bar as a reusable component that is consistent across the
 ## R016 OAuth2 MCP server auth (drop API keys) - DONE
 
 Replace MCP API-key/dual-auth with standard OAuth2. MCP client points at URL only; unauthenticated request returns 401 + `WWW-Authenticate` pointing to RFC 9728 protected-resource metadata. Clerk is the authorization server (Dynamic Client Registration). Server is a resource server only: validates bearer tokens via FastMCP `RemoteAuthProvider` + `JWTVerifier`, no key config. Home page connect UI simplified to bare URL snippets with OAuth browser sign-in copy.
+
+
+## R017 Adopt Clerk mcp-tools proxy for DCR loopback handling
+
+Native MCP clients (Claude Desktop, Cursor, VS Code) register one loopback redirect (`http://localhost:PORT/callback`) but send the other (`http://127.0.0.1:PORT/callback`) — per the OAuth spec these are distinct strings, so Clerk's `redirect_uri` validation fails even though they're the same address. Adopt Clerk's `mcp-tools` proxy layer, which expands and registers both `localhost`/`127.0.0.1` variants, normalizes `redirect_uri` on both authorize and token exchange, and overrides the auth method. Removes the loopback friction in the R016 OAuth flow without migrating off Clerk. Watch the Nov 2025 MCP spec shift from DCR to CIMD (Client ID Metadata Documents) — DCR still works but is no longer the default, so confirm target clients before investing further in DCR-specific behavior. Refs: https://github.com/clerk/mcp-tools, https://blog.modelcontextprotocol.io/posts/client_registration/
