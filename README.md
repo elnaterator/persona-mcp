@@ -38,19 +38,26 @@ Once running:
 |---|---|
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_test_...`) |
 | `VITE_MCP_SERVER_URL` | MCP server URL for Connect tab (e.g. `https://your-server.com/mcp`) |
-| `PERSONA_PUBLIC_URL` | Externally reachable base URL (e.g. `https://persona.example.com`) — required; used as OAuth2 resource identifier and metadata base |
+| `PERSONA_PUBLIC_URL` | Externally reachable base URL (e.g. `https://persona.example.com`) — required; the OAuth proxy advertises this as the authorization server and metadata base |
 | `CLERK_JWKS_URL` | Clerk JWKS endpoint |
 | `CLERK_ISSUER` | Clerk issuer URL |
+| `CLERK_OAUTH_CLIENT_ID` | Client id of the static Clerk OAuth application the MCP proxy uses upstream |
+| `CLERK_OAUTH_CLIENT_SECRET` | Client secret of that Clerk OAuth application |
 | `CLERK_WEBHOOK_SECRET` | Webhook signing secret from Clerk dashboard |
+| `FASTMCP_HOME` | Directory for FastMCP OAuth-proxy state (default OS data dir); mount a volume in prod so DCR registrations + encrypted upstream tokens survive restarts |
 
 ### Keyless OAuth connect flow
 
-MCP clients (Claude Code, Cursor, etc.) connect via standard OAuth2 (RFC 9728 + DCR):
+MCP clients (Claude Code, Cursor, etc.) connect via standard OAuth2. The server runs a
+**DCR proxy** (FastMCP `OAuthProxy`): clients register and authorize against *us*, and we
+proxy the flow upstream to Clerk through one fixed OAuth application. This removes the
+loopback-redirect friction where a native client registers `http://localhost:PORT` but
+sends `http://127.0.0.1:PORT` — both loopback hosts are accepted.
 
-1. Client sends unauthenticated request to `/mcp` → server returns `401` with `WWW-Authenticate` header pointing to `/.well-known/oauth-protected-resource/mcp`.
-2. Client fetches the metadata document → discovers the Clerk authorization server.
-3. Client registers itself dynamically (RFC 7591) and performs a PKCE browser sign-in.
-4. Client receives a resource-bound access token and calls `/mcp` with `Bearer <token>`.
+1. Client sends unauthenticated request to `/mcp` → server returns `401` with `WWW-Authenticate` pointing to `/.well-known/oauth-protected-resource/mcp`.
+2. Client fetches the metadata → discovers **this server** as the authorization server.
+3. Client registers dynamically (RFC 7591) with a loopback redirect, then does a PKCE browser sign-in; the consent screen redirects to Clerk to authenticate.
+4. The proxy exchanges the Clerk code server-side, stores the Clerk token encrypted, and issues the client a reference JWT. Each `/mcp` call re-validates the stored Clerk token, so revocation at Clerk takes effect.
 
 No API key to generate or paste. Add the bare URL in your assistant's MCP config:
 
@@ -64,9 +71,9 @@ claude mcp add --transport http persona https://your-persona-server.com/mcp
 
 ### Clerk manual setup (required before MCP auth works end-to-end)
 
-1. Enable Dynamic Client Registration in Clerk Dashboard (OAuth Applications / OAuth2 server settings). Confirm `https://<frontend-api>/.well-known/oauth-authorization-server` advertises `registration_endpoint` + `code_challenge_methods_supported`.
-2. Confirm Clerk allows DCR loopback/dynamic redirect URIs (CLI clients use `http://localhost:<port>/callback`).
-3. Confirm Clerk honors `resource` indicator → mints access tokens with `aud=<PERSONA_PUBLIC_URL>/mcp`.
+1. Create an OAuth application in Clerk Dashboard with redirect URI `<PERSONA_PUBLIC_URL>/auth/callback`; set its client id/secret as `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`.
+2. Confirm `<CLERK_ISSUER>/.well-known/oauth-authorization-server` advertises `authorization_endpoint` / `token_endpoint` matching `<CLERK_ISSUER>/oauth/authorize` and `/oauth/token` (adjust the proxy config if Clerk's paths differ).
+3. Clients register with the proxy, not with Clerk, so Clerk-side Dynamic Client Registration is no longer required and can be left disabled.
 
 Copy `.env.example` to `.env` and fill in values.
 

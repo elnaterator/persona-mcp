@@ -1,2 +1,4 @@
 .autopilot
 .autopilot-halt
+.mode
+.halt

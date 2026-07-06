@@ -90,6 +90,28 @@ def resolve_clerk_issuer() -> str:
     return value.strip()
 
 
+def resolve_clerk_oauth_client_id() -> str:
+    """Resolve CLERK_OAUTH_CLIENT_ID env var. Raises on missing.
+
+    Client id of the static Clerk OAuth application the MCP proxy uses upstream.
+    """
+    value = os.environ.get("CLERK_OAUTH_CLIENT_ID", "")
+    if not value.strip():
+        raise ValueError("CLERK_OAUTH_CLIENT_ID environment variable is required")
+    return value.strip()
+
+
+def resolve_clerk_oauth_client_secret() -> str:
+    """Resolve CLERK_OAUTH_CLIENT_SECRET env var. Raises on missing.
+
+    Secret of the static Clerk OAuth application the MCP proxy uses upstream.
+    """
+    value = os.environ.get("CLERK_OAUTH_CLIENT_SECRET", "")
+    if not value.strip():
+        raise ValueError("CLERK_OAUTH_CLIENT_SECRET environment variable is required")
+    return value.strip()
+
+
 def resolve_clerk_secret_key() -> str:
     """Resolve CLERK_SECRET_KEY env var. Raises on missing."""
     value = os.environ.get("CLERK_SECRET_KEY", "")
