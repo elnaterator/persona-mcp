@@ -37,14 +37,13 @@ Once running:
 | Variable | Description |
 |---|---|
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_test_...`) |
-| `VITE_MCP_SERVER_URL` | MCP server URL for Connect tab (e.g. `https://your-server.com/mcp`) |
+| `VITE_MCP_SERVER_URL` | Optional. Connect-tab MCP URL override. Defaults to `<page origin>/mcp` at runtime; only set it for `vite dev`, where the SPA (:5173) and backend (:8000) differ (e.g. `http://localhost:8000/mcp`) |
 | `PERSONA_PUBLIC_URL` | Externally reachable base URL (e.g. `https://persona.example.com`) — required; the OAuth proxy advertises this as the authorization server and metadata base |
 | `CLERK_JWKS_URL` | Clerk JWKS endpoint |
 | `CLERK_ISSUER` | Clerk issuer URL |
 | `CLERK_OAUTH_CLIENT_ID` | Client id of the static Clerk OAuth application the MCP proxy uses upstream |
-| `CLERK_OAUTH_CLIENT_SECRET` | Client secret of that Clerk OAuth application |
+| `CLERK_OAUTH_CLIENT_SECRET` | Client secret of that Clerk OAuth application (also derives the at-rest encryption key for proxy state) |
 | `CLERK_WEBHOOK_SECRET` | Webhook signing secret from Clerk dashboard |
-| `FASTMCP_HOME` | Directory for FastMCP OAuth-proxy state (default OS data dir); mount a volume in prod so DCR registrations + encrypted upstream tokens survive restarts |
 
 ### Keyless OAuth connect flow
 
@@ -57,7 +56,7 @@ sends `http://127.0.0.1:PORT` — both loopback hosts are accepted.
 1. Client sends unauthenticated request to `/mcp` → server returns `401` with `WWW-Authenticate` pointing to `/.well-known/oauth-protected-resource/mcp`.
 2. Client fetches the metadata → discovers **this server** as the authorization server.
 3. Client registers dynamically (RFC 7591) with a loopback redirect, then does a PKCE browser sign-in; the consent screen redirects to Clerk to authenticate.
-4. The proxy exchanges the Clerk code server-side, stores the Clerk token encrypted, and issues the client a reference JWT. Each `/mcp` call re-validates the stored Clerk token, so revocation at Clerk takes effect.
+4. The proxy exchanges the Clerk code server-side, stores the Clerk token encrypted **in PostgreSQL** (shared across instances — see the `oauth_kv` table), and issues the client a reference JWT. Each `/mcp` call re-validates the stored Clerk token, so revocation at Clerk takes effect.
 
 No API key to generate or paste. Add the bare URL in your assistant's MCP config:
 

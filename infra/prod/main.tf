@@ -26,11 +26,14 @@ module "lambda" {
   ssm_parameter_prefix = "/persona/${var.environment}"
 
   environment_variables = {
-    PERSONA_DB_URL       = data.aws_ssm_parameter.database_url.value
-    CLERK_JWKS_URL       = data.aws_ssm_parameter.clerk_jwks_url.value
-    CLERK_ISSUER         = data.aws_ssm_parameter.clerk_issuer.value
-    CLERK_WEBHOOK_SECRET = data.aws_ssm_parameter.clerk_webhook_secret.value
-    CLERK_SECRET_KEY     = data.aws_ssm_parameter.clerk_secret_key.value
+    PERSONA_DB_URL            = data.aws_ssm_parameter.database_url.value
+    PERSONA_PUBLIC_URL        = data.aws_ssm_parameter.persona_public_url.value
+    CLERK_JWKS_URL            = data.aws_ssm_parameter.clerk_jwks_url.value
+    CLERK_ISSUER              = data.aws_ssm_parameter.clerk_issuer.value
+    CLERK_OAUTH_CLIENT_ID     = data.aws_ssm_parameter.clerk_oauth_client_id.value
+    CLERK_OAUTH_CLIENT_SECRET = data.aws_ssm_parameter.clerk_oauth_client_secret.value
+    CLERK_WEBHOOK_SECRET      = data.aws_ssm_parameter.clerk_webhook_secret.value
+    CLERK_SECRET_KEY          = data.aws_ssm_parameter.clerk_secret_key.value
   }
 
   tags = {
@@ -69,6 +72,54 @@ resource "aws_ssm_parameter" "database_url" {
 resource "aws_ssm_parameter" "clerk_secret_key" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
   name  = "/persona/${var.environment}/clerk_secret_key"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "aws_ssm_parameter" "persona_public_url" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/persona/${var.environment}/persona_public_url"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "aws_ssm_parameter" "clerk_oauth_client_id" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/persona/${var.environment}/clerk_oauth_client_id"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "aws_ssm_parameter" "clerk_oauth_client_secret" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/persona/${var.environment}/clerk_oauth_client_secret"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -176,4 +227,22 @@ data "aws_ssm_parameter" "clerk_secret_key" {
   name            = aws_ssm_parameter.clerk_secret_key.name
   with_decryption = true
   depends_on      = [aws_ssm_parameter.clerk_secret_key]
+}
+
+data "aws_ssm_parameter" "persona_public_url" {
+  name            = aws_ssm_parameter.persona_public_url.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.persona_public_url]
+}
+
+data "aws_ssm_parameter" "clerk_oauth_client_id" {
+  name            = aws_ssm_parameter.clerk_oauth_client_id.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.clerk_oauth_client_id]
+}
+
+data "aws_ssm_parameter" "clerk_oauth_client_secret" {
+  name            = aws_ssm_parameter.clerk_oauth_client_secret.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.clerk_oauth_client_secret]
 }

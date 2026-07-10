@@ -5,7 +5,7 @@ import os
 import time
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from fastapi import Depends, HTTPException, status
@@ -21,6 +21,9 @@ from jose.exceptions import ExpiredSignatureError
 
 from persona.database import upsert_user
 from persona.db import DBConnection
+
+if TYPE_CHECKING:
+    from psycopg_pool import ConnectionPool
 
 logger = logging.getLogger("persona")
 
@@ -246,7 +249,7 @@ class _DiagnosticJWTVerifier(JWTVerifier):
         )
 
 
-def build_mcp_auth() -> OAuthProxy:
+def build_mcp_auth(pool: "ConnectionPool[Any]") -> OAuthProxy:
     """Build the FastMCP OAuth proxy for the /mcp endpoint.
 
     Requires PERSONA_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER,
@@ -260,6 +263,10 @@ def build_mcp_auth() -> OAuthProxy:
     Clerk via one fixed pre-registered redirect URI; the proxy issues its own
     reference JWTs to clients and validates the stored Clerk token on every call.
 
+    Proxy state (registrations, encrypted upstream tokens, JTI mappings, transient
+    authorize state) is stored in PostgreSQL via ``pool`` so it is shared across
+    serverless instances rather than a per-instance local DiskStore.
+
     Token audience is NOT validated: signature (JWKS) and issuer stay strict.
     """
     from persona.config import (
@@ -269,10 +276,12 @@ def build_mcp_auth() -> OAuthProxy:
         resolve_clerk_oauth_client_secret,
         resolve_public_url,
     )
+    from persona.oauth_store import build_oauth_client_storage
 
     public = resolve_public_url()
     issuer = resolve_clerk_issuer()
     jwks_uri = resolve_clerk_jwks_url()
+    client_secret = resolve_clerk_oauth_client_secret()
     verifier = _DiagnosticJWTVerifier(
         jwks_uri=jwks_uri,
         issuer=issuer,
@@ -289,7 +298,7 @@ def build_mcp_auth() -> OAuthProxy:
         upstream_authorization_endpoint=f"{issuer}/oauth/authorize",
         upstream_token_endpoint=f"{issuer}/oauth/token",
         upstream_client_id=resolve_clerk_oauth_client_id(),
-        upstream_client_secret=resolve_clerk_oauth_client_secret(),
+        upstream_client_secret=client_secret,
         token_verifier=verifier,
         base_url=public,
         redirect_path="/auth/callback",
@@ -300,6 +309,10 @@ def build_mcp_auth() -> OAuthProxy:
         # never registered. Extend this list if a hosted (non-loopback) client is
         # ever added.
         allowed_client_redirect_uris=list(DEFAULT_LOCALHOST_PATTERNS),
+        # Shared, encrypted proxy state in PostgreSQL (not a local DiskStore) so
+        # the OAuth flow survives across serverless instances and cold starts. The
+        # Fernet key is derived from the Clerk OAuth client secret, stable per env.
+        client_storage=build_oauth_client_storage(pool, client_secret),
     )
 
 

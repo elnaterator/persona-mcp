@@ -195,9 +195,13 @@ Wiring in `server.py` is unchanged: `build_mcp_auth()` return type widens to
 - No new dependencies: fastmcp 2.14.5 already ships `OAuthProxy` + storage/crypto deps.
 - Consent screen: `require_authorization_consent=True` (default) shows a FastMCP consent
   page before Clerk sign-in — keep it (MCP security best practice).
-- Proxy state store: default encrypted DiskStore under the FastMCP data dir; if the
-  Docker volume is awkward, switch `client_storage` to a Postgres-backed `AsyncKeyValue`
-  in a follow-up — not this plan.
+- Proxy state store: **implemented as a Postgres-backed `AsyncKeyValue`**
+  (`oauth_store.PostgresKVStore`, table `oauth_kv`, schema v13) wrapped in FastMCP's
+  `FernetEncryptionWrapper` — the DiskStore is unusable on Lambda (read-only FS,
+  ephemeral per-instance `/tmp`). State is shared across serverless instances;
+  values encrypted at rest with a key derived from the Clerk OAuth client secret.
+  Infra (`infra/{dev,prod}/main.tf`) gains `PERSONA_PUBLIC_URL`,
+  `CLERK_OAUTH_CLIENT_ID`, `CLERK_OAUTH_CLIENT_SECRET` SSM params + Lambda env.
 - Token lifetime: Clerk `expires_in` drives proxy JWT expiry; refresh handled by proxy
   against `<issuer>/oauth/token`. No config needed unless Clerk omits `expires_in`
   (then set `fallback_access_token_expiry_seconds`).

@@ -35,12 +35,6 @@ services:
       - CLERK_OAUTH_CLIENT_ID=${CLERK_OAUTH_CLIENT_ID}
       - CLERK_OAUTH_CLIENT_SECRET=${CLERK_OAUTH_CLIENT_SECRET}
       - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
-      # FastMCP OAuth-proxy state (DCR client registrations + encrypted upstream
-      # tokens) lives under $FASTMCP_HOME/oauth-proxy; persist it so restarts
-      # don't force every MCP client to re-authenticate.
-      - FASTMCP_HOME=/data/fastmcp
-    volumes:
-      - mcp-oauth-state:/data/fastmcp
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -50,4 +44,3 @@ services:
 
 volumes:
   pg-data:
-  mcp-oauth-state:
