@@ -163,6 +163,7 @@ secret. Required env in production: `PERSONA_PUBLIC_URL`, `CLERK_ISSUER`,
 ### Infrastructure
 - Docker + Docker Compose for containerized deployment (multi-stage build)
 - GNU Make for build orchestration (root + per-directory Makefiles)
+- AWS Lambda (container image + Function URL) via Terraform in `infra/`; EventBridge keep-warm rule pings `GET /health` every 5 min (toggle: `keep_warm_enabled` module var)
 
 ## Recent Changes
 - 017-oauth-dcr-proxy: MCP auth moved to FastMCP `OAuthProxy` (local DCR, loopback-tolerant), proxy state persisted in PostgreSQL (`oauth_kv`, schema v13); new env `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`

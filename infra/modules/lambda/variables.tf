@@ -37,6 +37,12 @@ variable "environment_variables" {
   sensitive   = true
 }
 
+variable "keep_warm_enabled" {
+  description = "Whether the EventBridge keep-warm rule pings the Lambda every 5 minutes to avoid cold starts."
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "AWS resource tags applied to all resources in this module."
   type        = map(string)
