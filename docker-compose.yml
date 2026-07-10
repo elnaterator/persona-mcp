@@ -32,6 +32,8 @@ services:
       - PERSONA_PUBLIC_URL=${PERSONA_PUBLIC_URL}
       - CLERK_JWKS_URL=${CLERK_JWKS_URL}
       - CLERK_ISSUER=${CLERK_ISSUER}
+      - CLERK_OAUTH_CLIENT_ID=${CLERK_OAUTH_CLIENT_ID}
+      - CLERK_OAUTH_CLIENT_SECRET=${CLERK_OAUTH_CLIENT_SECRET}
       - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]

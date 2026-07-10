@@ -5,13 +5,15 @@ import os
 import time
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fastmcp.server.auth import AccessToken, RemoteAuthProvider
+from fastmcp.server.auth import AccessToken
+from fastmcp.server.auth.oauth_proxy import OAuthProxy
 from fastmcp.server.auth.providers.jwt import JWTVerifier
+from fastmcp.server.auth.redirect_validation import DEFAULT_LOCALHOST_PATTERNS
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import Middleware
 from jose import JWTError, jwt
@@ -19,6 +21,9 @@ from jose.exceptions import ExpiredSignatureError
 
 from persona.database import upsert_user
 from persona.db import DBConnection
+
+if TYPE_CHECKING:
+    from psycopg_pool import ConnectionPool
 
 logger = logging.getLogger("persona")
 
@@ -244,27 +249,39 @@ class _DiagnosticJWTVerifier(JWTVerifier):
         )
 
 
-def build_mcp_auth() -> RemoteAuthProvider:
-    """Build the FastMCP auth provider for the /mcp endpoint.
+def build_mcp_auth(pool: "ConnectionPool[Any]") -> OAuthProxy:
+    """Build the FastMCP OAuth proxy for the /mcp endpoint.
 
-    Requires PERSONA_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER env vars.
-    Token audience is NOT validated (Clerk DCR sets aud=client_id); signature
-    and issuer are still strictly enforced.
+    Requires PERSONA_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER,
+    CLERK_OAUTH_CLIENT_ID, CLERK_OAUTH_CLIENT_SECRET env vars.
+
+    The proxy handles Dynamic Client Registration locally so native MCP clients
+    (Claude Desktop, Cursor, VS Code) register with *us*, not Clerk — fixing the
+    loopback redirect mismatch where a client registers http://localhost:PORT but
+    sends http://127.0.0.1:PORT (distinct strings per OAuth, both allowed here by
+    FastMCP's default localhost patterns). Authorize/token are proxied upstream to
+    Clerk via one fixed pre-registered redirect URI; the proxy issues its own
+    reference JWTs to clients and validates the stored Clerk token on every call.
+
+    Proxy state (registrations, encrypted upstream tokens, JTI mappings, transient
+    authorize state) is stored in PostgreSQL via ``pool`` so it is shared across
+    serverless instances rather than a per-instance local DiskStore.
+
+    Token audience is NOT validated: signature (JWKS) and issuer stay strict.
     """
     from persona.config import (
         resolve_clerk_issuer,
         resolve_clerk_jwks_url,
+        resolve_clerk_oauth_client_id,
+        resolve_clerk_oauth_client_secret,
         resolve_public_url,
     )
+    from persona.oauth_store import build_oauth_client_storage
 
     public = resolve_public_url()
     issuer = resolve_clerk_issuer()
     jwks_uri = resolve_clerk_jwks_url()
-    # Audience is intentionally not bound to <public_url>/mcp. Dynamic Client
-    # Registration via Clerk mints tokens whose `aud` is the generated client_id
-    # (e.g. Claude Code), not our resource URL; pinning it would reject every
-    # token with 401 invalid_token. audience=None skips the aud check (the
-    # equivalent of verify_aud=False) while issuer and JWKS signature stay strict.
+    client_secret = resolve_clerk_oauth_client_secret()
     verifier = _DiagnosticJWTVerifier(
         jwks_uri=jwks_uri,
         issuer=issuer,
@@ -272,16 +289,30 @@ def build_mcp_auth() -> RemoteAuthProvider:
         base_url=public,
     )
     logger.info(
-        "MCP auth configured: issuer=%s jwks_uri=%s resource=%s/mcp",
+        "MCP OAuth proxy configured: issuer=%s jwks_uri=%s resource=%s/mcp",
         issuer,
         jwks_uri,
         public,
     )
-    return RemoteAuthProvider(
+    return OAuthProxy(
+        upstream_authorization_endpoint=f"{issuer}/oauth/authorize",
+        upstream_token_endpoint=f"{issuer}/oauth/token",
+        upstream_client_id=resolve_clerk_oauth_client_id(),
+        upstream_client_secret=client_secret,
         token_verifier=verifier,
-        authorization_servers=[issuer],  # type: ignore[arg-type]
         base_url=public,
-        resource_name="Persona",
+        redirect_path="/auth/callback",
+        # Loopback tolerance: a client that registers http://127.0.0.1:PORT may
+        # authorize with http://localhost:PORT (or vice versa) — distinct strings
+        # per OAuth. These patterns accept either host on any port so the mismatch
+        # no longer 400s, while still rejecting non-loopback redirects a client
+        # never registered. Extend this list if a hosted (non-loopback) client is
+        # ever added.
+        allowed_client_redirect_uris=list(DEFAULT_LOCALHOST_PATTERNS),
+        # Shared, encrypted proxy state in PostgreSQL (not a local DiskStore) so
+        # the OAuth flow survives across serverless instances and cold starts. The
+        # Fernet key is derived from the Clerk OAuth client secret, stable per env.
+        client_storage=build_oauth_client_storage(pool, client_secret),
     )
 
 

@@ -297,7 +297,7 @@ class TestCrossUserOwnershipContract:
 
 
 # ---------------------------------------------------------------------------
-# Plan 016 — T15-T19: MCP OAuth2 resource server contract tests
+# Plan 017 — MCP OAuth DCR proxy contract tests (FastMCP OAuthProxy)
 # ---------------------------------------------------------------------------
 
 _TEST_PUBLIC_URL = "https://persona.test"
@@ -305,11 +305,17 @@ _TEST_ISSUER = "https://clerk.test"
 _TEST_RESOURCE = f"{_TEST_PUBLIC_URL}/mcp"
 
 
-def _build_mcp_oauth_app(private_key: Any) -> Any:
-    """Build a FastMCP ASGI app with JWT auth wired for testing."""
-    from fastmcp import FastMCP
-    from fastmcp.server.auth import RemoteAuthProvider
+def _build_mcp_proxy(private_key: Any) -> Any:
+    """Build a production-mirroring OAuthProxy provider for testing.
+
+    Uses an in-memory client store so no proxy state hits disk. Signature +
+    issuer are enforced by the token verifier; audience is not (Clerk mints
+    tokens with aud=client_id).
+    """
+    from fastmcp.server.auth.oauth_proxy import OAuthProxy
     from fastmcp.server.auth.providers.jwt import JWTVerifier
+    from fastmcp.server.auth.redirect_validation import DEFAULT_LOCALHOST_PATTERNS
+    from key_value.aio.stores.memory import MemoryStore
 
     pem = (
         private_key.public_key()
@@ -319,21 +325,30 @@ def _build_mcp_oauth_app(private_key: Any) -> Any:
         )
         .decode()
     )
-    # Mirror production build_mcp_auth: audience is NOT validated because Clerk
-    # DCR mints tokens with aud=client_id. Signature + issuer stay strict.
     verifier = JWTVerifier(
         public_key=pem,
         issuer=_TEST_ISSUER,
         audience=None,
         base_url=_TEST_PUBLIC_URL,
     )
-    provider = RemoteAuthProvider(
+    return OAuthProxy(
+        upstream_authorization_endpoint=f"{_TEST_ISSUER}/oauth/authorize",
+        upstream_token_endpoint=f"{_TEST_ISSUER}/oauth/token",
+        upstream_client_id="test_client_id",
+        upstream_client_secret="test_client_secret_at_least_12_chars",
         token_verifier=verifier,
-        authorization_servers=[_TEST_ISSUER],  # type: ignore[arg-type]
         base_url=_TEST_PUBLIC_URL,
-        resource_name="Persona",
+        redirect_path="/auth/callback",
+        allowed_client_redirect_uris=list(DEFAULT_LOCALHOST_PATTERNS),
+        client_storage=MemoryStore(),
     )
-    m = FastMCP("persona", auth=provider)
+
+
+def _build_mcp_oauth_app(private_key: Any) -> Any:
+    """Build a FastMCP ASGI app fronted by the OAuth DCR proxy for testing."""
+    from fastmcp import FastMCP
+
+    m = FastMCP("persona", auth=_build_mcp_proxy(private_key))
 
     @m.tool()
     def ping() -> str:
@@ -372,8 +387,12 @@ def mcp_oauth_key_pair() -> tuple[Any, Any]:
     return private_key, private_key.public_key()
 
 
-class TestMCPOAuth2ProtectedResourceMetadata:
-    """T15: /.well-known/oauth-protected-resource/mcp returns RFC 9728 metadata."""
+class TestMCPProxyProtectedResourceMetadata:
+    """T07: /.well-known/oauth-protected-resource/mcp advertises our own domain.
+
+    With the DCR proxy the authorization server is *us*, not Clerk — clients
+    register and authorize against our base_url, which then proxies to Clerk.
+    """
 
     def test_metadata_route_returns_200(self, mcp_oauth_key_pair: tuple) -> None:
         private_key, _ = mcp_oauth_key_pair
@@ -390,7 +409,7 @@ class TestMCPOAuth2ProtectedResourceMetadata:
         body = resp.json()
         assert "resource" in body
 
-    def test_metadata_body_has_authorization_servers(
+    def test_authorization_server_is_our_base_url(
         self, mcp_oauth_key_pair: tuple
     ) -> None:
         private_key, _ = mcp_oauth_key_pair
@@ -399,13 +418,128 @@ class TestMCPOAuth2ProtectedResourceMetadata:
         resp = client.get("/.well-known/oauth-protected-resource/mcp")
         body = resp.json()
         assert "authorization_servers" in body
-        # FastMCP may normalize URLs with a trailing slash
         servers = [s.rstrip("/") for s in body["authorization_servers"]]
-        assert _TEST_ISSUER.rstrip("/") in servers
+        # Proxy advertises itself as the AS; Clerk stays upstream and hidden.
+        assert _TEST_PUBLIC_URL.rstrip("/") in servers
+        assert _TEST_ISSUER.rstrip("/") not in servers
 
 
-class TestMCPOAuth2Unauthenticated:
-    """T16: Unauthenticated POST /mcp → 401 with WWW-Authenticate header."""
+class TestMCPProxyAuthorizationServerMetadata:
+    """T07: AS metadata endpoint exposes register/authorize/token on our domain."""
+
+    def test_as_metadata_returns_200(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.get("/.well-known/oauth-authorization-server")
+        assert resp.status_code == 200
+
+    def test_as_metadata_advertises_dcr_and_flow_endpoints(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        body = client.get("/.well-known/oauth-authorization-server").json()
+        for endpoint in (
+            "registration_endpoint",
+            "authorization_endpoint",
+            "token_endpoint",
+        ):
+            assert endpoint in body, f"missing {endpoint}"
+            assert body[endpoint].startswith(_TEST_PUBLIC_URL), body[endpoint]
+
+
+def _pkce_challenge() -> str:
+    import base64
+    import hashlib
+    import secrets
+
+    verifier = secrets.token_urlsafe(32)
+    digest = hashlib.sha256(verifier.encode()).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+
+
+class TestMCPProxyLoopbackRegistration:
+    """T08: loopback host mismatch is tolerated at /authorize — the core 017 fix.
+
+    Native clients register one loopback host (e.g. http://127.0.0.1:PORT) but
+    send the other (http://localhost:PORT). Per OAuth these are distinct strings;
+    Clerk's exact-match validation 400s. Our proxy configures localhost patterns
+    so either host on any port is accepted, while a non-loopback redirect the
+    client never registered is still rejected.
+    """
+
+    def _register(self, app: Any, redirect_uri: str) -> Any:
+        client = TestClient(app, raise_server_exceptions=False)
+        return client.post(
+            "/register",
+            json={
+                "redirect_uris": [redirect_uri],
+                "token_endpoint_auth_method": "none",
+                "grant_types": ["authorization_code", "refresh_token"],
+                "response_types": ["code"],
+            },
+        )
+
+    def _authorize(self, client: Any, client_id: str, redirect_uri: str) -> Any:
+        return client.get(
+            "/authorize",
+            params={
+                "response_type": "code",
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "code_challenge": _pkce_challenge(),
+                "code_challenge_method": "S256",
+                "state": "xyz",
+            },
+            follow_redirects=False,
+        )
+
+    def test_register_accepts_both_loopback_variants(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        for uri in (
+            "http://127.0.0.1:33418/callback",
+            "http://localhost:51000/callback",
+        ):
+            resp = self._register(app, uri)
+            assert resp.status_code == 201, resp.text
+            assert "client_id" in resp.json()
+
+    def test_authorize_tolerates_loopback_host_mismatch(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        # Register 127.0.0.1, then authorize with localhost on the same port.
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        client_id = self._register(app, "http://127.0.0.1:33418/callback").json()[
+            "client_id"
+        ]
+        resp = self._authorize(client, client_id, "http://localhost:33418/callback")
+        # 302 → proceeds into the flow (consent / upstream). A redirect_uri
+        # rejection would be 400; that must NOT happen for a loopback variant.
+        assert resp.status_code != 400, resp.text
+        assert resp.status_code in (302, 303, 307)
+
+    def test_authorize_rejects_unregistered_non_loopback(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        app = _build_mcp_oauth_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        client_id = self._register(app, "http://127.0.0.1:33418/callback").json()[
+            "client_id"
+        ]
+        resp = self._authorize(client, client_id, "https://evil.example.com/callback")
+        assert resp.status_code == 400, resp.text
+
+
+class TestMCPProxyUnauthenticated:
+    """T10: Unauthenticated POST /mcp → 401 with WWW-Authenticate header."""
 
     def test_unauth_post_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
         private_key, _ = mcp_oauth_key_pair
@@ -440,10 +574,14 @@ class TestMCPOAuth2Unauthenticated:
         assert "/.well-known/oauth-protected-resource/mcp" in www_auth
 
 
-class TestMCPOAuth2TokenValidation:
-    """T17: valid token ok; foreign aud accepted (DCR); expired → 401."""
+class TestMCPProxyTokenRejection:
+    """T10: raw tokens are rejected — clients must use proxy-issued reference JWTs.
 
-    def test_valid_token_allows_request(self, mcp_oauth_key_pair: tuple) -> None:
+    A directly-minted Clerk-style JWT is NOT a proxy token: it carries no JTI
+    mapping to a stored upstream token, so the swap in load_access_token fails.
+    """
+
+    def test_raw_clerk_token_rejected(self, mcp_oauth_key_pair: tuple) -> None:
         private_key, _ = mcp_oauth_key_pair
         app = _build_mcp_oauth_app(private_key)
         token = _make_mcp_token(private_key)
@@ -456,47 +594,25 @@ class TestMCPOAuth2TokenValidation:
                     "Accept": "application/json, text/event-stream",
                 },
             )
-        # 200 or 202 means auth passed; 401/403 means auth failed
-        assert resp.status_code not in (401, 403)
+        assert resp.status_code == 401
 
-    def test_foreign_audience_is_accepted(self, mcp_oauth_key_pair: tuple) -> None:
-        # Clerk DCR sets aud=client_id, so audience is intentionally not
-        # validated. A token with a foreign aud but valid signature + issuer
-        # must still authenticate.
+    def test_garbage_token_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
         private_key, _ = mcp_oauth_key_pair
         app = _build_mcp_oauth_app(private_key)
         with TestClient(app, raise_server_exceptions=False) as client:
-            token = _make_mcp_token(
-                private_key, audience="https://wrong.example.com/mcp"
-            )
             resp = client.post(
                 "/mcp",
                 json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
                 headers={
-                    "Authorization": f"Bearer {token}",
+                    "Authorization": "Bearer not-a-real-token",
                     "Accept": "application/json, text/event-stream",
                 },
             )
-        assert resp.status_code not in (401, 403)
-
-    def test_expired_token_returns_401(self, mcp_oauth_key_pair: tuple) -> None:
-        private_key, _ = mcp_oauth_key_pair
-        app = _build_mcp_oauth_app(private_key)
-        client = TestClient(app, raise_server_exceptions=False)
-        token = _make_mcp_token(private_key, exp_offset=-3600)
-        resp = client.post(
-            "/mcp",
-            json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/json, text/event-stream",
-            },
-        )
         assert resp.status_code == 401
 
 
 class TestMCPWellKnownRouteOrdering:
-    """T19: Well-known route not shadowed by SPA static catch-all."""
+    """T10: Well-known route not shadowed by SPA static catch-all."""
 
     def test_well_known_route_in_mcp_app_routes(
         self, mcp_oauth_key_pair: tuple

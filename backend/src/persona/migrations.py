@@ -81,6 +81,8 @@ def _detect_actual_version(conn) -> int:
     Checked newest-to-oldest; returns the first version whose structural
     marker is present.
     """
+    if _table_exists(conn, "oauth_kv"):
+        return 13
     if (
         _table_exists(conn, "resource_link")
         and not _column_exists(conn, "communication", "app_id")
@@ -637,6 +639,33 @@ def migrate_v11_to_v12(conn) -> None:
     conn.commit()
 
 
+def migrate_v12_to_v13(conn) -> None:
+    """Add oauth_kv table for FastMCP OAuth-proxy shared state (plan 017).
+
+    Backs the DCR proxy's key-value storage (client registrations, encrypted
+    upstream tokens, JTI mappings, transient authorize state) so it is shared
+    across serverless instances instead of a per-instance local DiskStore.
+    """
+    conn.execute(
+        """
+        CREATE TABLE oauth_kv (
+            collection  TEXT NOT NULL,
+            key         TEXT NOT NULL,
+            value       TEXT NOT NULL,
+            expires_at  TIMESTAMPTZ,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+            PRIMARY KEY (collection, key)
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX idx_oauth_kv_expires ON oauth_kv(expires_at) "
+        "WHERE expires_at IS NOT NULL"
+    )
+    conn.execute("UPDATE schema_version SET version = %s", (13,))
+    conn.commit()
+
+
 MIGRATIONS: list = [
     migrate_v0_to_v1,
     migrate_v1_to_v2,
@@ -650,6 +679,7 @@ MIGRATIONS: list = [
     migrate_v9_to_v10,
     migrate_v10_to_v11,
     migrate_v11_to_v12,
+    migrate_v12_to_v13,
 ]
 
 SCHEMA_VERSION: int = len(MIGRATIONS)

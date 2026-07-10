@@ -53,6 +53,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Local env overrides must never be baked into the image (Vite inlines VITE_*).
+# Deploy relies on runtime origin for the MCP URL; see frontend/src/pages/home.
+.env.local
+**/.env.local
+**/.env.*.local
+
 # Misc
 .DS_Store
 Thumbs.db

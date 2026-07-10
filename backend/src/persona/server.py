@@ -132,7 +132,11 @@ def _build_mcp(production: bool) -> FastMCP:
     """Create FastMCP instance, register all tools, and wire auth/middleware."""
     import persona.auth as auth_module
 
-    mcp_auth = build_mcp_auth() if production else None
+    if production:
+        assert _pool is not None, "DB pool required for production MCP auth"
+        mcp_auth = build_mcp_auth(_pool)
+    else:
+        mcp_auth = None
     m = FastMCP("persona", auth=mcp_auth)
 
     register_resume_tools(m, _get_resume_service)
