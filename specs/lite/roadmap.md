@@ -88,21 +88,25 @@ Replace MCP API-key/dual-auth with standard OAuth2. MCP client points at URL onl
 Native MCP clients (Claude Desktop, Cursor, VS Code) register one loopback redirect (`http://localhost:PORT/callback`) but send the other (`http://127.0.0.1:PORT/callback`) — per OAuth these are distinct strings, so Clerk's exact-match `redirect_uri` validation rejects the authorize call even though it's the same address. Fix: replace the 016 `RemoteAuthProvider` with FastMCP's `OAuthProxy`. The server now handles Dynamic Client Registration locally (both `localhost`/`127.0.0.1` loopback patterns accepted), proxies authorize/token upstream to one static Clerk OAuth app via a fixed `/auth/callback` redirect, and issues clients its own reference JWTs — each `/mcp` call re-validates the stored Clerk token so revocation still works. Clients register with us, not Clerk, which also insulates us from the Nov 2025 DCR→CIMD spec shift. Note: `clerk/mcp-tools` (the originally-named library) ships only TS client helpers + metadata generators, no server-side proxy — FastMCP's `OAuthProxy` (already installed) does the job with zero new deps. Needs a HUMAN-created Clerk OAuth app (`CLERK_OAUTH_CLIENT_ID`/`_SECRET`) before end-to-end auth works. Refs: https://github.com/clerk/mcp-tools, https://blog.modelcontextprotocol.io/posts/client_registration/
 
 
-## 018 Deploy prod and self-host daily (beta readiness)
+## 018 Lambda keep-warm EventBridge rule
+Cold starts hurt the MCP connect flow (Claude Desktop hits `/mcp` at session start) and first browser load. Add an EventBridge Scheduler rule to `infra/modules/lambda` (or a small sibling module) that pings the Lambda every 5 minutes to keep one instance warm. Ping a cheap unauthenticated endpoint (e.g. `/health` — add one if missing) so the warmer doesn't need Clerk credentials; handler should short-circuit before touching Postgres. Wire into both `infra/dev` and `infra/prod`. Costs stay in free tier (EventBridge + ~8.6k invocations/month). Known limits, acceptable for single-user app: concurrent second request and first post-deploy request still cold.
+
+
+## 019 Deploy prod and self-host daily (beta readiness)
 Stand up the prod environment (`infra/prod`) and use the app daily for 2 weeks before inviting beta users. Fix all friction found: first-run experience with empty states, signup-to-first-accomplishment under 5 minutes, MCP connect flow verified on a machine other than the dev box. Beta invite gated on this soak period completing without broken flows.
 
 
-## 019 Backups, tested restore, and user data export
+## 020 Backups, tested restore, and user data export
 Verify automated Postgres backups exist in Terraform and run an actual restore drill (backups enabled is not enough — restore must be proven). Add a user-facing "export my data" feature: full dump of the user's accomplishments, applications, resumes, notes, contacts, and communications as JSON (optionally Markdown). Export doubles as the data-portability trust story. Blocker for first beta invite.
 
 
-## 020 Error tracking and feedback loop
+## 021 Error tracking and feedback loop
 Add error tracking (Sentry free tier or similar) for backend and frontend, wired to alert the developer on new errors. Add one low-friction in-app feedback channel (footer link to a form or shared chat). Goal: see errors before beta users report them, and make giving feedback effortless.
 
 
-## 021 Trust basics for public launch: privacy policy, ToS, account deletion
+## 022 Trust basics for public launch: privacy policy, ToS, account deletion
 Add privacy policy and terms of service pages. Implement full account deletion (user-initiated, via Clerk webhook cascade to all owned resources). Set an AWS budget alarm to cap surprise costs from a free public service. Required before opening signup beyond friends and family.
 
 
-## 022 Donations via simple payment link
+## 023 Donations via simple payment link
 Add a GitHub Sponsors or Buy Me a Coffee link in the app footer. Explicitly no billing system, subscriptions, or tiers — a payment link only. Revisit with real billing (Stripe) only if donations become meaningful revenue.
