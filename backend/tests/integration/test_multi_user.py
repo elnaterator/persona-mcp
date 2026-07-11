@@ -16,11 +16,11 @@ from jose import jwt
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.accomplishment_service import AccomplishmentService
-from persona.api.routes import create_router
-from persona.application_service import ApplicationService
-from persona.auth import build_get_current_user
-from persona.resume_service import ResumeService
+from pktx.accomplishment_service import AccomplishmentService
+from pktx.api.routes import create_router
+from pktx.application_service import ApplicationService
+from pktx.auth import build_get_current_user
+from pktx.resume_service import ResumeService
 
 # ---------------------------------------------------------------------------
 # RSA / JWT helpers (same pattern as test_auth_contract.py)
@@ -86,7 +86,7 @@ def multi_user_db(db_conn: Connection[Any]) -> Connection[Any]:
 @pytest.fixture
 def two_user_setup(multi_user_db: Connection[Any]) -> dict[str, Any]:  # type: ignore[return]
     """Build a shared TestClient plus tokens for Alice and Bob."""
-    import persona.auth as auth_module
+    import pktx.auth as auth_module
 
     private_key, public_key = _gen_rsa_key_pair()
     jwk_entry = _public_key_to_jwk(public_key, kid="ck1")
@@ -307,7 +307,7 @@ class TestUserDeletionCascade:
             alice_resume_id = resp.json()["id"]
 
         # Directly delete Alice's user row (simulates webhook cascade).
-        from persona.database import delete_user
+        from pktx.database import delete_user
 
         delete_user(db, "user_alice")
 
@@ -333,7 +333,7 @@ class TestUserDeletionCascade:
             assert resp.status_code == 201
             alice_app_id = resp.json()["id"]
 
-        from persona.database import delete_user
+        from pktx.database import delete_user
 
         delete_user(db, "user_alice")
 
@@ -358,7 +358,7 @@ class TestUserDeletionCascade:
             assert resp.status_code == 201
             alice_acc_id = resp.json()["id"]
 
-        from persona.database import delete_user
+        from pktx.database import delete_user
 
         delete_user(db, "user_alice")
 
@@ -390,7 +390,7 @@ class TestUserDeletionCascade:
             assert resp.status_code == 201
             bob_resume_id = resp.json()["id"]
 
-        from persona.database import delete_user
+        from pktx.database import delete_user
 
         delete_user(db, "user_alice")
 

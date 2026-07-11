@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 from fastmcp import FastMCP
 
-from persona.auth import current_user_id_var
-from persona.link_service import RESOURCE_TYPES, LinkService
+from pktx.auth import current_user_id_var
+from pktx.link_service import RESOURCE_TYPES, LinkService
 
 _VALID_TYPES = ", ".join(RESOURCE_TYPES)
 

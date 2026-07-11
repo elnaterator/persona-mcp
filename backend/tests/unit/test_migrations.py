@@ -1,4 +1,4 @@
-"""Unit tests for persona.migrations module (PostgreSQL).
+"""Unit tests for pktx.migrations module (PostgreSQL).
 
 Uses a self-contained module-scoped testcontainers fixture — no conftest.py
 dependency — so these tests can run before conftest.py is rewritten.
@@ -68,14 +68,14 @@ class TestApplyMigrations:
     """Tests for the migration framework."""
 
     def test_applies_all_migrations(self, pg_conn) -> None:
-        from persona.migrations import SCHEMA_VERSION, apply_migrations
+        from pktx.migrations import SCHEMA_VERSION, apply_migrations
 
         apply_migrations(pg_conn)
         version = _get_version(pg_conn)
         assert version == SCHEMA_VERSION
 
     def test_no_op_when_already_current(self, pg_conn) -> None:
-        from persona.migrations import apply_migrations
+        from pktx.migrations import apply_migrations
 
         apply_migrations(pg_conn)
         version_before = _get_version(pg_conn)
@@ -87,7 +87,7 @@ class TestApplyMigrations:
         assert version_before == version_after
 
     def test_raises_schema_version_error_when_db_ahead(self, pg_conn) -> None:
-        from persona.migrations import SchemaVersionError, apply_migrations
+        from pktx.migrations import SchemaVersionError, apply_migrations
 
         # Bootstrap schema_version table manually with a future version
         pg_conn.execute(
@@ -102,7 +102,7 @@ class TestApplyMigrations:
             apply_migrations(pg_conn)
 
     def test_schema_version_error_has_versions(self) -> None:
-        from persona.migrations import SchemaVersionError
+        from pktx.migrations import SchemaVersionError
 
         err = SchemaVersionError(db_version=5, code_version=1)
         assert err.db_version == 5
@@ -111,7 +111,7 @@ class TestApplyMigrations:
         assert "1" in str(err)
 
     def test_migration_error_has_context(self) -> None:
-        from persona.migrations import MigrationError
+        from pktx.migrations import MigrationError
 
         cause = RuntimeError("bad sql")
         err = MigrationError(from_version=0, to_version=1, cause=cause)
@@ -121,7 +121,7 @@ class TestApplyMigrations:
 
     def test_rollback_on_migration_failure(self, pg_conn) -> None:
         """A failed migration should leave the DB at the pre-migration version."""
-        from persona.migrations import (
+        from pktx.migrations import (
             MIGRATIONS,
             MigrationError,
             apply_migrations,
@@ -148,7 +148,7 @@ class TestApplyMigrations:
 
     def test_schema_version_bootstrapped_on_first_run(self, pg_conn) -> None:
         """schema_version must exist with exactly one row after apply_migrations."""
-        from persona.migrations import apply_migrations
+        from pktx.migrations import apply_migrations
 
         apply_migrations(pg_conn)
         rows = pg_conn.execute("SELECT version FROM schema_version").fetchall()
@@ -165,7 +165,7 @@ class TestMigrationV0ToV1:
     """Verify final schema state after v0→v1 migration."""
 
     def test_creates_all_v1_tables(self, pg_conn) -> None:
-        from persona.migrations import migrate_v0_to_v1
+        from pktx.migrations import migrate_v0_to_v1
 
         # Bootstrap schema_version first
         pg_conn.execute(
@@ -196,7 +196,7 @@ class TestFullMigrationChain:
     """Tests for complete migration chain applied via apply_migrations."""
 
     def test_final_schema_has_users_table(self, pg_conn) -> None:
-        from persona.migrations import apply_migrations
+        from pktx.migrations import apply_migrations
 
         apply_migrations(pg_conn)
 
@@ -213,7 +213,7 @@ class TestFullMigrationChain:
 
     def test_resume_version_has_serial_pk(self, pg_conn) -> None:
         """After full migration, SERIAL PK on resume_version must be auto-assigned."""
-        from persona.migrations import apply_migrations
+        from pktx.migrations import apply_migrations
 
         apply_migrations(pg_conn)
 
@@ -232,7 +232,7 @@ class TestFullMigrationChain:
         assert row["id"] > 0
 
     def test_version_incremented_through_full_chain(self, pg_conn) -> None:
-        from persona.migrations import SCHEMA_VERSION, apply_migrations
+        from pktx.migrations import SCHEMA_VERSION, apply_migrations
 
         apply_migrations(pg_conn)
         version = _get_version(pg_conn)
@@ -240,7 +240,7 @@ class TestFullMigrationChain:
 
     def test_application_has_no_resume_version_id_column(self, pg_conn) -> None:
         """After v12, application table must not have resume_version_id column."""
-        from persona.migrations import _column_exists, apply_migrations
+        from pktx.migrations import _column_exists, apply_migrations
 
         apply_migrations(pg_conn)
         assert not _column_exists(pg_conn, "application", "resume_version_id")
@@ -250,7 +250,7 @@ class TestMigrateV11ToV12:
     """Verify v11→v12 migration backfills FK into resource_link then drops column."""
 
     def test_backfills_fk_into_resource_link(self, pg_conn) -> None:
-        from persona.migrations import (
+        from pktx.migrations import (
             MIGRATIONS,
             apply_migrations,
             migrate_v11_to_v12,
@@ -299,7 +299,7 @@ class TestMigrateV11ToV12:
         assert row is not None
 
     def test_drops_resume_version_id_column(self, pg_conn) -> None:
-        from persona.migrations import (
+        from pktx.migrations import (
             MIGRATIONS,
             _column_exists,
             apply_migrations,

@@ -4,9 +4,9 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from persona.auth import require_user_id
-from persona.communication_service import ContactCommunicationService
-from persona.contact_service import ContactService
+from pktx.auth import require_user_id
+from pktx.communication_service import ContactCommunicationService
+from pktx.contact_service import ContactService
 
 
 def register_contact_tools(

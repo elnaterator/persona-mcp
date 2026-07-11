@@ -367,7 +367,7 @@ priority = 100
 
 [[rule]]
 toolName = "run_shell_command"
-commandPrefix = "uv run persona"
+commandPrefix = "uv run pktx"
 decision = "allow"
 priority = 100
 

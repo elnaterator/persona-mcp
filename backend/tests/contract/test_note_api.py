@@ -7,7 +7,7 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.auth import current_user_id_var
+from pktx.auth import current_user_id_var
 
 # ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ def _set_user_context() -> Generator[None, None, None]:
 @pytest.fixture
 def note_service(db_conn: Connection[Any]) -> Any:
     """NoteService for use in MCP tool tests."""
-    from persona.note_service import NoteService
+    from pktx.note_service import NoteService
 
     # Seed the test user
     db_conn.execute(
@@ -43,9 +43,9 @@ def _make_note_client(db_conn: Connection[Any]) -> TestClient:
     """TestClient with note routes enabled."""
     from fastapi import FastAPI
 
-    from persona.api.routes import create_router
-    from persona.note_service import NoteService
-    from persona.resume_service import ResumeService
+    from pktx.api.routes import create_router
+    from pktx.note_service import NoteService
+    from pktx.resume_service import ResumeService
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     note_svc = NoteService(db_conn)  # type: ignore[arg-type]
@@ -275,7 +275,7 @@ class TestMCPNoteTools:
     def test_create_returns_confirmation_string(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -289,7 +289,7 @@ class TestMCPNoteTools:
     def test_create_missing_title_returns_error_string(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -302,7 +302,7 @@ class TestMCPNoteTools:
     def test_list_returns_summaries(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -317,7 +317,7 @@ class TestMCPNoteTools:
     def test_get_returns_note_dict(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -331,7 +331,7 @@ class TestMCPNoteTools:
     def test_get_unknown_returns_error_string(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -344,7 +344,7 @@ class TestMCPNoteTools:
     def test_update_returns_confirmation(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -358,7 +358,7 @@ class TestMCPNoteTools:
     def test_delete_returns_confirmation(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)
@@ -373,7 +373,7 @@ class TestMCPNoteTools:
     def test_create_list_update_delete_sequence(self, note_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.note_tools import register_note_tools
+        from pktx.tools.note_tools import register_note_tools
 
         mcp = FastMCP("test")
         register_note_tools(mcp, lambda: note_service)

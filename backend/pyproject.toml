@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "persona"
+name = "pktx"
 version = "0.1.0"
 description = "MCP server for managing personal data — resume, job search, and more"
 requires-python = ">=3.11"
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-persona = "persona.server:main"
+pktx = "pktx.server:main"
 
 [dependency-groups]
 dev = [
@@ -33,7 +33,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/persona"]
+packages = ["src/pktx"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

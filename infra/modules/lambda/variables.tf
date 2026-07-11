@@ -26,7 +26,7 @@ variable "timeout" {
 }
 
 variable "ssm_parameter_prefix" {
-  description = "SSM parameter path prefix for this environment (e.g., /persona/dev)."
+  description = "SSM parameter path prefix for this environment (e.g., /pktx/dev)."
   type        = string
 }
 

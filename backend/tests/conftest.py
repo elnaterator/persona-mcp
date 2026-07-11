@@ -1,4 +1,4 @@
-"""Shared test fixtures for persona MCP server tests.
+"""Shared test fixtures for pktx MCP server tests.
 
 Three-layer fixture hierarchy
 ------------------------------
@@ -22,7 +22,7 @@ Pure unit test (no DB needed)::
 DB integration test::
 
     def test_foo(db_conn) -> None:
-        from persona.database import create_application
+        from pktx.database import create_application
         app = create_application(db_conn, {"company": "Acme", "position": "Dev"})
         assert app["company"] == "Acme"
         # db_conn automatically rolls back after this test
@@ -70,7 +70,7 @@ def pg_dsn(pg_container) -> str:
 @pytest.fixture(scope="session")
 def _schema_applied(pg_dsn: str) -> None:
     """Apply all migrations exactly once per test session."""
-    from persona.migrations import apply_migrations
+    from pktx.migrations import apply_migrations
 
     with psycopg.connect(pg_dsn) as conn:
         apply_migrations(conn)
@@ -193,7 +193,7 @@ def db_conn_with_data(db_conn: Connection[Any]) -> Connection[Any]:
 @pytest.fixture
 def resume_service(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
     """ResumeService backed by a PostgreSQL database."""
-    from persona.resume_service import ResumeService
+    from pktx.resume_service import ResumeService
 
     return ResumeService(db_conn)  # type: ignore[arg-type]
 
@@ -201,6 +201,6 @@ def resume_service(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
 @pytest.fixture
 def resume_service_with_data(db_conn_with_data: Connection[Any]):  # type: ignore[no-untyped-def]
     """ResumeService backed by a database pre-populated with sample data."""
-    from persona.resume_service import ResumeService
+    from pktx.resume_service import ResumeService
 
     return ResumeService(db_conn_with_data)  # type: ignore[arg-type]

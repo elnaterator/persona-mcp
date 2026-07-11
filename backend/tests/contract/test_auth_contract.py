@@ -18,11 +18,11 @@ from jose import jwt
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.accomplishment_service import AccomplishmentService
-from persona.api.routes import create_router
-from persona.application_service import ApplicationService
-from persona.auth import build_get_current_user
-from persona.resume_service import ResumeService
+from pktx.accomplishment_service import AccomplishmentService
+from pktx.api.routes import create_router
+from pktx.application_service import ApplicationService
+from pktx.auth import build_get_current_user
+from pktx.resume_service import ResumeService
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -87,7 +87,7 @@ def auth_db(db_conn: Connection[Any]) -> psycopg.Connection:
 @pytest.fixture
 def auth_app(auth_db: psycopg.Connection) -> tuple:  # type: ignore[override]
     """Full app with auth middleware enabled."""
-    import persona.auth as auth_module
+    import pktx.auth as auth_module
 
     private_key, public_key = _gen_rsa_key_pair()
     jwk_entry = _public_key_to_jwk(public_key, kid="ck1")
@@ -190,7 +190,7 @@ class TestCrossUserOwnershipContract:
 
     @pytest.fixture
     def two_user_setup(self, auth_db: psycopg.Connection) -> dict:
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         private_key, public_key = _gen_rsa_key_pair()
         jwk_entry = _public_key_to_jwk(public_key, kid="ck1")
@@ -300,7 +300,7 @@ class TestCrossUserOwnershipContract:
 # Plan 017 — MCP OAuth DCR proxy contract tests (FastMCP OAuthProxy)
 # ---------------------------------------------------------------------------
 
-_TEST_PUBLIC_URL = "https://persona.test"
+_TEST_PUBLIC_URL = "https://pktx.test"
 _TEST_ISSUER = "https://clerk.test"
 _TEST_RESOURCE = f"{_TEST_PUBLIC_URL}/mcp"
 
@@ -348,7 +348,7 @@ def _build_mcp_oauth_app(private_key: Any) -> Any:
     """Build a FastMCP ASGI app fronted by the OAuth DCR proxy for testing."""
     from fastmcp import FastMCP
 
-    m = FastMCP("persona", auth=_build_mcp_proxy(private_key))
+    m = FastMCP("pktx", auth=_build_mcp_proxy(private_key))
 
     @m.tool()
     def ping() -> str:

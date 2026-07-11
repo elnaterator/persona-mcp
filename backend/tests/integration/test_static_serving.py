@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from persona.resume_service import ResumeService
-from persona.server import create_app
+from pktx.resume_service import ResumeService
+from pktx.server import create_app
 
 
 class TestStaticFileServing:
@@ -42,23 +42,23 @@ class TestStaticFileServing:
     def app_with_frontend(self, temp_frontend_dir, db_conn):
         """Create app with temporary frontend directory."""
         # Override the frontend directory config
-        os.environ["PERSONA_FRONTEND_DIR"] = str(temp_frontend_dir)
+        os.environ["PKTX_FRONTEND_DIR"] = str(temp_frontend_dir)
         try:
             # Pass an explicit service so auth is not wired (test mode).
             app = create_app(service=ResumeService(db_conn), conn=db_conn)
         finally:
-            os.environ.pop("PERSONA_FRONTEND_DIR", None)
+            os.environ.pop("PKTX_FRONTEND_DIR", None)
         return app
 
     @pytest.fixture
     def app_without_frontend(self, db_conn):
         """Create app with non-existent frontend directory."""
-        os.environ["PERSONA_FRONTEND_DIR"] = "/nonexistent/path"
+        os.environ["PKTX_FRONTEND_DIR"] = "/nonexistent/path"
         try:
             # Pass an explicit service so auth is not wired (test mode).
             app = create_app(service=ResumeService(db_conn), conn=db_conn)
         finally:
-            os.environ.pop("PERSONA_FRONTEND_DIR", None)
+            os.environ.pop("PKTX_FRONTEND_DIR", None)
         return app
 
     def test_root_serves_index_html(self, app_with_frontend):

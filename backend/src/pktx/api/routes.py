@@ -1,20 +1,20 @@
-"""FastAPI route handlers for the Persona REST API."""
+"""FastAPI route handlers for the pktx REST API."""
 
 from collections.abc import Callable
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from persona.accomplishment_service import AccomplishmentService
-from persona.application_service import ApplicationService
-from persona.auth import UserContext
-from persona.communication_service import ContactCommunicationService
-from persona.contact_service import ContactService
-from persona.link_service import RESOURCE_TYPES, LinkService
-from persona.models import Resume
-from persona.note_service import NoteService
-from persona.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
-from persona.search_service import SearchService
+from pktx.accomplishment_service import AccomplishmentService
+from pktx.application_service import ApplicationService
+from pktx.auth import UserContext
+from pktx.communication_service import ContactCommunicationService
+from pktx.contact_service import ContactService
+from pktx.link_service import RESOURCE_TYPES, LinkService
+from pktx.models import Resume
+from pktx.note_service import NoteService
+from pktx.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
+from pktx.search_service import SearchService
 
 
 def _make_user_dep(get_current_user: Callable | None) -> Callable:
@@ -1013,10 +1013,10 @@ async def _handle_clerk_webhook(request: Any) -> dict[str, str]:
     if event_type == "user.deleted":
         user_id = event.get("data", {}).get("id")
         if user_id:
-            from persona.database import delete_user
+            from pktx.database import delete_user
 
             try:
-                from persona.server import _conn
+                from pktx.server import _conn
 
                 if _conn is not None:
                     delete_user(_conn, user_id)

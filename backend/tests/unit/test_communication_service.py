@@ -11,8 +11,8 @@ _OTHER_USER = "other_comm_user"
 
 @pytest.fixture
 def comm_service(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
-    from persona.auth import current_user_id_var
-    from persona.communication_service import ContactCommunicationService
+    from pktx.auth import current_user_id_var
+    from pktx.communication_service import ContactCommunicationService
 
     db_conn.execute(
         "INSERT INTO users (id, email) VALUES (%s, 'a@test.com') "
@@ -79,7 +79,7 @@ class TestContactRefIdNotNull:
 
 class TestTagNormalization:
     def test_tags_lowercased(self, comm_service: Any, contact_id: int) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         result = svc.add_for_contact(
@@ -92,7 +92,7 @@ class TestTagNormalization:
     def test_duplicate_tags_deduplicated(
         self, comm_service: Any, contact_id: int
     ) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         result = svc.add_for_contact(
@@ -103,7 +103,7 @@ class TestTagNormalization:
         assert result["tags"] == ["foo"]
 
     def test_tag_over_50_chars_raises(self, comm_service: Any, contact_id: int) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         with pytest.raises(ValueError, match="50 characters"):
@@ -118,7 +118,7 @@ class TestDateValidator:
     def test_invalid_date_format_raises(
         self, comm_service: Any, contact_id: int
     ) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         with pytest.raises(ValueError, match="YYYY-MM-DD"):
@@ -129,7 +129,7 @@ class TestDateValidator:
             )
 
     def test_missing_date_raises(self, comm_service: Any, contact_id: int) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         with pytest.raises(ValueError, match="date"):
@@ -142,7 +142,7 @@ class TestDateValidator:
 
 class TestTypeDirectionValidation:
     def test_invalid_type_raises(self, comm_service: Any, contact_id: int) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         with pytest.raises(ValueError, match="type"):
@@ -153,7 +153,7 @@ class TestTypeDirectionValidation:
             )
 
     def test_invalid_direction_raises(self, comm_service: Any, contact_id: int) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         with pytest.raises(ValueError, match="direction"):
@@ -166,7 +166,7 @@ class TestTypeDirectionValidation:
 
 class TestSearchTagAnd:
     def test_multi_tag_and_filters(self, comm_service: Any, contact_id: int) -> None:
-        from persona.communication_service import ContactCommunicationService
+        from pktx.communication_service import ContactCommunicationService
 
         svc: ContactCommunicationService = comm_service
         svc.add_for_contact(

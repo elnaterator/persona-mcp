@@ -8,35 +8,35 @@ from psycopg import Connection
 
 @pytest.fixture
 def app_svc(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
-    from persona.application_service import ApplicationService
+    from pktx.application_service import ApplicationService
 
     return ApplicationService(db_conn)  # type: ignore[arg-type]
 
 
 @pytest.fixture
 def acc_svc(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
-    from persona.accomplishment_service import AccomplishmentService
+    from pktx.accomplishment_service import AccomplishmentService
 
     return AccomplishmentService(db_conn)  # type: ignore[arg-type]
 
 
 @pytest.fixture
 def note_svc(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
-    from persona.note_service import NoteService
+    from pktx.note_service import NoteService
 
     return NoteService(db_conn)  # type: ignore[arg-type]
 
 
 @pytest.fixture
 def contact_svc(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
-    from persona.contact_service import ContactService
+    from pktx.contact_service import ContactService
 
     return ContactService(db_conn)  # type: ignore[arg-type]
 
 
 class TestApplicationWordSplitQ:
     def test_single_word_matches(self, app_svc: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_svc  # type: ignore[assignment]
         svc.create_application({"company": "Acme Corp", "position": "Engineer"})
@@ -46,7 +46,7 @@ class TestApplicationWordSplitQ:
         assert results[0]["company"] == "Acme Corp"
 
     def test_multi_word_and_both_words_must_match(self, app_svc: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_svc  # type: ignore[assignment]
         svc.create_application({"company": "Acme Corp", "position": "Engineer"})
@@ -57,7 +57,7 @@ class TestApplicationWordSplitQ:
         assert results[0]["company"] == "Acme Corp"
 
     def test_multi_word_no_match_if_only_one_word(self, app_svc: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_svc  # type: ignore[assignment]
         svc.create_application({"company": "Acme Corp", "position": "Engineer"})
@@ -67,7 +67,7 @@ class TestApplicationWordSplitQ:
 
 class TestAccomplishmentWordSplitQ:
     def test_single_word_matches_title(self, acc_svc: object) -> None:
-        from persona.accomplishment_service import AccomplishmentService
+        from pktx.accomplishment_service import AccomplishmentService
 
         svc: AccomplishmentService = acc_svc  # type: ignore[assignment]
         svc.create_accomplishment({"title": "Launched product", "result": "10x growth"})
@@ -77,7 +77,7 @@ class TestAccomplishmentWordSplitQ:
         assert results[0]["title"] == "Launched product"
 
     def test_multi_word_and_across_fields(self, acc_svc: object) -> None:
-        from persona.accomplishment_service import AccomplishmentService
+        from pktx.accomplishment_service import AccomplishmentService
 
         svc: AccomplishmentService = acc_svc  # type: ignore[assignment]
         svc.create_accomplishment({"title": "Launched product", "result": "10x growth"})
@@ -92,8 +92,8 @@ class TestAccomplishmentWordSplitQ:
 
 class TestCommunicationWordSplitQ:
     def test_single_word_matches_subject(self, db_conn: Connection[Any]) -> None:
-        from persona.communication_service import ContactCommunicationService
-        from persona.contact_service import ContactService
+        from pktx.communication_service import ContactCommunicationService
+        from pktx.contact_service import ContactService
 
         contact_svc = ContactService(db_conn)  # type: ignore[arg-type]
         comm_svc = ContactCommunicationService(db_conn)  # type: ignore[arg-type]
@@ -113,8 +113,8 @@ class TestCommunicationWordSplitQ:
         assert len(results) == 1
 
     def test_multi_word_and_both_must_match(self, db_conn: Connection[Any]) -> None:
-        from persona.communication_service import ContactCommunicationService
-        from persona.contact_service import ContactService
+        from pktx.communication_service import ContactCommunicationService
+        from pktx.contact_service import ContactService
 
         contact_svc = ContactService(db_conn)  # type: ignore[arg-type]
         comm_svc = ContactCommunicationService(db_conn)  # type: ignore[arg-type]

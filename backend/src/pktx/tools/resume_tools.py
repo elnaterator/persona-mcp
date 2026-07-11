@@ -4,9 +4,9 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from persona.auth import require_user_id
-from persona.models import Resume
-from persona.resume_service import ResumeService
+from pktx.auth import require_user_id
+from pktx.models import Resume
+from pktx.resume_service import ResumeService
 
 
 def register_resume_tools(mcp: FastMCP, get_service: Any) -> None:
@@ -62,7 +62,7 @@ def register_resume_tools(mcp: FastMCP, get_service: Any) -> None:
         resume = Resume(**version["resume_data"])
         data = resume.model_dump()
         if section not in data:
-            from persona.resume_service import ALL_SECTIONS
+            from pktx.resume_service import ALL_SECTIONS
 
             raise ValueError(
                 f"Invalid section: '{section}'. "

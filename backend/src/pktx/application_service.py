@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from persona.database import (
+from pktx.database import (
     create_application,
     delete_application,
     load_application,
@@ -11,9 +11,9 @@ from persona.database import (
     unlink_all_for,
     update_application,
 )
-from persona.db import DBConnection
-from persona.link_service import LinkService
-from persona.models import APPLICATION_STATUSES
+from pktx.db import DBConnection
+from pktx.link_service import LinkService
+from pktx.models import APPLICATION_STATUSES
 
 
 def _normalize_tags(tags: list[str]) -> list[str]:

@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from persona.database import (
+from pktx.database import (
     create_resume_version,
     delete_resume_version,
     link_counts_by_type,
@@ -16,9 +16,9 @@ from persona.database import (
     update_resume_version_data,
     update_resume_version_metadata,
 )
-from persona.db import DBConnection
-from persona.link_service import LinkService
-from persona.models import (
+from pktx.db import DBConnection
+from pktx.link_service import LinkService
+from pktx.models import (
     ContactInfo,
     Education,
     Skill,

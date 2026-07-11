@@ -4,8 +4,8 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from persona.application_service import ApplicationService
-from persona.auth import require_user_id
+from pktx.application_service import ApplicationService
+from pktx.auth import require_user_id
 
 
 def register_application_tools(mcp: FastMCP, get_service: Any) -> None:

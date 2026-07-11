@@ -6,9 +6,9 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.api.routes import create_router
-from persona.application_service import ApplicationService
-from persona.resume_service import ResumeService
+from pktx.api.routes import create_router
+from pktx.application_service import ApplicationService
+from pktx.resume_service import ResumeService
 
 
 @pytest.fixture
@@ -723,8 +723,8 @@ def _make_all_services_client(db_conn: Any) -> TestClient:
     """TestClient with all services enabled."""
     from fastapi import FastAPI
 
-    from persona.accomplishment_service import AccomplishmentService
-    from persona.note_service import NoteService
+    from pktx.accomplishment_service import AccomplishmentService
+    from pktx.note_service import NoteService
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     app_svc = ApplicationService(db_conn)  # type: ignore[arg-type]

@@ -1,6 +1,6 @@
-# personal-mcp
+# pktx
 
-Persona MCP Server — Python MCP server for resume/personal data, installable via `uvx`.
+pktx MCP Server — Python MCP server for resume/personal data, installable via `uvx`.
 
 ## Constitution
 
@@ -23,7 +23,7 @@ cd backend
 make check      # lint + typecheck + test
 make test       # uv run pytest
 make lint       # ruff check + format check
-make run        # uv run persona (HTTP server)
+make run        # uv run pktx (HTTP server)
 make format     # auto-format with ruff
 
 # Frontend-specific (from frontend/ directory)
@@ -68,7 +68,7 @@ frontend/                 # React SPA
   eslint.config.js        # ESLint config
   Makefile                # Frontend build targets
 backend/                  # Python FastAPI + MCP server
-  src/persona/            # Python package (renamed from backend)
+  src/pktx/               # Python package
     server.py             # FastAPI + MCP server entrypoint
     models.py             # Pydantic data models
     config.py             # Configuration (env-var resolvers)
@@ -109,13 +109,13 @@ proxies authorize/token upstream to one static Clerk OAuth app, so native client
 `localhost` vs `127.0.0.1` loopback redirect mismatch. Clients receive proxy-issued
 reference JWTs; each `/mcp` call swaps the JWT for the stored Clerk token and
 re-validates it (revocation-aware). REST `/api/*` auth is unchanged (Clerk JWT via
-`build_get_current_user`). stdio mode uses `PERSONA_USER_ID`, no token.
+`build_get_current_user`). stdio mode uses `PKTX_USER_ID`, no token.
 
 Proxy state (DCR registrations, encrypted upstream tokens, JTI mappings, transient
 authorize state) is stored in PostgreSQL via `oauth_store.PostgresKVStore` (table
 `oauth_kv`) — **not** a local DiskStore — so it is shared across serverless
 instances. Values are Fernet-encrypted at rest, keyed off the Clerk OAuth client
-secret. Required env in production: `PERSONA_PUBLIC_URL`, `CLERK_ISSUER`,
+secret. Required env in production: `PKTX_PUBLIC_URL`, `CLERK_ISSUER`,
 `CLERK_JWKS_URL`, `CLERK_OAUTH_CLIENT_ID`, `CLERK_OAUTH_CLIENT_SECRET`.
 
 <!-- MANUAL ADDITIONS END -->

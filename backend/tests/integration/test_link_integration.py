@@ -5,8 +5,8 @@ from typing import Any, cast
 import pytest
 from psycopg import Connection
 
-from persona.auth import current_user_id_var
-from persona.db import DBConnection
+from pktx.auth import current_user_id_var
+from pktx.db import DBConnection
 
 _TEST_USER = "link_int_user"
 
@@ -38,12 +38,12 @@ class TestLinkMcpRoundtrip:
     def test_link_unlink_roundtrip(self, seeded_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.application_service import ApplicationService
-        from persona.link_service import LinkService
-        from persona.note_service import NoteService
-        from persona.tools.application_tools import register_application_tools
-        from persona.tools.link_tools import register_link_tools
-        from persona.tools.note_tools import register_note_tools
+        from pktx.application_service import ApplicationService
+        from pktx.link_service import LinkService
+        from pktx.note_service import NoteService
+        from pktx.tools.application_tools import register_application_tools
+        from pktx.tools.link_tools import register_link_tools
+        from pktx.tools.note_tools import register_note_tools
 
         conn = cast(DBConnection, seeded_db)
         note_svc = NoteService(conn)
@@ -104,9 +104,9 @@ class TestLinkMcpRoundtrip:
 
 class TestLinkCascadeDelete:
     def test_delete_note_removes_links(self, seeded_db: Connection[Any]) -> None:
-        from persona.application_service import ApplicationService
-        from persona.link_service import LinkService
-        from persona.note_service import NoteService
+        from pktx.application_service import ApplicationService
+        from pktx.link_service import LinkService
+        from pktx.note_service import NoteService
 
         conn = cast(DBConnection, seeded_db)
         note_svc = NoteService(conn)

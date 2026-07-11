@@ -7,7 +7,7 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.auth import current_user_id_var
+from pktx.auth import current_user_id_var
 
 _USER_A = "comm_api_user_a"
 _USER_B = "comm_api_user_b"
@@ -25,10 +25,10 @@ def _set_user_context() -> Generator[None, None, None]:
 def _make_client(db_conn: Connection[Any]) -> TestClient:
     from fastapi import FastAPI
 
-    from persona.api.routes import create_router
-    from persona.communication_service import ContactCommunicationService
-    from persona.contact_service import ContactService
-    from persona.resume_service import ResumeService
+    from pktx.api.routes import create_router
+    from pktx.communication_service import ContactCommunicationService
+    from pktx.contact_service import ContactService
+    from pktx.resume_service import ResumeService
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     contact_svc = ContactService(db_conn)  # type: ignore[arg-type]
@@ -190,8 +190,8 @@ class TestCommunicationSearchCrossUserIsolation:
         self, db_conn: Connection[Any]
     ) -> None:
         """Service-level isolation: search with user_b id returns no user_a comms."""
-        from persona.communication_service import ContactCommunicationService
-        from persona.contact_service import ContactService
+        from pktx.communication_service import ContactCommunicationService
+        from pktx.contact_service import ContactService
 
         # Ensure both users exist in users table
         for uid, email in [(_USER_A, "a2@t.com"), (_USER_B, "b2@t.com")]:

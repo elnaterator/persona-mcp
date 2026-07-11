@@ -25,7 +25,7 @@ const MCP_SERVER_URL =
   import.meta.env.VITE_MCP_SERVER_URL ??
   (typeof window !== 'undefined'
     ? `${window.location.origin}/mcp`
-    : 'https://your-persona-server.com/mcp')
+    : 'https://your-pktx-server.com/mcp')
 
 interface Assistant {
   id: string
@@ -39,14 +39,14 @@ const ASSISTANTS: Assistant[] = [
     id: 'claude-code',
     name: 'Claude Code',
     filePath: null,
-    snippet: `claude mcp add --transport http persona ${MCP_SERVER_URL}`,
+    snippet: `claude mcp add --transport http pktx ${MCP_SERVER_URL}`,
   },
   {
     id: 'cursor',
     name: 'Cursor',
     filePath: '.cursor/mcp.json',
     snippet: JSON.stringify(
-      { mcpServers: { persona: { url: MCP_SERVER_URL } } },
+      { mcpServers: { pktx: { url: MCP_SERVER_URL } } },
       null,
       2,
     ),
@@ -56,7 +56,7 @@ const ASSISTANTS: Assistant[] = [
     name: 'GitHub Copilot',
     filePath: '.vscode/mcp.json',
     snippet: JSON.stringify(
-      { servers: { persona: { type: 'http', url: MCP_SERVER_URL } } },
+      { servers: { pktx: { type: 'http', url: MCP_SERVER_URL } } },
       null,
       2,
     ),
@@ -66,7 +66,7 @@ const ASSISTANTS: Assistant[] = [
     name: 'Amazon Kiro',
     filePath: '.kiro/settings/mcp.json',
     snippet: JSON.stringify(
-      { mcpServers: { persona: { url: MCP_SERVER_URL } } },
+      { mcpServers: { pktx: { url: MCP_SERVER_URL } } },
       null,
       2,
     ),

@@ -6,18 +6,18 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.accomplishment_service import AccomplishmentService
-from persona.application_service import ApplicationService
-from persona.communication_service import ContactCommunicationService
-from persona.contact_service import ContactService
-from persona.note_service import NoteService
-from persona.resume_service import ResumeService
+from pktx.accomplishment_service import AccomplishmentService
+from pktx.application_service import ApplicationService
+from pktx.communication_service import ContactCommunicationService
+from pktx.contact_service import ContactService
+from pktx.note_service import NoteService
+from pktx.resume_service import ResumeService
 
 
 def _make_client(db_conn: Connection[Any]) -> TestClient:
     from fastapi import FastAPI
 
-    from persona.api.routes import create_router
+    from pktx.api.routes import create_router
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     app_svc = ApplicationService(db_conn)  # type: ignore[arg-type]
@@ -122,8 +122,8 @@ class TestSearchEndpointBasic:
         """Results from one user should not appear for another."""
         from fastapi import FastAPI
 
-        from persona.api.routes import create_router
-        from persona.auth import UserContext
+        from pktx.api.routes import create_router
+        from pktx.auth import UserContext
 
         async def _user_a() -> UserContext:
             return UserContext(id="user_a", email="a@test.com", display_name=None)

@@ -7,7 +7,7 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.auth import current_user_id_var
+from pktx.auth import current_user_id_var
 
 _TEST_USER = "link_contract_user"
 _OTHER_USER = "link_contract_other"
@@ -35,11 +35,11 @@ def seeded_db(db_conn: Connection[Any]) -> Connection[Any]:
 def _make_client(db_conn: Connection[Any]) -> TestClient:
     from fastapi import FastAPI
 
-    from persona.api.routes import create_router
-    from persona.application_service import ApplicationService
-    from persona.link_service import LinkService
-    from persona.note_service import NoteService
-    from persona.resume_service import ResumeService
+    from pktx.api.routes import create_router
+    from pktx.application_service import ApplicationService
+    from pktx.link_service import LinkService
+    from pktx.note_service import NoteService
+    from pktx.resume_service import ResumeService
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     note_svc = NoteService(db_conn)  # type: ignore[arg-type]

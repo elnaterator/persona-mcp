@@ -4,8 +4,8 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from persona.auth import require_user_id
-from persona.note_service import NoteService
+from pktx.auth import require_user_id
+from pktx.note_service import NoteService
 
 
 def register_note_tools(mcp: FastMCP, get_service: Any) -> None:

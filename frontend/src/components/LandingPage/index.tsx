@@ -5,14 +5,14 @@ export default function LandingPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.logo}>Persona</h1>
+        <h1 className={styles.logo}>pktx</h1>
       </header>
 
       <main className={styles.main}>
         <section className={styles.hero}>
           <h2 className={styles.headline}>Your career data, organized.</h2>
           <p className={styles.subheadline}>
-            Persona keeps your resumes, job applications, and professional accomplishments in one
+            pktx keeps your resumes, job applications, and professional accomplishments in one
             place — ready for your AI assistant to use when you need them most.
           </p>
           <SignInButton mode="modal">
