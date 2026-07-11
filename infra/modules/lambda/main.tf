@@ -192,6 +192,58 @@ resource "aws_lambda_permission" "allow_invoke_via_url" {
   principal     = "*"
 }
 
+# Keep-warm: EventBridge invokes the Lambda every 5 minutes with a synthetic
+# GET /health event (API Gateway payload v2 shape) so one execution environment
+# stays warm and interactive requests avoid cold starts. The Lambda Web Adapter
+# in the container translates the payload into a real HTTP request; /health is
+# public and does not touch the database. Classic EventBridge rule (not
+# Scheduler) — Lambda targets use resource-based permissions, no execution role.
+resource "aws_cloudwatch_event_rule" "keep_warm" {
+  count = var.keep_warm_enabled ? 1 : 0
+
+  name                = "persona-${var.environment}-keep-warm"
+  description         = "Ping the persona-${var.environment} Lambda every 5 minutes to keep one instance warm"
+  schedule_expression = "rate(5 minutes)"
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "keep_warm" {
+  count = var.keep_warm_enabled ? 1 : 0
+
+  rule      = aws_cloudwatch_event_rule.keep_warm[0].name
+  target_id = "persona-${var.environment}-keep-warm"
+  arn       = aws_lambda_function.app.arn
+
+  input = jsonencode({
+    version        = "2.0"
+    routeKey       = "$default"
+    rawPath        = "/health"
+    rawQueryString = ""
+    headers        = { "x-keep-warm" = "true" }
+    requestContext = {
+      http = {
+        method    = "GET"
+        path      = "/health"
+        protocol  = "HTTP/1.1"
+        sourceIp  = "127.0.0.1"
+        userAgent = "keep-warm"
+      }
+    }
+    isBase64Encoded = false
+  })
+}
+
+resource "aws_lambda_permission" "allow_keep_warm" {
+  count = var.keep_warm_enabled ? 1 : 0
+
+  statement_id  = "AllowEventBridgeKeepWarm"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.app.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.keep_warm[0].arn
+}
+
 # Public HTTPS endpoint for the Lambda function (no auth at URL level;
 # Clerk JWT validation is enforced by the application on every request)
 resource "aws_lambda_function_url" "app" {
