@@ -92,7 +92,7 @@ Native MCP clients (Claude Desktop, Cursor, VS Code) register one loopback redir
 Cold starts hurt the MCP connect flow (Claude Desktop hits `/mcp` at session start) and first browser load. Add an EventBridge Scheduler rule to `infra/modules/lambda` (or a small sibling module) that pings the Lambda every 5 minutes to keep one instance warm. Ping a cheap unauthenticated endpoint (e.g. `/health` — add one if missing) so the warmer doesn't need Clerk credentials; handler should short-circuit before touching Postgres. Wire into both `infra/dev` and `infra/prod`. Costs stay in free tier (EventBridge + ~8.6k invocations/month). Known limits, acceptable for single-user app: concurrent second request and first post-deploy request still cold.
 
 
-## 019 Rename the app to pktx and clean up docs - BUILT
+## 019 Rename the app to pktx and clean up docs - SHIPPED
 I want to rename this app from persona to pktx which is short for personal context. Look through docs, readme, code, etc.  I also want to clean up docs and readmes, organize the repo, prep for open source. Create contributing.md. Give manual steps needed to rename all places (github, neon, clerk, etc.)
 
 
