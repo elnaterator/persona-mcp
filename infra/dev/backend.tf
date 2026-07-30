@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "pktx-terraform-state-dev"
+    bucket         = "persona-terraform-state-dev"
     key            = "dev/terraform.tfstate"
     region         = "us-west-2"
-    dynamodb_table = "pktx-terraform-locks-dev"
+    dynamodb_table = "persona-terraform-locks-dev"
     encrypt        = true
   }
 }
