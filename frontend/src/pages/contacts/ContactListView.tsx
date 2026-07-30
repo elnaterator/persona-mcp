@@ -18,17 +18,11 @@ import styles from './ContactListView.module.css'
 export default function ContactListView() {
   const navigate = useNavigate()
   const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
-  const [debouncedQ, setDebouncedQ] = useState('')
+  const [debounced, setDebounced] = useState<SearchValue>({ tags: [], text: '' })
   const [showForm, setShowForm] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Comm search state
-  const [showCommSearch, setShowCommSearch] = useState(false)
-  const [commSearch, setCommSearch] = useState<SearchValue>({ tags: [], text: '' })
-  const [debouncedComm, setDebouncedComm] = useState<SearchValue>({ tags: [], text: '' })
-  const commDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const listQuery = useContactList({ tags: search.tags, q: debouncedQ || undefined })
+  const listQuery = useContactList({ tags: search.tags, q: debounced.text || undefined })
   const tagsQuery = useAllTags()
   const { create } = useContactMutations()
   const { success, error } = useToast()
@@ -36,25 +30,20 @@ export default function ContactListView() {
   const contacts = listQuery.data ?? []
   const allTags = tagsQuery.data ?? []
 
-  const handleCommSearchChange = (v: SearchValue) => {
-    setCommSearch(v)
-    if (commDebounceRef.current) clearTimeout(commDebounceRef.current)
-    commDebounceRef.current = setTimeout(() => setDebouncedComm(v), 300)
-  }
+  const hasSearchInput = search.text.length > 0 || search.tags.length > 0
 
   const commQuery = useCommunicationSearch({
-    q: debouncedComm.text || undefined,
-    tags: debouncedComm.tags,
-    enabled: showCommSearch,
+    q: debounced.text || undefined,
+    tags: debounced.tags,
+    enabled: hasSearchInput,
   })
   const commResults: CommunicationSearchResult[] = commQuery.data ?? []
   const commSearching = commQuery.isFetching
-  const commHasInput = commSearch.text.length > 0 || commSearch.tags.length > 0
 
   const handleSearchChange = (v: SearchValue) => {
     setSearch(v)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedQ(v.text), 300)
+    debounceRef.current = setTimeout(() => setDebounced(v), 300)
   }
 
   const handleCreate = async (data: ContactCreateInput) => {
@@ -106,28 +95,22 @@ export default function ContactListView() {
         />
       )}
 
-      {/* Communication Search Panel */}
-      <div className={styles.commSearchCard}>
-        <button
-          className={styles.commSearchToggle}
-          onClick={() => setShowCommSearch((v) => !v)}
-        >
-          {showCommSearch ? '▾' : '▸'} Search Communications
-        </button>
-        {showCommSearch && (
+      <div className={styles.filters}>
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          availableTags={allTags}
+          placeholder="Search contacts and communications..."
+        />
+      </div>
+
+      {hasSearchInput && (
+        <div className={styles.commSearchCard}>
           <div className={styles.commSearchBody}>
-            <SearchBar
-              value={commSearch}
-              onChange={handleCommSearchChange}
-              availableTags={allTags}
-              placeholder="Search subject, body, contact..."
-            />
+            <h3 className={styles.commSearchHeading}>Communications</h3>
             {commSearching && <p className={styles.commSearchHint}>Searching...</p>}
-            {!commSearching && commResults.length === 0 && commHasInput && (
-              <p className={styles.commSearchHint}>No results found.</p>
-            )}
-            {!commSearching && !commHasInput && (
-              <p className={styles.commSearchHint}>Enter a search term or tag to find communications.</p>
+            {!commSearching && commResults.length === 0 && (
+              <p className={styles.commSearchHint}>No matching communications.</p>
             )}
             {commResults.length > 0 && (
               <ul className={styles.commResultList}>
@@ -145,17 +128,8 @@ export default function ContactListView() {
               </ul>
             )}
           </div>
-        )}
-      </div>
-
-      <div className={styles.filters}>
-        <SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          availableTags={allTags}
-          placeholder="Search contacts..."
-        />
-      </div>
+        </div>
+      )}
 
       {contacts.length === 0 ? (
         <p className={styles.empty}>No contacts yet. Click &quot;New Contact&quot; to add one.</p>
