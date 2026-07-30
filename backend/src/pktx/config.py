@@ -1,4 +1,4 @@
-"""Configuration for persona MCP server — database, server, and logging."""
+"""Configuration for pktx MCP server — database, server, and logging."""
 
 import logging
 import os
@@ -7,21 +7,21 @@ from pathlib import Path
 
 DEFAULT_PORT = 8000
 
-logger = logging.getLogger("persona")
+logger = logging.getLogger("pktx")
 
 
 def resolve_port() -> int:
-    """Resolve the HTTP server port from PERSONA_PORT env var (default 8000)."""
-    raw = os.environ.get("PERSONA_PORT", str(DEFAULT_PORT))
+    """Resolve the HTTP server port from PKTX_PORT env var (default 8000)."""
+    raw = os.environ.get("PKTX_PORT", str(DEFAULT_PORT))
     return int(raw)
 
 
 def resolve_cors_origins() -> list[str]:
-    """Resolve CORS allowed origins from PERSONA_CORS_ORIGINS env var.
+    """Resolve CORS allowed origins from PKTX_CORS_ORIGINS env var.
 
     Comma-separated list. Empty/unset = no CORS origins allowed.
     """
-    raw = os.environ.get("PERSONA_CORS_ORIGINS", "")
+    raw = os.environ.get("PKTX_CORS_ORIGINS", "")
     if not raw.strip():
         return []
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
@@ -30,19 +30,19 @@ def resolve_cors_origins() -> list[str]:
 def resolve_frontend_dir() -> Path | None:
     """Resolve the frontend build directory path.
 
-    Uses PERSONA_FRONTEND_DIR env var if set, otherwise tries to find
+    Uses PKTX_FRONTEND_DIR env var if set, otherwise tries to find
     frontend/dist relative to the repository root.
 
     Returns None if the directory doesn't exist (backend runs without frontend).
     """
-    raw = os.environ.get("PERSONA_FRONTEND_DIR")
+    raw = os.environ.get("PKTX_FRONTEND_DIR")
 
     if raw:
         # Use explicit env var if provided
         path = Path(raw).expanduser().resolve()
     else:
         # Try to find frontend/dist relative to repo root
-        # The backend package is at <repo>/backend/src/persona/
+        # The backend package is at <repo>/backend/src/pktx/
         # So we go up 3 levels to get to repo root, then to frontend/dist
         try:
             repo_root = Path(__file__).parent.parent.parent.parent
@@ -67,10 +67,10 @@ def resolve_frontend_dir() -> Path | None:
 
 
 def resolve_public_url() -> str:
-    """Resolve PERSONA_PUBLIC_URL env var. Raises on missing."""
-    value = os.environ.get("PERSONA_PUBLIC_URL", "")
+    """Resolve PKTX_PUBLIC_URL env var. Raises on missing."""
+    value = os.environ.get("PKTX_PUBLIC_URL", "")
     if not value.strip():
-        raise ValueError("PERSONA_PUBLIC_URL environment variable is required")
+        raise ValueError("PKTX_PUBLIC_URL environment variable is required")
     return value.strip().rstrip("/")
 
 
@@ -133,24 +133,24 @@ def resolve_clerk_webhook_secret() -> str:
 
 
 def resolve_db_url() -> str:
-    """Resolve PERSONA_DB_URL env var (required for PostgreSQL).
+    """Resolve PKTX_DB_URL env var (required for PostgreSQL).
 
     Raises ValueError if not set.
     """
-    value = os.environ.get("PERSONA_DB_URL", "")
+    value = os.environ.get("PKTX_DB_URL", "")
     if not value.strip():
-        raise ValueError("PERSONA_DB_URL environment variable is required")
+        raise ValueError("PKTX_DB_URL environment variable is required")
     return value.strip()
 
 
 def resolve_pool_min() -> int:
-    """Resolve PERSONA_DB_POOL_MIN env var (default 1)."""
-    return int(os.environ.get("PERSONA_DB_POOL_MIN", "1"))
+    """Resolve PKTX_DB_POOL_MIN env var (default 1)."""
+    return int(os.environ.get("PKTX_DB_POOL_MIN", "1"))
 
 
 def resolve_pool_max() -> int:
-    """Resolve PERSONA_DB_POOL_MAX env var (default 10)."""
-    return int(os.environ.get("PERSONA_DB_POOL_MAX", "10"))
+    """Resolve PKTX_DB_POOL_MAX env var (default 10)."""
+    return int(os.environ.get("PKTX_DB_POOL_MAX", "10"))
 
 
 def configure_logging() -> logging.Logger:
@@ -161,7 +161,7 @@ def configure_logging() -> logging.Logger:
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 
-    root_logger = logging.getLogger("persona")
+    root_logger = logging.getLogger("pktx")
     root_logger.setLevel(level)
     # Avoid duplicate handlers on repeated calls
     if not root_logger.handlers:

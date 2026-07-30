@@ -5,7 +5,7 @@ module "observability" {
   source = "../modules/observability"
 
   environment          = var.environment
-  lambda_function_name = "persona-${var.environment}"
+  lambda_function_name = "pktx-${var.environment}"
   log_retention_days   = var.log_retention_days
   error_threshold      = var.error_threshold
 
@@ -23,11 +23,11 @@ module "lambda" {
   image_tag            = var.image_tag
   memory_size          = var.memory_size
   timeout              = var.timeout
-  ssm_parameter_prefix = "/persona/${var.environment}"
+  ssm_parameter_prefix = "/pktx/${var.environment}"
 
   environment_variables = {
-    PERSONA_DB_URL            = data.aws_ssm_parameter.database_url.value
-    PERSONA_PUBLIC_URL        = data.aws_ssm_parameter.persona_public_url.value
+    PKTX_DB_URL               = data.aws_ssm_parameter.database_url.value
+    PKTX_PUBLIC_URL           = data.aws_ssm_parameter.pktx_public_url.value
     CLERK_JWKS_URL            = data.aws_ssm_parameter.clerk_jwks_url.value
     CLERK_ISSUER              = data.aws_ssm_parameter.clerk_issuer.value
     CLERK_OAUTH_CLIENT_ID     = data.aws_ssm_parameter.clerk_oauth_client_id.value
@@ -47,7 +47,7 @@ module "lambda" {
 # SSM SecureString parameters for runtime secrets.
 # Terraform creates each parameter with a placeholder value. Real values must be
 # set manually before the first full terraform apply (see quickstart.md Step 4):
-#   aws ssm put-parameter --name /persona/prod/database_url --value "..." \
+#   aws ssm put-parameter --name /pktx/prod/database_url --value "..." \
 #     --type SecureString --overwrite
 #
 # lifecycle.ignore_changes = [value] prevents Terraform from reverting
@@ -55,7 +55,7 @@ module "lambda" {
 
 resource "aws_ssm_parameter" "database_url" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/database_url"
+  name  = "/pktx/${var.environment}/database_url"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -71,7 +71,7 @@ resource "aws_ssm_parameter" "database_url" {
 
 resource "aws_ssm_parameter" "clerk_secret_key" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_secret_key"
+  name  = "/pktx/${var.environment}/clerk_secret_key"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -85,9 +85,9 @@ resource "aws_ssm_parameter" "clerk_secret_key" {
   }
 }
 
-resource "aws_ssm_parameter" "persona_public_url" {
+resource "aws_ssm_parameter" "pktx_public_url" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/persona_public_url"
+  name  = "/pktx/${var.environment}/pktx_public_url"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -103,7 +103,7 @@ resource "aws_ssm_parameter" "persona_public_url" {
 
 resource "aws_ssm_parameter" "clerk_oauth_client_id" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_oauth_client_id"
+  name  = "/pktx/${var.environment}/clerk_oauth_client_id"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -119,7 +119,7 @@ resource "aws_ssm_parameter" "clerk_oauth_client_id" {
 
 resource "aws_ssm_parameter" "clerk_oauth_client_secret" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_oauth_client_secret"
+  name  = "/pktx/${var.environment}/clerk_oauth_client_secret"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -135,7 +135,7 @@ resource "aws_ssm_parameter" "clerk_oauth_client_secret" {
 
 resource "aws_ssm_parameter" "clerk_publishable_key" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_publishable_key"
+  name  = "/pktx/${var.environment}/clerk_publishable_key"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -151,7 +151,7 @@ resource "aws_ssm_parameter" "clerk_publishable_key" {
 
 resource "aws_ssm_parameter" "clerk_jwks_url" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_jwks_url"
+  name  = "/pktx/${var.environment}/clerk_jwks_url"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -167,7 +167,7 @@ resource "aws_ssm_parameter" "clerk_jwks_url" {
 
 resource "aws_ssm_parameter" "clerk_issuer" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_issuer"
+  name  = "/pktx/${var.environment}/clerk_issuer"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -183,7 +183,7 @@ resource "aws_ssm_parameter" "clerk_issuer" {
 
 resource "aws_ssm_parameter" "clerk_webhook_secret" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
-  name  = "/persona/${var.environment}/clerk_webhook_secret"
+  name  = "/pktx/${var.environment}/clerk_webhook_secret"
   type  = "SecureString"
   value = "TO_BE_SET"
 
@@ -229,10 +229,10 @@ data "aws_ssm_parameter" "clerk_secret_key" {
   depends_on      = [aws_ssm_parameter.clerk_secret_key]
 }
 
-data "aws_ssm_parameter" "persona_public_url" {
-  name            = aws_ssm_parameter.persona_public_url.name
+data "aws_ssm_parameter" "pktx_public_url" {
+  name            = aws_ssm_parameter.pktx_public_url.name
   with_decryption = true
-  depends_on      = [aws_ssm_parameter.persona_public_url]
+  depends_on      = [aws_ssm_parameter.pktx_public_url]
 }
 
 data "aws_ssm_parameter" "clerk_oauth_client_id" {

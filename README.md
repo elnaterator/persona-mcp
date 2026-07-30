@@ -1,16 +1,23 @@
-# Persona MCP Server
+# pktx
 
-Personal data server for resume + job application management. AI workflow support built in.
+**pktx** ("personal context") is a self-hostable server for your professional data — resumes,
+job applications, accomplishments, notes, and contacts — with a web UI and an
+[MCP](https://modelcontextprotocol.io) interface so AI assistants can work with that data
+directly.
+
+Track accomplishments as they happen; let your assistant pull them when tailoring a resume
+or drafting a cover letter.
 
 ## Features
 
-- **Accomplishment Tracking**: Record career accomplishments in STAR format (Situation, Task, Action, Result). Tag for filtering. Use to craft job application materials.
-- **Job Application Tracking**: Track applications from "Interested" to "Offer".
-- **Resume Versioning**: Multiple resume versions, tailored per job.
-- **Connect Tab**: Copy-ready config for Claude Code, Cursor, GitHub Copilot, Amazon Kiro. MCP client opens a browser to sign in via OAuth — no API key to manage.
-- **Web UI**: Clean interface for data management. Deep links + bookmarks supported — navigate directly via URL. Refresh stays on current view.
-- **REST + MCP APIs**: Programmatic access via REST or MCP. `/mcp` uses standard OAuth2 bearer tokens (RFC 9728 resource server); assistant authenticates via PKCE + browser sign-in.
-- **Docker Support**: Run entire app with single command.
+- **Accomplishment tracking** — record career accomplishments in STAR format (Situation, Task, Action, Result), tagged for filtering, ready to feed job application materials.
+- **Job application tracking** — track applications from "Interested" to "Offer".
+- **Resume versioning** — multiple resume versions, tailored per job.
+- **Notes, contacts & communications** — keep context and link it to any other resource.
+- **Web UI** — clean interface with deep links, bookmarks, and cross-resource search.
+- **MCP + REST APIs** — `/mcp` is a standard OAuth2 resource server (RFC 9728); assistants sign in via PKCE + browser, no API keys. REST at `/api`.
+- **Connect tab** — copy-ready MCP config for Claude Code, Cursor, GitHub Copilot, Amazon Kiro.
+- **Docker support** — run the entire app with a single command.
 
 ## Quick Start
 
@@ -18,19 +25,19 @@ Personal data server for resume + job application management. AI workflow suppor
 
 1. [Docker](https://docs.docker.com/get-docker/) + `make`
 2. [Clerk](https://clerk.com) account (free tier sufficient)
-3. Copy `.env.example` to `.env` and populate Clerk env vars (see `.env.example` for required keys)
+3. Copy `.env.example` to `.env` and populate the Clerk env vars (see `.env.example` for required keys)
 
 ```bash
 make run
 ```
 
-Starts app + `postgres:16-alpine` container. Data persists in named Docker volume (`pg-data`) across restarts.
+Starts the app + a `postgres:16-alpine` container. Data persists in a named Docker volume (`pg-data`) across restarts.
 
 Once running:
 
 - **Web UI**: `http://localhost:8000/`
 - **REST API**: `http://localhost:8000/api`
-- **MCP Endpoint**: `http://localhost:8000/mcp`
+- **MCP endpoint**: `http://localhost:8000/mcp`
 
 ## Configure
 
@@ -38,7 +45,7 @@ Once running:
 |---|---|
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_test_...`) |
 | `VITE_MCP_SERVER_URL` | Optional. Connect-tab MCP URL override. Defaults to `<page origin>/mcp` at runtime; only set it for `vite dev`, where the SPA (:5173) and backend (:8000) differ (e.g. `http://localhost:8000/mcp`) |
-| `PERSONA_PUBLIC_URL` | Externally reachable base URL (e.g. `https://persona.example.com`) — required; the OAuth proxy advertises this as the authorization server and metadata base |
+| `PKTX_PUBLIC_URL` | Externally reachable base URL (e.g. `https://pktx.example.com`) — required; the OAuth proxy advertises this as the authorization server and metadata base |
 | `CLERK_JWKS_URL` | Clerk JWKS endpoint |
 | `CLERK_ISSUER` | Clerk issuer URL |
 | `CLERK_OAUTH_CLIENT_ID` | Client id of the static Clerk OAuth application the MCP proxy uses upstream |
@@ -62,15 +69,15 @@ No API key to generate or paste. Add the bare URL in your assistant's MCP config
 
 ```bash
 # Claude Code
-claude mcp add --transport http persona https://your-persona-server.com/mcp
+claude mcp add --transport http pktx https://your-pktx-server.com/mcp
 
 # Cursor / Kiro — .cursor/mcp.json or .kiro/settings/mcp.json
-{ "mcpServers": { "persona": { "url": "https://your-persona-server.com/mcp" } } }
+{ "mcpServers": { "pktx": { "url": "https://your-pktx-server.com/mcp" } } }
 ```
 
 ### Clerk manual setup (required before MCP auth works end-to-end)
 
-1. Create an OAuth application in Clerk Dashboard with redirect URI `<PERSONA_PUBLIC_URL>/auth/callback`; set its client id/secret as `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`.
+1. Create an OAuth application in Clerk Dashboard with redirect URI `<PKTX_PUBLIC_URL>/auth/callback`; set its client id/secret as `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`.
 2. Confirm `<CLERK_ISSUER>/.well-known/oauth-authorization-server` advertises `authorization_endpoint` / `token_endpoint` matching `<CLERK_ISSUER>/oauth/authorize` and `/oauth/token` (adjust the proxy config if Clerk's paths differ).
 3. Clients register with the proxy, not with Clerk, so Clerk-side Dynamic Client Registration is no longer required and can be left disabled.
 
@@ -85,6 +92,8 @@ make deploy ENV=dev   # or prod
 ```
 
 ## Developer Setup
+
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full development workflow, conventions, and PR expectations.
 
 ### Required tools
 
@@ -113,3 +122,13 @@ make check   # lint + typecheck + test (frontend + backend)
 make run     # start app via Docker Compose
 make help    # list all targets
 ```
+
+## Documentation
+
+- [docs/architecture-notes.md](docs/architecture-notes.md) — design decisions and tradeoffs
+- [docs/deployment.md](docs/deployment.md) — AWS deployment guide
+- [docs/rename-checklist.md](docs/rename-checklist.md) — persona → pktx rename runbook (external systems)
+
+## License
+
+[MIT](LICENSE)

@@ -8,7 +8,7 @@ import pytest
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from persona.oauth_store import PostgresKVStore, build_oauth_client_storage
+from pktx.oauth_store import PostgresKVStore, build_oauth_client_storage
 
 T = TypeVar("T")
 

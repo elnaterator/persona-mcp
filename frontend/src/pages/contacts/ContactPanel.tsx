@@ -118,102 +118,92 @@ export function ContactPanel({
       {isEditable ? (
         <div className={styles.editGrid}>
           <div className={styles.editFields}>
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Relationship</label>
-                <input
-                  className={styles.fieldInput}
-                  type="text"
-                  list="cp-rel-suggestions"
-                  placeholder="e.g. Recruiter"
-                  {...register('relationship')}
-                />
-                <datalist id="cp-rel-suggestions">
-                  {RELATIONSHIP_SUGGESTIONS.map((r) => <option key={r} value={r} />)}
-                </datalist>
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Company</label>
-                <input
-                  className={styles.fieldInput}
-                  type="text"
-                  placeholder="Company"
-                  {...register('company')}
-                />
-              </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Relationship</label>
+              <input
+                className={styles.fieldInput}
+                type="text"
+                list="cp-rel-suggestions"
+                placeholder="e.g. Recruiter"
+                {...register('relationship')}
+              />
+              <datalist id="cp-rel-suggestions">
+                {RELATIONSHIP_SUGGESTIONS.map((r) => <option key={r} value={r} />)}
+              </datalist>
             </div>
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Title</label>
-                <input
-                  className={styles.fieldInput}
-                  type="text"
-                  placeholder="Job title"
-                  {...register('title')}
-                />
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Email</label>
-                <input
-                  className={styles.fieldInput}
-                  type="email"
-                  placeholder="email@example.com"
-                  aria-invalid={!!errors.email}
-                  {...register('email')}
-                />
-                <FieldError error={errors.email} />
-              </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Email</label>
+              <input
+                className={styles.fieldInput}
+                type="email"
+                placeholder="email@example.com"
+                aria-invalid={!!errors.email}
+                {...register('email')}
+              />
+              <FieldError error={errors.email} />
             </div>
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Phone</label>
-                <input
-                  className={styles.fieldInput}
-                  type="text"
-                  placeholder="+1 555 000 0000"
-                  {...register('phone')}
-                />
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Location</label>
-                <input
-                  className={styles.fieldInput}
-                  type="text"
-                  placeholder="City, Country"
-                  {...register('location')}
-                />
-              </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Phone</label>
+              <input
+                className={styles.fieldInput}
+                type="text"
+                placeholder="+1 555 000 0000"
+                {...register('phone')}
+              />
             </div>
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>LinkedIn URL</label>
-                <input
-                  className={styles.fieldInput}
-                  type="url"
-                  placeholder="https://linkedin.com/in/..."
-                  aria-invalid={!!errors.linkedin_url}
-                  {...register('linkedin_url')}
-                />
-                <FieldError error={errors.linkedin_url} />
-              </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Company</label>
+              <input
+                className={styles.fieldInput}
+                type="text"
+                placeholder="Company"
+                {...register('company')}
+              />
             </div>
-            <div className={styles.fieldRow}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Last Contacted</label>
-                <input
-                  className={styles.fieldInput}
-                  type="date"
-                  {...register('last_contacted_date')}
-                />
-              </div>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Follow Up Date</label>
-                <input
-                  className={styles.fieldInput}
-                  type="date"
-                  {...register('followup_date')}
-                />
-              </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Title</label>
+              <input
+                className={styles.fieldInput}
+                type="text"
+                placeholder="Job title"
+                {...register('title')}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Location</label>
+              <input
+                className={styles.fieldInput}
+                type="text"
+                placeholder="City, Country"
+                {...register('location')}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>LinkedIn URL</label>
+              <input
+                className={styles.fieldInput}
+                type="url"
+                placeholder="https://linkedin.com/in/..."
+                aria-invalid={!!errors.linkedin_url}
+                {...register('linkedin_url')}
+              />
+              <FieldError error={errors.linkedin_url} />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Last Contacted</label>
+              <input
+                className={styles.fieldInput}
+                type="date"
+                {...register('last_contacted_date')}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>Follow Up Date</label>
+              <input
+                className={styles.fieldInput}
+                type="date"
+                {...register('followup_date')}
+              />
             </div>
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel}>Tags</label>

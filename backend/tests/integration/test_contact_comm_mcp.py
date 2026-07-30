@@ -5,8 +5,8 @@ from typing import Any, cast
 import pytest
 from psycopg import Connection
 
-from persona.auth import current_user_id_var
-from persona.db import DBConnection
+from pktx.auth import current_user_id_var
+from pktx.db import DBConnection
 
 _TEST_USER = "contact_comm_mcp_user"
 
@@ -33,9 +33,9 @@ class TestContactCommMcpRoundtrip:
     def test_add_list_update_delete(self, seeded_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.communication_service import ContactCommunicationService
-        from persona.contact_service import ContactService
-        from persona.tools.contact_tools import register_contact_tools
+        from pktx.communication_service import ContactCommunicationService
+        from pktx.contact_service import ContactService
+        from pktx.tools.contact_tools import register_contact_tools
 
         conn = cast(DBConnection, seeded_db)
         contact_svc = ContactService(conn)
@@ -105,9 +105,9 @@ class TestSearchCrossParents:
     def test_search_finds_contact_comm(self, seeded_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.communication_service import ContactCommunicationService
-        from persona.contact_service import ContactService
-        from persona.tools.contact_tools import register_contact_tools
+        from pktx.communication_service import ContactCommunicationService
+        from pktx.contact_service import ContactService
+        from pktx.tools.contact_tools import register_contact_tools
 
         conn = cast(DBConnection, seeded_db)
         contact_svc = ContactService(conn)

@@ -4,7 +4,7 @@ data "aws_caller_identity" "current" {}
 resource "aws_ecr_repository" "app" {
   #checkov:skip=CKV_AWS_136:Default AWS-managed encryption is sufficient for a personal app; KMS CMK adds cost/complexity without meaningful benefit
   #checkov:skip=CKV_AWS_51:Mutable image tags are required for the dev/prod deployment workflow (same :latest or :sha tag is re-pushed per environment)
-  name                 = "persona-${var.environment}"
+  name                 = "pktx-${var.environment}"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -16,7 +16,7 @@ resource "aws_ecr_repository" "app" {
 
 # IAM role assumed by the Lambda function at runtime
 resource "aws_iam_role" "lambda_exec" {
-  name = "persona-${var.environment}-lambda-exec"
+  name = "pktx-${var.environment}-lambda-exec"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -156,7 +156,7 @@ resource "aws_lambda_function" "app" {
   #checkov:skip=CKV_AWS_272:Code signing not warranted for a personal app; images are built and pushed by the developer directly
   #checkov:skip=CKV_AWS_115:No reserved concurrency limit set — personal app with low traffic; limiting concurrency would cause avoidable throttling
   #checkov:skip=CKV2_AWS_75:Open CORS is intentional — app must be accessible from any browser origin and MCP clients
-  function_name = "persona-${var.environment}"
+  function_name = "pktx-${var.environment}"
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
@@ -201,8 +201,8 @@ resource "aws_lambda_permission" "allow_invoke_via_url" {
 resource "aws_cloudwatch_event_rule" "keep_warm" {
   count = var.keep_warm_enabled ? 1 : 0
 
-  name                = "persona-${var.environment}-keep-warm"
-  description         = "Ping the persona-${var.environment} Lambda every 5 minutes to keep one instance warm"
+  name                = "pktx-${var.environment}-keep-warm"
+  description         = "Ping the pktx-${var.environment} Lambda every 5 minutes to keep one instance warm"
   schedule_expression = "rate(5 minutes)"
 
   tags = var.tags
@@ -212,7 +212,7 @@ resource "aws_cloudwatch_event_target" "keep_warm" {
   count = var.keep_warm_enabled ? 1 : 0
 
   rule      = aws_cloudwatch_event_rule.keep_warm[0].name
-  target_id = "persona-${var.environment}-keep-warm"
+  target_id = "pktx-${var.environment}-keep-warm"
   arn       = aws_lambda_function.app.arn
 
   input = jsonencode({

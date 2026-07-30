@@ -9,13 +9,13 @@ from typing import Any, cast
 import pytest
 from psycopg import Connection
 
-from persona.auth import current_user_id_var
-from persona.database import (
+from pktx.auth import current_user_id_var
+from pktx.database import (
     create_resume_version,
     load_default_resume_version,
     set_default_resume_version,
 )
-from persona.db import DBConnection
+from pktx.db import DBConnection
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -77,8 +77,8 @@ class TestMcpToolsRequireUserContext:
     def test_resume_list_requires_user(self, two_user_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.resume_service import ResumeService
-        from persona.tools.resume_tools import register_resume_tools
+        from pktx.resume_service import ResumeService
+        from pktx.tools.resume_tools import register_resume_tools
 
         mcp = FastMCP("test")
         svc = ResumeService(two_user_db)  # type: ignore[arg-type]
@@ -97,8 +97,8 @@ class TestMcpToolsRequireUserContext:
     ) -> None:
         from fastmcp import FastMCP
 
-        from persona.accomplishment_service import AccomplishmentService
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.accomplishment_service import AccomplishmentService
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         svc = AccomplishmentService(two_user_db)  # type: ignore[arg-type]
@@ -115,8 +115,8 @@ class TestMcpToolsRequireUserContext:
     def test_application_list_requires_user(self, two_user_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.application_service import ApplicationService
-        from persona.tools.application_tools import register_application_tools
+        from pktx.application_service import ApplicationService
+        from pktx.tools.application_tools import register_application_tools
 
         mcp = FastMCP("test")
         svc = ApplicationService(two_user_db)  # type: ignore[arg-type]
@@ -140,7 +140,7 @@ class TestResumeToolUserScoping:
     """Resume MCP tools only operate on the authenticated user's data."""
 
     def test_list_resumes_scoped_to_user(self, two_user_db: Connection[Any]) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         svc = ResumeService(two_user_db)  # type: ignore[arg-type]
 
@@ -156,7 +156,7 @@ class TestResumeToolUserScoping:
         assert "Alice CV" not in bob_labels
 
     def test_get_resume_rejects_cross_user(self, two_user_db: Connection[Any]) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         svc = ResumeService(two_user_db)  # type: ignore[arg-type]
         alice_resumes = svc.list_resumes(user_id="user_alice")
@@ -166,7 +166,7 @@ class TestResumeToolUserScoping:
             svc.get_resume(alice_id, user_id="user_bob")
 
     def test_create_resume_uses_user_id(self, two_user_db: Connection[Any]) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         svc = ResumeService(two_user_db)  # type: ignore[arg-type]
         new = svc.create_resume("Bob Extra", user_id="user_bob")
@@ -179,7 +179,7 @@ class TestResumeToolUserScoping:
         assert row["user_id"] == "user_bob"
 
     def test_set_default_scoped_to_user(self, two_user_db: Connection[Any]) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         svc = ResumeService(two_user_db)  # type: ignore[arg-type]
 
@@ -204,7 +204,7 @@ class TestApplicationToolUserScoping:
     """Application MCP tools only operate on the authenticated user's data."""
 
     def test_list_applications_scoped(self, two_user_db: Connection[Any]) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc = ApplicationService(two_user_db)  # type: ignore[arg-type]
         svc.create_application(
@@ -225,7 +225,7 @@ class TestApplicationToolUserScoping:
     def test_get_application_rejects_cross_user(
         self, two_user_db: Connection[Any]
     ) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc = ApplicationService(two_user_db)  # type: ignore[arg-type]
         app = svc.create_application(
@@ -238,7 +238,7 @@ class TestApplicationToolUserScoping:
     def test_delete_application_rejects_cross_user(
         self, two_user_db: Connection[Any]
     ) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc = ApplicationService(two_user_db)  # type: ignore[arg-type]
         app = svc.create_application(
@@ -258,7 +258,7 @@ class TestAccomplishmentToolUserScoping:
     """Accomplishment MCP tools only operate on the authenticated user's data."""
 
     def test_list_accomplishments_scoped(self, two_user_db: Connection[Any]) -> None:
-        from persona.accomplishment_service import AccomplishmentService
+        from pktx.accomplishment_service import AccomplishmentService
 
         svc = AccomplishmentService(two_user_db)  # type: ignore[arg-type]
         svc.create_accomplishment({"title": "Alice win"}, user_id="user_alice")
@@ -275,7 +275,7 @@ class TestAccomplishmentToolUserScoping:
     def test_get_accomplishment_rejects_cross_user(
         self, two_user_db: Connection[Any]
     ) -> None:
-        from persona.accomplishment_service import AccomplishmentService
+        from pktx.accomplishment_service import AccomplishmentService
 
         svc = AccomplishmentService(two_user_db)  # type: ignore[arg-type]
         acc = svc.create_accomplishment({"title": "Alice win"}, user_id="user_alice")
@@ -319,7 +319,7 @@ class TestApplicationContextUserScoping:
     def test_context_returns_own_application(
         self, two_user_db: Connection[Any]
     ) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc = ApplicationService(two_user_db)  # type: ignore[arg-type]
         app = svc.create_application(
@@ -332,7 +332,7 @@ class TestApplicationContextUserScoping:
         assert "linked" in context
 
     def test_context_rejects_cross_user_app(self, two_user_db: Connection[Any]) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc = ApplicationService(two_user_db)  # type: ignore[arg-type]
         app = svc.create_application(

@@ -92,8 +92,8 @@ Native MCP clients (Claude Desktop, Cursor, VS Code) register one loopback redir
 Cold starts hurt the MCP connect flow (Claude Desktop hits `/mcp` at session start) and first browser load. Add an EventBridge Scheduler rule to `infra/modules/lambda` (or a small sibling module) that pings the Lambda every 5 minutes to keep one instance warm. Ping a cheap unauthenticated endpoint (e.g. `/health` — add one if missing) so the warmer doesn't need Clerk credentials; handler should short-circuit before touching Postgres. Wire into both `infra/dev` and `infra/prod`. Costs stay in free tier (EventBridge + ~8.6k invocations/month). Known limits, acceptable for single-user app: concurrent second request and first post-deploy request still cold.
 
 
-## 019 Deploy prod and self-host daily (beta readiness)
-Stand up the prod environment (`infra/prod`) and use the app daily for 2 weeks before inviting beta users. Fix all friction found: first-run experience with empty states, signup-to-first-accomplishment under 5 minutes, MCP connect flow verified on a machine other than the dev box. Beta invite gated on this soak period completing without broken flows.
+## 019 Rename the app to pktx and clean up docs - SHIPPED
+I want to rename this app from persona to pktx which is short for personal context. Look through docs, readme, code, etc.  I also want to clean up docs and readmes, organize the repo, prep for open source. Create contributing.md. Give manual steps needed to rename all places (github, neon, clerk, etc.)
 
 
 ## 020 Backups, tested restore, and user data export
@@ -104,9 +104,13 @@ Verify automated Postgres backups exist in Terraform and run an actual restore d
 Add error tracking (Sentry free tier or similar) for backend and frontend, wired to alert the developer on new errors. Add one low-friction in-app feedback channel (footer link to a form or shared chat). Goal: see errors before beta users report them, and make giving feedback effortless.
 
 
-## 022 Trust basics for public launch: privacy policy, ToS, account deletion
+## 022 Deploy prod and self-host daily (beta readiness)
+Stand up the prod environment (`infra/prod`) and use the app daily for 2 weeks before inviting beta users. Fix all friction found: first-run experience with empty states, signup-to-first-accomplishment under 5 minutes, MCP connect flow verified on a machine other than the dev box. Beta invite gated on this soak period completing without broken flows.
+
+
+## 023 Trust basics for public launch: privacy policy, ToS, account deletion
 Add privacy policy and terms of service pages. Implement full account deletion (user-initiated, via Clerk webhook cascade to all owned resources). Set an AWS budget alarm to cap surprise costs from a free public service. Required before opening signup beyond friends and family.
 
 
-## 023 Donations via simple payment link
+## 024 Donations via simple payment link
 Add a GitHub Sponsors or Buy Me a Coffee link in the app footer. Explicitly no billing system, subscriptions, or tiers — a payment link only. Revisit with real billing (Stripe) only if donations become meaningful revenue.

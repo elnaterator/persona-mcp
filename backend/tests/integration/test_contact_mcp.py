@@ -5,8 +5,8 @@ from typing import Any, cast
 import pytest
 from psycopg import Connection
 
-from persona.auth import current_user_id_var
-from persona.db import DBConnection
+from pktx.auth import current_user_id_var
+from pktx.db import DBConnection
 
 _TEST_USER = "contact_mcp_test_user"
 
@@ -33,8 +33,8 @@ class TestContactMcpRoundtrip:
     def test_full_roundtrip(self, seeded_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.contact_service import ContactService
-        from persona.tools.contact_tools import register_contact_tools
+        from pktx.contact_service import ContactService
+        from pktx.tools.contact_tools import register_contact_tools
 
         conn = cast(DBConnection, seeded_db)
         svc = ContactService(conn)
@@ -91,8 +91,8 @@ class TestContactMcpRoundtrip:
     def test_list_filter_by_tag(self, seeded_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.contact_service import ContactService
-        from persona.tools.contact_tools import register_contact_tools
+        from pktx.contact_service import ContactService
+        from pktx.tools.contact_tools import register_contact_tools
 
         conn = cast(DBConnection, seeded_db)
         svc = ContactService(conn)
@@ -117,8 +117,8 @@ class TestContactMcpRoundtrip:
     def test_require_user_id_without_context(self, seeded_db: Connection[Any]) -> None:
         from fastmcp import FastMCP
 
-        from persona.contact_service import ContactService
-        from persona.tools.contact_tools import register_contact_tools
+        from pktx.contact_service import ContactService
+        from pktx.tools.contact_tools import register_contact_tools
 
         conn = cast(DBConnection, seeded_db)
         svc = ContactService(conn)

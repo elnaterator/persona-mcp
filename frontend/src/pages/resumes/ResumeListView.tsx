@@ -55,8 +55,6 @@ export default function ResumeListView() {
     })
   }
 
-  if (isPending) return <LoadingSpinner />
-
   return (
     <div className={styles.container} data-testid="resume-list-view">
       <div className={styles.header}>
@@ -84,7 +82,9 @@ export default function ResumeListView() {
         />
       </div>
 
-      {resumes.length === 0 ? (
+      {isPending ? (
+        <LoadingSpinner />
+      ) : resumes.length === 0 ? (
         <p className={styles.empty}>No resume versions found.</p>
       ) : (
         <ul className={styles.list}>

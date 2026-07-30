@@ -27,7 +27,7 @@
   /* Shadows */
   --shadow-none: none;
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.5);
-  --shadow-focus: inset 0 -1px 0 var(--accent-green-dim);
+  --shadow-focus: none;
   --shadow-focus-error: inset 0 -1px 0 var(--status-error);
 
   /* Colors — Backgrounds */

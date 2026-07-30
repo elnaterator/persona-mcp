@@ -1,4 +1,4 @@
-"""Persona server — FastAPI REST API + MCP tools, with --stdio backward compat."""
+"""pktx server — FastAPI REST API + MCP tools, with --stdio backward compat."""
 
 import argparse
 import logging
@@ -17,18 +17,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
-from persona.accomplishment_service import AccomplishmentService
-from persona.api.routes import create_router
-from persona.application_service import ApplicationService
-from persona.auth import (
+from pktx.accomplishment_service import AccomplishmentService
+from pktx.api.routes import create_router
+from pktx.application_service import ApplicationService
+from pktx.auth import (
     UserContextToolMiddleware,
     build_get_current_user,
     build_mcp_auth,
     current_user_id_var,
     verify_clerk_jwt,
 )
-from persona.communication_service import ContactCommunicationService
-from persona.config import (
+from pktx.communication_service import ContactCommunicationService
+from pktx.config import (
     configure_logging,
     resolve_cors_origins,
     resolve_db_url,
@@ -37,20 +37,20 @@ from persona.config import (
     resolve_pool_min,
     resolve_port,
 )
-from persona.contact_service import ContactService
-from persona.database import init_pool
-from persona.db import DBConnection
-from persona.link_service import LinkService
-from persona.note_service import NoteService
-from persona.resume_service import ResumeService
-from persona.tools.accomplishment_tools import register_accomplishment_tools
-from persona.tools.application_tools import register_application_tools
-from persona.tools.contact_tools import register_contact_tools
-from persona.tools.link_tools import register_link_tools
-from persona.tools.note_tools import register_note_tools
-from persona.tools.resume_tools import register_resume_tools
+from pktx.contact_service import ContactService
+from pktx.database import init_pool
+from pktx.db import DBConnection
+from pktx.link_service import LinkService
+from pktx.note_service import NoteService
+from pktx.resume_service import ResumeService
+from pktx.tools.accomplishment_tools import register_accomplishment_tools
+from pktx.tools.application_tools import register_application_tools
+from pktx.tools.contact_tools import register_contact_tools
+from pktx.tools.link_tools import register_link_tools
+from pktx.tools.note_tools import register_note_tools
+from pktx.tools.resume_tools import register_resume_tools
 
-logger = logging.getLogger("persona")
+logger = logging.getLogger("pktx")
 
 
 class SPAStaticFiles(StaticFiles):
@@ -130,14 +130,14 @@ def get_db() -> Generator[DBConnection, None, None]:
 
 def _build_mcp(production: bool) -> FastMCP:
     """Create FastMCP instance, register all tools, and wire auth/middleware."""
-    import persona.auth as auth_module
+    import pktx.auth as auth_module
 
     if production:
         assert _pool is not None, "DB pool required for production MCP auth"
         mcp_auth = build_mcp_auth(_pool)
     else:
         mcp_auth = None
-    m = FastMCP("persona", auth=mcp_auth)
+    m = FastMCP("pktx", auth=mcp_auth)
 
     register_resume_tools(m, _get_resume_service)
     register_application_tools(m, _get_app_service)
@@ -158,10 +158,10 @@ def _build_mcp(production: bool) -> FastMCP:
 
 
 class UserContextMiddleware(BaseHTTPMiddleware):
-    """Set current_user_id_var from Bearer token or PERSONA_USER_ID env var.
+    """Set current_user_id_var from Bearer token or PKTX_USER_ID env var.
 
     REST API paths: attempts JWT-only auth (sets context var), never blocks.
-    stdio mode: reads PERSONA_USER_ID env var.
+    stdio mode: reads PKTX_USER_ID env var.
     MCP paths are handled by UserContextToolMiddleware via FastMCP middleware.
     """
 
@@ -182,7 +182,7 @@ class UserContextMiddleware(BaseHTTPMiddleware):
                     pass
 
         # Also support stdio mode: check env var
-        stdio_user = os.environ.get("PERSONA_USER_ID")
+        stdio_user = os.environ.get("PKTX_USER_ID")
         if stdio_user:
             token_ctx = current_user_id_var.set(stdio_user)
             try:
@@ -223,7 +223,7 @@ def create_app(
         _raw_conn = raw
         conn = cast(DBConnection, raw)
         service = ResumeService(conn)
-        logger.info("Persona server starting (PostgreSQL pool initialized)")
+        logger.info("pktx server starting (PostgreSQL pool initialized)")
 
     _conn = conn
     _service = service
@@ -254,7 +254,7 @@ def create_app(
                 _pool.putconn(_raw_conn)
             _pool.close()
 
-    app = FastAPI(title="Persona", lifespan=lifespan)
+    app = FastAPI(title="pktx", lifespan=lifespan)
 
     # CORS middleware
     cors_origins = resolve_cors_origins()
@@ -320,8 +320,8 @@ def create_app(
 
 
 def main() -> None:
-    """Start the persona server (HTTP default, --stdio for backward compat)."""
-    parser = argparse.ArgumentParser(description="Persona server")
+    """Start the pktx server (HTTP default, --stdio for backward compat)."""
+    parser = argparse.ArgumentParser(description="pktx server")
     parser.add_argument(
         "--stdio",
         action="store_true",
@@ -346,7 +346,7 @@ def main() -> None:
         _contact_service = ContactService(_conn)
         _comm_service = ContactCommunicationService(_conn)
         _link_service = LinkService(_conn)
-        logger.info("Persona MCP server starting (stdio, PostgreSQL pool initialized)")
+        logger.info("pktx MCP server starting (stdio, PostgreSQL pool initialized)")
         mcp = _build_mcp(production=False)
         try:
             mcp.run(transport="stdio")

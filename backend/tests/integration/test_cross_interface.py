@@ -6,9 +6,9 @@ import pytest
 from fastapi.testclient import TestClient
 from psycopg import Connection
 
-import persona.server
-from persona.resume_service import ResumeService
-from persona.server import create_app
+import pktx.server
+from pktx.resume_service import ResumeService
+from pktx.server import create_app
 
 
 class TestCrossInterfaceSharedState:
@@ -102,7 +102,7 @@ class TestCrossInterfaceSharedState:
         app, service, client = app_and_service
 
         # The global _service should be the same instance
-        assert persona.server._service is service, (
+        assert pktx.server._service is service, (
             "MCP tools should use the same service instance"
         )
 
@@ -184,7 +184,7 @@ class TestAccomplishmentCrossInterface:
     ) -> None:
         """Accomplishment created via AccomplishmentService visible via REST API."""
         _app, _service, client = full_app
-        acc_svc = persona.server._acc_service
+        acc_svc = pktx.server._acc_service
         assert acc_svc is not None
 
         created = acc_svc.create_accomplishment(
@@ -200,7 +200,7 @@ class TestAccomplishmentCrossInterface:
     ) -> None:
         """Accomplishment created via REST API visible via AccomplishmentService."""
         _app, _service, client = full_app
-        acc_svc = persona.server._acc_service
+        acc_svc = pktx.server._acc_service
         assert acc_svc is not None
 
         resp = client.post(
@@ -218,13 +218,13 @@ class TestAccomplishmentCrossInterface:
     ) -> None:
         """Verify global _acc_service used by MCP is the same instance."""
         _app, _service, client = full_app
-        assert persona.server._acc_service is not None
+        assert pktx.server._acc_service is not None
 
     def test_durability_across_connection_reopen(
         self, db_conn: Connection[Any]
     ) -> None:
         """SC-006: Accomplishment readable via second service on same connection."""
-        from persona.accomplishment_service import AccomplishmentService
+        from pktx.accomplishment_service import AccomplishmentService
 
         svc1 = AccomplishmentService(db_conn)  # type: ignore[arg-type]
         created = svc1.create_accomplishment({"title": "Durability test"})
@@ -255,7 +255,7 @@ class TestNoteCrossInterface:
     ) -> None:
         """Note created via NoteService visible via REST API."""
         _app, _service, client = full_app
-        note_svc = persona.server._note_service
+        note_svc = pktx.server._note_service
         assert note_svc is not None
 
         created = note_svc.create_note(
@@ -276,7 +276,7 @@ class TestNoteCrossInterface:
     ) -> None:
         """Note created via REST API visible via NoteService."""
         _app, _service, client = full_app
-        note_svc = persona.server._note_service
+        note_svc = pktx.server._note_service
         assert note_svc is not None
 
         resp = client.post(
@@ -295,13 +295,13 @@ class TestNoteCrossInterface:
     ) -> None:
         """Verify global _note_service used by MCP is the same instance."""
         _app, _service, client = full_app
-        assert persona.server._note_service is not None
+        assert pktx.server._note_service is not None
 
     def test_durability_across_service_instances(
         self, db_conn: Connection[Any]
     ) -> None:
         """Note readable via second service on same connection."""
-        from persona.note_service import NoteService
+        from pktx.note_service import NoteService
 
         svc1 = NoteService(db_conn)  # type: ignore[arg-type]
         created = svc1.create_note({"title": "Durability note"})

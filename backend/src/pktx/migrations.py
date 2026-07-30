@@ -3,7 +3,7 @@
 import json
 import logging
 
-logger = logging.getLogger("persona")
+logger = logging.getLogger("pktx")
 
 
 class SchemaVersionError(Exception):

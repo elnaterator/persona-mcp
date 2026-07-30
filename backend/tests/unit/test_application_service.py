@@ -1,4 +1,4 @@
-"""Unit tests for persona.application_service module."""
+"""Unit tests for pktx.application_service module."""
 
 from typing import Any
 
@@ -9,7 +9,7 @@ from psycopg import Connection
 @pytest.fixture
 def app_service(db_conn: Connection[Any]):  # type: ignore[no-untyped-def]
     """ApplicationService backed by an empty PostgreSQL database."""
-    from persona.application_service import ApplicationService
+    from pktx.application_service import ApplicationService
 
     return ApplicationService(db_conn)  # type: ignore[arg-type]
 
@@ -18,21 +18,21 @@ class TestApplicationServiceCreate:
     """Tests for ApplicationService.create_application."""
 
     def test_requires_company(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Company is required"):
             svc.create_application({"position": "Dev"})
 
     def test_requires_position(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Position is required"):
             svc.create_application({"company": "Corp"})
 
     def test_rejects_invalid_status(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid status"):
@@ -41,8 +41,8 @@ class TestApplicationServiceCreate:
             )
 
     def test_accepts_valid_statuses(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
-        from persona.models import APPLICATION_STATUSES
+        from pktx.application_service import ApplicationService
+        from pktx.models import APPLICATION_STATUSES
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         for status in APPLICATION_STATUSES:
@@ -52,7 +52,7 @@ class TestApplicationServiceCreate:
             assert result["status"] == status
 
     def test_creates_with_defaults(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         result = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -67,7 +67,7 @@ class TestApplicationServiceGet:
     """Tests for ApplicationService.get_application."""
 
     def test_gets_existing_application(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -77,7 +77,7 @@ class TestApplicationServiceGet:
         assert result["company"] == "Corp"
 
     def test_raises_for_nonexistent(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
@@ -88,7 +88,7 @@ class TestApplicationServiceList:
     """Tests for ApplicationService.list_applications."""
 
     def test_lists_all(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         svc.create_application({"company": "A", "position": "P1"})
@@ -98,7 +98,7 @@ class TestApplicationServiceList:
         assert len(results) == 2
 
     def test_filter_by_status(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         svc.create_application({"company": "A", "position": "P1", "status": "Applied"})
@@ -111,7 +111,7 @@ class TestApplicationServiceList:
         assert results[0]["company"] == "A"
 
     def test_search_by_query(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         svc.create_application({"company": "Acme Corp", "position": "Dev"})
@@ -122,7 +122,7 @@ class TestApplicationServiceList:
         assert results[0]["company"] == "Acme Corp"
 
     def test_returns_empty_when_no_applications(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         results = svc.list_applications()
@@ -134,7 +134,7 @@ class TestApplicationServiceUpdate:
     """Tests for ApplicationService.update_application."""
 
     def test_updates_fields(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -144,7 +144,7 @@ class TestApplicationServiceUpdate:
         assert updated["company"] == "Corp"
 
     def test_rejects_invalid_status_on_update(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -152,7 +152,7 @@ class TestApplicationServiceUpdate:
             svc.update_application(created["id"], {"status": "Fake"})
 
     def test_raises_for_nonexistent_app(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
@@ -163,7 +163,7 @@ class TestApplicationServiceDelete:
     """Tests for ApplicationService.delete_application."""
 
     def test_deletes_existing(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -173,7 +173,7 @@ class TestApplicationServiceDelete:
             svc.get_application(created["id"])
 
     def test_returns_deleted_app_data(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -183,7 +183,7 @@ class TestApplicationServiceDelete:
         assert result["position"] == "Dev"
 
     def test_raises_for_nonexistent(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
@@ -194,7 +194,7 @@ class TestApplicationServiceContext:
     """Tests for ApplicationService.get_application_context."""
 
     def test_returns_composite_data(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -204,7 +204,7 @@ class TestApplicationServiceContext:
         assert "linked" in context
 
     def test_application_data_matches(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "Corp", "position": "Dev"})
@@ -214,7 +214,7 @@ class TestApplicationServiceContext:
         assert context["application"]["company"] == "Corp"
 
     def test_raises_for_nonexistent_app(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
@@ -225,7 +225,7 @@ class TestApplicationServiceTags:
     """Unit tests for tag normalization and filtering in ApplicationService."""
 
     def test_tags_normalized_on_create(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         result = svc.create_application(
@@ -234,7 +234,7 @@ class TestApplicationServiceTags:
         assert result["tags"] == ["python", "go"]
 
     def test_tags_50_char_limit_on_create(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         long_tag = "x" * 51
@@ -244,7 +244,7 @@ class TestApplicationServiceTags:
             )
 
     def test_tags_normalized_on_update(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         created = svc.create_application({"company": "A", "position": "P"})
@@ -254,7 +254,7 @@ class TestApplicationServiceTags:
         assert updated["tags"] == ["java", "rust"]
 
     def test_filter_by_tag(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         svc.create_application({"company": "A", "position": "P1", "tags": ["python"]})
@@ -264,7 +264,7 @@ class TestApplicationServiceTags:
         assert results[0]["company"] == "A"
 
     def test_list_tags(self, app_service: object) -> None:
-        from persona.application_service import ApplicationService
+        from pktx.application_service import ApplicationService
 
         svc: ApplicationService = app_service  # type: ignore[assignment]
         svc.create_application({"company": "A", "position": "P1", "tags": ["python"]})

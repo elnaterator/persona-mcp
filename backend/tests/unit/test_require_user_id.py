@@ -2,7 +2,7 @@
 
 import pytest
 
-from persona.auth import current_user_id_var, require_user_id
+from pktx.auth import current_user_id_var, require_user_id
 
 
 class TestRequireUserId:

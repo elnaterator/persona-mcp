@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from persona.models import SearchResult
+from pktx.models import SearchResult
 
 _SNIPPET_MAX = 160
 

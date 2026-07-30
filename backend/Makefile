@@ -15,7 +15,7 @@ build:
 	uv sync
 
 run:
-	uv run persona
+	uv run pktx
 
 lint:
 	uv run ruff check .

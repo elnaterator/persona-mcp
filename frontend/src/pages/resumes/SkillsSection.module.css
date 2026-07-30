@@ -17,20 +17,24 @@
 
 .list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* min() keeps tracks from exceeding the container on narrow viewports */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
   gap: var(--space-5) var(--space-8);
-}
-
-@media (max-width: 480px) {
-  .list {
-    grid-template-columns: 1fr;
-  }
 }
 
 .skillGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3);
+  /* Override min-width:auto so long skill names can't widen the grid track */
+  min-width: 0;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 1.25rem;
 }
 
 .categoryLabel {
@@ -41,67 +45,100 @@
   letter-spacing: 0.06em;
 }
 
-.skillItems {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.skillItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-1) 0;
-  border-bottom: 1px solid var(--border-primary);
-}
-
-.skillItem:last-child {
-  border-bottom: none;
-}
-
-.skillName {
-  color: var(--text-primary);
-  font-size: 0.9rem;
-}
-
-.skillActions {
-  display: flex;
-  gap: var(--space-1);
-  flex-shrink: 0;
-}
-
-.editButton {
-  background-color: var(--bg-surface);
-  color: var(--text-secondary);
-  padding: var(--space-1) var(--space-1);
-  border-radius: var(--radius-none);
-  cursor: pointer;
+/* Revealed on hover/keyboard focus anywhere in the group */
+.editCategoryButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  padding: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
 }
 
-.editButton:hover {
-  background-color: var(--bg-active);
+.skillGroup:hover .editCategoryButton,
+.editCategoryButton:focus-visible {
+  opacity: 1;
+}
+
+.editCategoryButton:hover {
   color: var(--accent-green);
 }
 
-.deleteButton {
-  background-color: var(--status-error-bg);
-  color: var(--status-error);
-  padding: var(--space-1) var(--space-1);
-  border-radius: var(--radius-none);
+/* Touch devices have no hover — keep the affordance visible */
+@media (hover: none) {
+  .editCategoryButton {
+    opacity: 1;
+  }
+}
+
+.doneButton {
+  padding: 0;
+  background: none;
+  color: var(--accent-green);
   cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color var(--transition-fast);
+}
+
+.doneButton:hover {
+  color: var(--accent-green-dim);
+}
+
+.skillItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Chip — matches TagInput chip styling */
+.skillItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  border-radius: var(--radius-none);
+  background-color: var(--accent-green-bg);
+  /* Never wider than its column; long names wrap inside the chip instead of
+     overflowing into the neighbouring grid track */
+  max-width: 100%;
+}
+
+.skillName {
+  color: var(--accent-green);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Chip remove — only rendered while the category is being edited */
+.chipRemove {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent-green);
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
 }
 
-.deleteButton:hover {
-  background-color: var(--status-error-bg-hover);
+.chipRemove:hover {
+  opacity: 1;
+  color: var(--status-error);
 }
 
 .placeholder {
@@ -124,3 +161,58 @@
 .addButton:hover {
   color: var(--accent-green-dim);
 }
+
+/* ─── Draft (unsaved) category ───────────────────────────────────────────── */
+
+.draftHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.draftName {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed var(--accent-green-dim);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.draftName::placeholder {
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.draftCancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.draftCancel:hover {
+  opacity: 1;
+  color: var(--status-error);
+}
+
+.draftHint {
+  font-size: 0.6875rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+

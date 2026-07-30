@@ -15,6 +15,9 @@ function normalizeTag(raw: string): string {
   return raw.trim().toLowerCase()
 }
 
+/** Separators accepted when pasting multiple values at once. */
+const PASTE_SPLIT = /[,;\n\r\t]+/
+
 export function TagInput({
   value,
   onChange,
@@ -28,18 +31,26 @@ export function TagInput({
   const [activeIndex, setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const commitTag = useCallback(
-    (raw: string) => {
-      const normalized = normalizeTag(raw)
-      if (!normalized) return
-      if (value.includes(normalized)) return
-      onChange([...value, normalized])
+  // Folds every value into one onChange so a multi-value paste can't drop
+  // entries to stale-closure reads of `value`.
+  const commitTags = useCallback(
+    (raws: string[]) => {
+      const next = [...value]
+      for (const raw of raws) {
+        const normalized = normalizeTag(raw)
+        if (!normalized) continue
+        if (next.some((v) => v.toLowerCase() === normalized.toLowerCase())) continue
+        next.push(normalized)
+      }
+      if (next.length !== value.length) onChange(next)
       setInputText('')
       setDropdownOpen(false)
       setActiveIndex(-1)
     },
     [value, onChange]
   )
+
+  const commitTag = useCallback((raw: string) => commitTags([raw]), [commitTags])
 
   const removeTag = useCallback(
     (tag: string) => {
@@ -52,7 +63,9 @@ export function TagInput({
 
   const matchingSuggestions = lowerInput
     ? availableTags.filter(
-        (t) => t.toLowerCase().includes(lowerInput) && !value.includes(t.toLowerCase())
+        (t) =>
+          t.toLowerCase().includes(lowerInput) &&
+          !value.some((v) => v.toLowerCase() === t.toLowerCase())
       )
     : []
 
@@ -103,6 +116,15 @@ export function TagInput({
     setActiveIndex(-1)
   }
 
+  // Pasting a separated list ("Python, Go; Rust") commits every value at once.
+  // A paste with no separator falls through to the browser default.
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text')
+    if (!PASTE_SPLIT.test(pasted)) return
+    e.preventDefault()
+    commitTags((inputText + pasted).split(PASTE_SPLIT))
+  }
+
   const handleBlur = () => {
     if (inputText.trim()) {
       commitTag(inputText)
@@ -145,6 +167,7 @@ export function TagInput({
           placeholder={value.length === 0 ? placeholder : ''}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onBlur={handleBlur}
           autoComplete="off"
           aria-autocomplete="list"

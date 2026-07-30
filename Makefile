@@ -68,7 +68,7 @@ endif
 	  ECR_URL=$$(terraform -chdir=infra/$(ENV) output -raw ecr_repository_url); \
 	  ACCOUNT_ID=$$(aws sts get-caller-identity --query Account --output text); \
 	  CLERK_PK=$$(aws ssm get-parameter \
-	    --name /persona/$(ENV)/clerk_publishable_key \
+	    --name /pktx/$(ENV)/clerk_publishable_key \
 	    --with-decryption \
 	    --query Parameter.Value \
 	    --output text \
@@ -85,13 +85,13 @@ endif
 	@set -e; \
 	  ECR_URL=$$(terraform -chdir=infra/$(ENV) output -raw ecr_repository_url); \
 	  DIGEST=$$(aws ecr describe-images \
-	    --repository-name persona-$(ENV) \
+	    --repository-name pktx-$(ENV) \
 	    --image-ids imageTag=latest \
 	    --query 'imageDetails[0].imageDigest' \
 	    --output text \
 	    --region $(AWS_REGION)); \
 	  aws lambda update-function-code \
-	    --function-name persona-$(ENV) \
+	    --function-name pktx-$(ENV) \
 	    --image-uri $${ECR_URL}@$${DIGEST} \
 	    --region $(AWS_REGION) \
 	    --output json | jq -r '"    updated to " + .CodeSha256'

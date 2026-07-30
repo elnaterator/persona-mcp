@@ -3,7 +3,7 @@
 import re
 from typing import Any
 
-from persona.database import (
+from pktx.database import (
     create_contact_communication,
     delete_communication_owned,
     load_communication_tags,
@@ -12,8 +12,8 @@ from persona.database import (
     search_communications,
     update_communication,
 )
-from persona.db import DBConnection
-from persona.models import (
+from pktx.db import DBConnection
+from pktx.models import (
     COMMUNICATION_DIRECTIONS,
     COMMUNICATION_STATUSES,
     COMMUNICATION_TYPES,

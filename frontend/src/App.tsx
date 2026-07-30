@@ -23,7 +23,7 @@ function AuthenticatedApp() {
     <div className="app">
       <header className="app-header">
         <div className="app-header-inner">
-          <h1>Persona<BlinkingCursor /></h1>
+          <h1>pktx<BlinkingCursor /></h1>
           <Navigation />
           <UserMenu />
         </div>

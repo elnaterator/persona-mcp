@@ -19,13 +19,13 @@ from fastmcp.server.middleware import Middleware
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 
-from persona.database import upsert_user
-from persona.db import DBConnection
+from pktx.database import upsert_user
+from pktx.db import DBConnection
 
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
 
-logger = logging.getLogger("persona")
+logger = logging.getLogger("pktx")
 
 # ContextVar for passing user identity into MCP tool handlers
 # Set to the Clerk user_id string when a request is authenticated;
@@ -215,7 +215,7 @@ class _DiagnosticJWTVerifier(JWTVerifier):
     FastMCP's JWTVerifier swallows validation failures, returns ``None``, and
     logs the reason only on its own logger — so our logs show a bare 401
     invalid_token with no cause. This subclass re-logs the rejection on the
-    ``persona`` logger at DEBUG, including the token's unverified header/claims
+    ``pktx`` logger at DEBUG, including the token's unverified header/claims
     next to the expected issuer, making a mismatch (alg, kid, issuer, or an
     opaque non-JWT token) diagnosable. Verification behaviour is unchanged.
     """
@@ -252,7 +252,7 @@ class _DiagnosticJWTVerifier(JWTVerifier):
 def build_mcp_auth(pool: "ConnectionPool[Any]") -> OAuthProxy:
     """Build the FastMCP OAuth proxy for the /mcp endpoint.
 
-    Requires PERSONA_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER,
+    Requires PKTX_PUBLIC_URL, CLERK_JWKS_URL, CLERK_ISSUER,
     CLERK_OAUTH_CLIENT_ID, CLERK_OAUTH_CLIENT_SECRET env vars.
 
     The proxy handles Dynamic Client Registration locally so native MCP clients
@@ -269,14 +269,14 @@ def build_mcp_auth(pool: "ConnectionPool[Any]") -> OAuthProxy:
 
     Token audience is NOT validated: signature (JWKS) and issuer stay strict.
     """
-    from persona.config import (
+    from pktx.config import (
         resolve_clerk_issuer,
         resolve_clerk_jwks_url,
         resolve_clerk_oauth_client_id,
         resolve_clerk_oauth_client_secret,
         resolve_public_url,
     )
-    from persona.oauth_store import build_oauth_client_storage
+    from pktx.oauth_store import build_oauth_client_storage
 
     public = resolve_public_url()
     issuer = resolve_clerk_issuer()

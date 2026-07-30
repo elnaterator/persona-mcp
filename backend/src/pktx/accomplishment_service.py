@@ -3,7 +3,7 @@
 import re
 from typing import Any
 
-from persona.database import (
+from pktx.database import (
     create_accomplishment,
     delete_accomplishment,
     load_accomplishment,
@@ -12,8 +12,8 @@ from persona.database import (
     unlink_all_for,
     update_accomplishment,
 )
-from persona.db import DBConnection
-from persona.link_service import LinkService
+from pktx.db import DBConnection
+from pktx.link_service import LinkService
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 

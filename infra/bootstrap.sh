@@ -14,8 +14,8 @@ if [[ "$ENV" != "dev" && "$ENV" != "prod" ]]; then
   exit 1
 fi
 
-BUCKET="persona-terraform-state-${ENV}"
-TABLE="persona-terraform-locks-${ENV}"
+BUCKET="pktx-terraform-state-${ENV}"
+TABLE="pktx-terraform-locks-${ENV}"
 
 echo "==> Bootstrapping Terraform remote state for environment: ${ENV}"
 echo "    Bucket: ${BUCKET}"

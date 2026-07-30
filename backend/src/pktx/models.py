@@ -1,4 +1,4 @@
-"""Pydantic models for persona resume data."""
+"""Pydantic models for pktx resume data."""
 
 import re
 from typing import Literal

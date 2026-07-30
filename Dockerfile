@@ -1,4 +1,4 @@
-# Multi-stage build for Persona MCP server with React frontend
+# Multi-stage build for pktx MCP server with React frontend
 # Stage 1: Frontend builder - build React SPA
 FROM node:18-slim AS frontend-builder
 
@@ -36,7 +36,7 @@ COPY backend/pyproject.toml backend/uv.lock ./
 # Copy backend source (needed for package installation)
 COPY backend/src ./src
 
-# Install dependencies and the persona package
+# Install dependencies and the pktx package
 RUN uv sync --frozen --no-dev
 
 # Stage 3: Runtime - minimal image with both frontend and backend
@@ -58,8 +58,8 @@ COPY --from=frontend-builder /frontend/dist /app/frontend-dist
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app" \
     PYTHONUNBUFFERED=1 \
-    PERSONA_DATA_DIR=/data \
-    PERSONA_FRONTEND_DIR=/app/frontend-dist
+    PKTX_DATA_DIR=/data \
+    PKTX_FRONTEND_DIR=/app/frontend-dist
 
 # Create data directory
 RUN mkdir -p /data
@@ -74,7 +74,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; import os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PERSONA_PORT\", \"8000\")}/health')"
+    CMD python -c "import urllib.request; import os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PKTX_PORT\", \"8000\")}/health')"
 
 # Run the server
-CMD ["python", "-m", "persona.server"]
+CMD ["python", "-m", "pktx.server"]

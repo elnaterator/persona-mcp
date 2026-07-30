@@ -1,6 +1,6 @@
 # Deploying to AWS
 
-Persona runs on **AWS Lambda** as a container image stored in **ECR**. All AWS resources are defined in Terraform under `infra/`. There are two environments: `dev` and `prod`, each with isolated state.
+pktx runs on **AWS Lambda** as a container image stored in **ECR**. All AWS resources are defined in Terraform under `infra/`. There are two environments: `dev` and `prod`, each with isolated state.
 
 **CI never runs `terraform apply`.** Deploys are always performed manually by the developer.
 
@@ -46,22 +46,22 @@ Replace `dev` with `prod` and repeat for the prod environment.
 # S3 bucket for Terraform state
 aws s3api create-bucket \
   --region us-west-2 \
-  --bucket persona-terraform-state-dev \
+  --bucket pktx-terraform-state-dev \
   --create-bucket-configuration LocationConstraint=us-west-2
 
 aws s3api put-bucket-versioning \
-  --bucket persona-terraform-state-dev \
+  --bucket pktx-terraform-state-dev \
   --versioning-configuration Status=Enabled
 
 aws s3api put-bucket-encryption \
-  --bucket persona-terraform-state-dev \
+  --bucket pktx-terraform-state-dev \
   --server-side-encryption-configuration \
   '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
 # DynamoDB table for state locking
 aws dynamodb create-table \
   --region us-west-2 \
-  --table-name persona-terraform-locks-dev \
+  --table-name pktx-terraform-locks-dev \
   --attribute-definitions AttributeName=LockID,AttributeType=S \
   --key-schema AttributeName=LockID,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST
@@ -93,21 +93,21 @@ Terraform creates placeholder SSM parameters (`value = "TO_BE_SET"`) during appl
 
 aws ssm put-parameter \
   --region us-west-2 \
-  --name /persona/{env}/database_url \
+  --name /pktx/{env}/database_url \
   --value "postgresql://user:pass@ep-xxx.us-west-2.aws.neon.tech/neondb?sslmode=require" \
   --type SecureString \
   --overwrite
 
 aws ssm put-parameter \
   --region us-west-2 \
-  --name /persona/{env}/clerk_secret_key \
+  --name /pktx/{env}/clerk_secret_key \
   --value "sk_test_..." \
   --type SecureString \
   --overwrite
 
 aws ssm put-parameter \
   --region us-west-2 \
-  --name /persona/{env}/clerk_publishable_key \
+  --name /pktx/{env}/clerk_publishable_key \
   --value "pk_test_..." \
   --type SecureString \
   --overwrite
@@ -118,7 +118,7 @@ Verify all three are set:
 ```bash
 aws ssm get-parameters-by-path \
   --region us-west-2 \
-  --path /persona/{env}/ \
+  --path /pktx/{env}/ \
   --query "Parameters[*].{Name:Name,Type:Type}"
 ```
 
@@ -135,8 +135,8 @@ aws ecr get-login-password --region us-west-2 | \
   ${ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com
 
 # Build, tag, push
-docker build -t persona-{env}:latest .
-docker tag persona-{env}:latest ${ECR_URL}:latest
+docker build -t pktx-{env}:latest .
+docker tag pktx-{env}:latest ${ECR_URL}:latest
 docker push ${ECR_URL}:latest
 ```
 
@@ -203,7 +203,7 @@ SSM parameter *values* are managed outside Terraform. Use `put-parameter --overw
 ```bash
 aws ssm put-parameter \
   --region us-west-2 \
-  --name /persona/prod/database_url \
+  --name /pktx/prod/database_url \
   --value "postgresql://..." \
   --type SecureString \
   --overwrite
@@ -214,7 +214,7 @@ Lambda reads SSM parameters at cold-start only. Force a cold start after rotatin
 ```bash
 aws lambda update-function-configuration \
   --region us-west-2 \
-  --function-name persona-prod \
+  --function-name pktx-prod \
   --description "force cold start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
@@ -244,14 +244,14 @@ aws ecr get-login-password --region us-west-2 | \
   docker login --username AWS --password-stdin \
   ${ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com
 
-docker build -t persona-{env}:latest .
-docker tag persona-{env}:latest ${ECR_URL}:latest
+docker build -t pktx-{env}:latest .
+docker tag pktx-{env}:latest ${ECR_URL}:latest
 docker push ${ECR_URL}:latest
 
 # Force Lambda to pull the new image
 aws lambda update-function-code \
   --region us-west-2 \
-  --function-name persona-{env} \
+  --function-name pktx-{env} \
   --image-uri ${ECR_URL}:latest
 ```
 
@@ -300,8 +300,8 @@ terraform destroy
 The S3 state bucket and DynamoDB locks table are not destroyed by `terraform destroy` (they are not Terraform-managed). Delete them manually if needed:
 
 ```bash
-aws s3 rb s3://persona-terraform-state-{env} --force
-aws dynamodb delete-table --region us-west-2 --table-name persona-terraform-locks-{env}
+aws s3 rb s3://pktx-terraform-state-{env} --force
+aws dynamodb delete-table --region us-west-2 --table-name pktx-terraform-locks-{env}
 ```
 
 ---
@@ -310,11 +310,11 @@ aws dynamodb delete-table --region us-west-2 --table-name persona-terraform-lock
 
 | Symptom | Likely cause | Resolution |
 |---------|-------------|------------|
-| Lambda returns 502 | App failed to start; Web Adapter never received a readiness response | Check logs: `aws logs tail /aws/lambda/persona-{env} --follow` |
+| Lambda returns 502 | App failed to start; Web Adapter never received a readiness response | Check logs: `aws logs tail /aws/lambda/pktx-{env} --follow` |
 | Lambda returns 500 | App started but errored on a request | Check logs for Python traceback |
-| Cold start > 15s | SSM reads timing out | Verify IAM role has `ssm:GetParameter` on `/persona/{env}/*` |
+| Cold start > 15s | SSM reads timing out | Verify IAM role has `ssm:GetParameter` on `/pktx/{env}/*` |
 | `docker push` fails with "denied" | ECR auth token expired (valid 12h) | Re-run `aws ecr get-login-password \| docker login ...` |
 | `terraform plan` fails "image not found" | ECR image not yet pushed | Complete Phase 3 (build and push) before full apply |
 | `terraform init` fails "bucket not found" | S3 state bucket not bootstrapped | Complete One-Time Bootstrap above |
 | CI plan fails "no identity" | OIDC role not set up or secret not set | Complete CI setup section above |
-| SSM value still `TO_BE_SET` after `put-parameter` | Wrong path or region | Verify with `aws ssm get-parameter --name /persona/{env}/database_url --with-decryption` |
+| SSM value still `TO_BE_SET` after `put-parameter` | Wrong path or region | Verify with `aws ssm get-parameter --name /pktx/{env}/database_url --with-decryption` |

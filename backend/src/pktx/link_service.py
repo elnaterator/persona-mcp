@@ -2,15 +2,15 @@
 
 from typing import Any
 
-from persona.database import (
+from pktx.database import (
     link_counts,
     link_delete,
     link_insert,
     links_for_resource,
     unlink_all_for,
 )
-from persona.db import DBConnection
-from persona.models import ResourceRef
+from pktx.db import DBConnection
+from pktx.models import ResourceRef
 
 RESOURCE_TYPES = ("application", "accomplishment", "resume", "note", "contact")
 

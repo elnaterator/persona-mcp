@@ -1,4 +1,4 @@
-"""Unit tests for persona.auth — JWKS caching and JWT validation."""
+"""Unit tests for pktx.auth — JWKS caching and JWT validation."""
 
 import time
 from typing import Any
@@ -75,20 +75,20 @@ class TestJWKSCache:
 
     def setup_method(self) -> None:
         """Reset the module-level cache state before each test."""
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         auth_module._JWKS_CACHE = {}
         auth_module._JWKS_FETCHED_AT = 0.0
 
     def test_cache_hit_returns_key_without_fetch(self) -> None:
         """A known kid within TTL is returned without an HTTP call."""
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         key_data = {"kid": "k1", "kty": "RSA"}
         auth_module._JWKS_CACHE = {"k1": key_data}
         auth_module._JWKS_FETCHED_AT = time.monotonic()  # fresh
 
-        with patch("persona.auth._fetch_jwks") as mock_fetch:
+        with patch("pktx.auth._fetch_jwks") as mock_fetch:
             result = auth_module._get_jwks_key("k1")
 
         mock_fetch.assert_not_called()
@@ -96,7 +96,7 @@ class TestJWKSCache:
 
     def test_cache_miss_triggers_fetch(self) -> None:
         """An unknown kid in a fresh cache triggers a JWKS refresh."""
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         auth_module._JWKS_CACHE = {}
         auth_module._JWKS_FETCHED_AT = time.monotonic()  # fresh but empty
@@ -108,14 +108,14 @@ class TestJWKSCache:
             auth_module._JWKS_FETCHED_AT = time.monotonic()
             return auth_module._JWKS_CACHE
 
-        with patch("persona.auth._fetch_jwks", side_effect=_fake_fetch):
+        with patch("pktx.auth._fetch_jwks", side_effect=_fake_fetch):
             result = auth_module._get_jwks_key("k2")
 
         assert result == key_data
 
     def test_expired_ttl_triggers_refresh(self) -> None:
         """An expired cache forces a fresh JWKS fetch even for a known kid."""
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         key_data = {"kid": "k3", "kty": "RSA"}
         auth_module._JWKS_CACHE = {"k3": key_data}
@@ -128,7 +128,7 @@ class TestJWKSCache:
             auth_module._JWKS_FETCHED_AT = time.monotonic()
             return auth_module._JWKS_CACHE
 
-        with patch("persona.auth._fetch_jwks", side_effect=_fake_fetch) as mock_fetch:
+        with patch("pktx.auth._fetch_jwks", side_effect=_fake_fetch) as mock_fetch:
             result = auth_module._get_jwks_key("k3")
 
         mock_fetch.assert_called_once()
@@ -136,7 +136,7 @@ class TestJWKSCache:
 
     def test_unknown_kid_after_refresh_raises_401(self) -> None:
         """If kid is still absent after a fresh JWKS fetch, a 401 is raised."""
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         auth_module._JWKS_CACHE = {}
         auth_module._JWKS_FETCHED_AT = 0.0
@@ -146,7 +146,7 @@ class TestJWKSCache:
             auth_module._JWKS_FETCHED_AT = time.monotonic()
             return auth_module._JWKS_CACHE
 
-        with patch("persona.auth._fetch_jwks", side_effect=_fake_fetch):
+        with patch("pktx.auth._fetch_jwks", side_effect=_fake_fetch):
             with pytest.raises(HTTPException) as exc_info:
                 auth_module._get_jwks_key("unknown-kid")
 
@@ -162,7 +162,7 @@ class TestVerifyClerkJwt:
     """Tests for the verify_clerk_jwt function."""
 
     def setup_method(self) -> None:
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         auth_module._JWKS_CACHE = {}
         auth_module._JWKS_FETCHED_AT = 0.0
@@ -171,7 +171,7 @@ class TestVerifyClerkJwt:
         self, kid: str = "test-kid", issuer: str = "https://clerk.test"
     ) -> tuple[Any, str]:
         """Set up JWKS cache with a test key and return (private_key, issuer)."""
-        import persona.auth as auth_module
+        import pktx.auth as auth_module
 
         private_key, public_key = _gen_rsa_key_pair()
         jwk_entry = _public_key_to_jwk(public_key, kid=kid)
@@ -186,7 +186,7 @@ class TestVerifyClerkJwt:
 
         with patch.dict("os.environ", {"CLERK_ISSUER": issuer}):
             claims = __import__(
-                "persona.auth", fromlist=["verify_clerk_jwt"]
+                "pktx.auth", fromlist=["verify_clerk_jwt"]
             ).verify_clerk_jwt(token)
 
         assert claims["sub"] == "user_test_123"
@@ -199,9 +199,9 @@ class TestVerifyClerkJwt:
 
         with patch.dict("os.environ", {"CLERK_ISSUER": issuer}):
             with pytest.raises(HTTPException) as exc_info:
-                __import__(
-                    "persona.auth", fromlist=["verify_clerk_jwt"]
-                ).verify_clerk_jwt(token)
+                __import__("pktx.auth", fromlist=["verify_clerk_jwt"]).verify_clerk_jwt(
+                    token
+                )
 
         assert exc_info.value.status_code == 401
         assert "expired" in exc_info.value.detail.lower()
@@ -213,9 +213,9 @@ class TestVerifyClerkJwt:
 
         with patch.dict("os.environ", {"CLERK_ISSUER": "https://clerk.test"}):
             with pytest.raises(HTTPException) as exc_info:
-                __import__(
-                    "persona.auth", fromlist=["verify_clerk_jwt"]
-                ).verify_clerk_jwt(token)
+                __import__("pktx.auth", fromlist=["verify_clerk_jwt"]).verify_clerk_jwt(
+                    token
+                )
 
         assert exc_info.value.status_code == 401
 
@@ -240,9 +240,9 @@ class TestVerifyClerkJwt:
 
         with patch.dict("os.environ", {"CLERK_ISSUER": issuer}):
             with pytest.raises(HTTPException) as exc_info:
-                __import__(
-                    "persona.auth", fromlist=["verify_clerk_jwt"]
-                ).verify_clerk_jwt(token)
+                __import__("pktx.auth", fromlist=["verify_clerk_jwt"]).verify_clerk_jwt(
+                    token
+                )
 
         assert exc_info.value.status_code == 401
         assert "sub" in exc_info.value.detail.lower()
@@ -251,8 +251,8 @@ class TestVerifyClerkJwt:
         """A garbage string raises HTTP 401."""
         with patch.dict("os.environ", {"CLERK_ISSUER": "https://clerk.test"}):
             with pytest.raises(HTTPException) as exc_info:
-                __import__(
-                    "persona.auth", fromlist=["verify_clerk_jwt"]
-                ).verify_clerk_jwt("not.a.jwt")
+                __import__("pktx.auth", fromlist=["verify_clerk_jwt"]).verify_clerk_jwt(
+                    "not.a.jwt"
+                )
 
         assert exc_info.value.status_code == 401

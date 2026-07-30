@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Design decisions and tradeoff analysis for Persona. Records *why* the architecture looks the way it does, not just *what* it is.
+Design decisions and tradeoff analysis for pktx. Records *why* the architecture looks the way it does, not just *what* it is.
 
 ---
 
@@ -10,12 +10,12 @@ Design decisions and tradeoff analysis for Persona. Records *why* the architectu
 
 ### Context
 
-The backend exposes standard CRUD REST across six resources — resumes (with nested sections/entries), applications, accomplishments, notes, contacts, and communications — plus per-resource `tags` endpoints and cross-resource search. Routes live in `backend/src/persona/api/routes.py` (~1000 lines), guarded by Clerk auth middleware.
+The backend exposes standard CRUD REST across six resources — resumes (with nested sections/entries), applications, accomplishments, notes, contacts, and communications — plus per-resource `tags` endpoints and cross-resource search. Routes live in `backend/src/pktx/api/routes.py` (~1000 lines), guarded by Clerk auth middleware.
 
 There are two consumers:
 
 1. The **React SPA** (`frontend/`), which calls REST endpoints via the fetch client in `src/services/api/`.
-2. The **MCP tool layer** (`backend/src/persona/tools/`), which an LLM drives directly against the shared service layer.
+2. The **MCP tool layer** (`backend/src/pktx/tools/`), which an LLM drives directly against the shared service layer.
 
 ### GraphQL — pros for this app
 
@@ -40,7 +40,7 @@ There are two consumers:
 
 ### Rationale
 
-GraphQL solves problems Persona does not have: many heterogeneous clients, deeply nested object graphs, and over-fetching at scale. Persona has one SPA plus one MCP layer, six flat resources with fixed shapes, and a working API with HTTP caching.
+GraphQL solves problems pktx does not have: many heterogeneous clients, deeply nested object graphs, and over-fetching at scale. pktx has one SPA plus one MCP layer, six flat resources with fixed shapes, and a working API with HTTP caching.
 
 The query-shape flexibility GraphQL sells is already delivered to the LLM by the MCP tools. Adding GraphQL would create a second flexible layer on top of a rewrite cost.
 

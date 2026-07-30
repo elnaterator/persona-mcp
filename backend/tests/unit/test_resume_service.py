@@ -1,4 +1,4 @@
-"""Unit tests for persona.resume_service module (v2 version-aware API)."""
+"""Unit tests for pktx.resume_service module (v2 version-aware API)."""
 
 import pytest
 
@@ -9,7 +9,7 @@ class TestResumeServiceGetResume:
     def test_returns_default_version_with_full_data(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.get_resume()
@@ -22,7 +22,7 @@ class TestResumeServiceGetResume:
         assert len(result["resume_data"]["skills"]) == 8
 
     def test_returns_default_version_on_empty_db(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         result = service.get_resume()
@@ -31,7 +31,7 @@ class TestResumeServiceGetResume:
         assert isinstance(result["resume_data"], dict)
 
     def test_returns_specific_version_by_id(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         # Create a second version
@@ -42,14 +42,14 @@ class TestResumeServiceGetResume:
         assert result["label"] == "Second Version"
 
     def test_raises_for_nonexistent_version_id(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
             service.get_resume(version_id=9999)
 
     def test_result_contains_metadata_fields(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         result = service.get_resume()
@@ -68,7 +68,7 @@ class TestResumeServiceGetSection:
     def test_get_contact_section_returns_dict(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.get_section("contact")
@@ -80,7 +80,7 @@ class TestResumeServiceGetSection:
     def test_get_summary_section_returns_string(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.get_section("summary")
@@ -91,7 +91,7 @@ class TestResumeServiceGetSection:
     def test_get_experience_section_returns_list(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.get_section("experience")
@@ -103,7 +103,7 @@ class TestResumeServiceGetSection:
     def test_get_education_section_returns_list(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.get_section("education")
@@ -115,7 +115,7 @@ class TestResumeServiceGetSection:
     def test_get_skills_section_returns_list(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.get_section("skills")
@@ -126,7 +126,7 @@ class TestResumeServiceGetSection:
     def test_get_section_with_version_id(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         default = service.get_resume()
@@ -135,7 +135,7 @@ class TestResumeServiceGetSection:
         assert result["name"] == "Jane Doe"
 
     def test_invalid_section_raises_value_error(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid section"):
@@ -148,7 +148,7 @@ class TestResumeServiceUpdateSection:
     def test_update_contact_merges_fields(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.update_section("contact", {"email": "new@example.com"})
@@ -160,7 +160,7 @@ class TestResumeServiceUpdateSection:
     def test_update_contact_returns_string(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.update_section("contact", {"phone": "+1-555-9999"})
@@ -170,7 +170,7 @@ class TestResumeServiceUpdateSection:
     def test_update_summary_replaces_text(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.update_section("summary", {"text": "New summary text."})
@@ -181,7 +181,7 @@ class TestResumeServiceUpdateSection:
     def test_update_summary_returns_string(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.update_section("summary", {"text": "Updated."})
@@ -191,7 +191,7 @@ class TestResumeServiceUpdateSection:
     def test_update_contact_with_multiple_fields(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.update_section(
@@ -205,14 +205,14 @@ class TestResumeServiceUpdateSection:
         assert contact["name"] == "Jane Doe"  # preserved
 
     def test_update_experience_section_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid section"):
             service.update_section("experience", {"title": "x"})
 
     def test_update_summary_empty_text_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Summary text must not be empty"):
@@ -223,7 +223,7 @@ class TestResumeServiceAddEntry:
     """Tests for ResumeService.add_entry."""
 
     def test_add_experience_prepends(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.add_entry("experience", {"title": "CTO", "company": "NewCo"})
@@ -236,7 +236,7 @@ class TestResumeServiceAddEntry:
     def test_add_experience_returns_string(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.add_entry(
@@ -246,7 +246,7 @@ class TestResumeServiceAddEntry:
         assert isinstance(result, str)
 
     def test_add_education_prepends(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.add_entry("education", {"institution": "MIT", "degree": "Ph.D. CS"})
@@ -256,7 +256,7 @@ class TestResumeServiceAddEntry:
         assert education[0]["institution"] == "MIT"
 
     def test_add_skill_appends(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.add_entry(
@@ -272,14 +272,14 @@ class TestResumeServiceAddEntry:
     def test_add_skill_rejects_case_insensitive_duplicate(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         with pytest.raises(ValueError, match="already exists"):
             service.add_entry("skills", {"name": "python", "category": "Languages"})
 
     def test_add_entry_to_empty_db(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         service.add_entry("experience", {"title": "Dev", "company": "Co"})
@@ -289,7 +289,7 @@ class TestResumeServiceAddEntry:
         assert experience[0]["title"] == "Dev"
 
     def test_add_entry_invalid_section_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid section"):
@@ -298,7 +298,7 @@ class TestResumeServiceAddEntry:
     def test_add_entry_invalid_section_summary_raises(
         self, resume_service: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid section"):
@@ -309,7 +309,7 @@ class TestResumeServiceUpdateEntry:
     """Tests for ResumeService.update_entry."""
 
     def test_update_experience_in_place(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.update_entry("experience", 0, {"title": "Staff Engineer"})
@@ -321,7 +321,7 @@ class TestResumeServiceUpdateEntry:
     def test_update_experience_returns_string(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.update_entry("experience", 0, {"title": "Principal Engineer"})
@@ -329,7 +329,7 @@ class TestResumeServiceUpdateEntry:
         assert isinstance(result, str)
 
     def test_update_education_entry(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.update_entry("education", 0, {"honors": "Magna Cum Laude"})
@@ -339,7 +339,7 @@ class TestResumeServiceUpdateEntry:
         assert education[0]["institution"] == "Stanford University"  # preserved
 
     def test_update_skill_entry(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.update_entry("skills", 0, {"name": "Python 3"})
@@ -350,14 +350,14 @@ class TestResumeServiceUpdateEntry:
     def test_update_entry_out_of_range_raises(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         with pytest.raises(ValueError, match="out of range"):
             service.update_entry("experience", 99, {"title": "x"})
 
     def test_update_entry_invalid_section_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid section"):
@@ -370,7 +370,7 @@ class TestResumeServiceRemoveEntry:
     def test_remove_experience_and_compact(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.remove_entry("experience", 0)
@@ -382,7 +382,7 @@ class TestResumeServiceRemoveEntry:
     def test_remove_experience_returns_string(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         result = service.remove_entry("experience", 0)
@@ -390,7 +390,7 @@ class TestResumeServiceRemoveEntry:
         assert isinstance(result, str)
 
     def test_remove_education_entry(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         service.remove_entry("education", 0)
@@ -400,7 +400,7 @@ class TestResumeServiceRemoveEntry:
         assert education[0]["institution"] == "UC Berkeley"
 
     def test_remove_skill_entry(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         initial_skills = service.get_section("skills")
@@ -415,14 +415,14 @@ class TestResumeServiceRemoveEntry:
     def test_remove_entry_out_of_range_raises(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         with pytest.raises(ValueError, match="out of range"):
             service.remove_entry("experience", 99)
 
     def test_remove_entry_invalid_section_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Invalid section"):
@@ -433,7 +433,7 @@ class TestResumeServiceListResumes:
     """Tests for ResumeService.list_resumes."""
 
     def test_returns_list(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         result = service.list_resumes()
@@ -442,7 +442,7 @@ class TestResumeServiceListResumes:
         assert len(result) >= 1
 
     def test_includes_metadata_fields(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         versions = service.list_resumes()
@@ -454,7 +454,7 @@ class TestResumeServiceListResumes:
         assert "app_count" in v
 
     def test_shows_default_version(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         versions = service.list_resumes()
@@ -463,7 +463,7 @@ class TestResumeServiceListResumes:
         assert len(defaults) == 1
 
     def test_shows_all_versions_after_create(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         service.create_resume("Alpha")
@@ -479,12 +479,12 @@ class TestResumeServiceListResumes:
     ) -> None:
         from psycopg import Connection
 
-        from persona.database import (
+        from pktx.database import (
             create_application,
             link_insert,
             load_default_resume_version,
         )
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         conn: Connection = db_conn  # type: ignore[assignment]
@@ -502,7 +502,7 @@ class TestResumeServiceCreateResume:
     """Tests for ResumeService.create_resume."""
 
     def test_creates_copy_of_default(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         new_version = service.create_resume("My Custom Resume")
@@ -511,7 +511,7 @@ class TestResumeServiceCreateResume:
         assert new_version["resume_data"]["contact"]["name"] == "Jane Doe"
 
     def test_new_version_not_default(self, resume_service_with_data: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         new_version = service.create_resume("Side Resume")
@@ -519,21 +519,21 @@ class TestResumeServiceCreateResume:
         assert new_version["is_default"] is False
 
     def test_empty_label_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Label must not be empty"):
             service.create_resume("")
 
     def test_whitespace_only_label_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="Label must not be empty"):
             service.create_resume("   ")
 
     def test_label_is_stripped(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         new_version = service.create_resume("  Trimmed Label  ")
@@ -545,7 +545,7 @@ class TestResumeServiceSetDefault:
     """Tests for ResumeService.set_default."""
 
     def test_changes_default_version(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         v2 = service.create_resume("Version 2")
@@ -555,7 +555,7 @@ class TestResumeServiceSetDefault:
         assert default["id"] == v2["id"]
 
     def test_returns_confirmation_string(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         v2 = service.create_resume("New Default")
@@ -565,7 +565,7 @@ class TestResumeServiceSetDefault:
         assert "New Default" in result
 
     def test_only_one_default_after_change(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         v2 = service.create_resume("Another")
@@ -576,7 +576,7 @@ class TestResumeServiceSetDefault:
         assert len(defaults) == 1
 
     def test_raises_for_nonexistent_id(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
@@ -587,7 +587,7 @@ class TestResumeServiceDeleteResume:
     """Tests for ResumeService.delete_resume."""
 
     def test_removes_version(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         v2 = service.create_resume("Temporary")
@@ -598,7 +598,7 @@ class TestResumeServiceDeleteResume:
         assert v2["id"] not in ids
 
     def test_returns_confirmation_string(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         v2 = service.create_resume("To Delete")
@@ -608,7 +608,7 @@ class TestResumeServiceDeleteResume:
         assert "To Delete" in result
 
     def test_raises_when_deleting_last_version(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         default = service.get_resume()
@@ -620,7 +620,7 @@ class TestResumeServiceUpdateMetadata:
     """Tests for ResumeService.update_metadata."""
 
     def test_renames_version(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         default = service.get_resume()
@@ -629,7 +629,7 @@ class TestResumeServiceUpdateMetadata:
         assert updated["label"] == "Renamed Resume"
 
     def test_empty_label_raises(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         default = service.get_resume()
@@ -637,7 +637,7 @@ class TestResumeServiceUpdateMetadata:
             service.update_metadata(default["id"], "")
 
     def test_raises_for_nonexistent_id(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         with pytest.raises(ValueError, match="not found"):
@@ -650,7 +650,7 @@ class TestVersionIsolation:
     def test_editing_copy_does_not_affect_original(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         default = service.get_resume()
@@ -671,7 +671,7 @@ class TestVersionIsolation:
     def test_adding_entry_to_copy_does_not_affect_original(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         default = service.get_resume()
@@ -692,7 +692,7 @@ class TestVersionIsolation:
     def test_removing_entry_from_copy_does_not_affect_original(
         self, resume_service_with_data: object
     ) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service_with_data  # type: ignore[assignment]
         default = service.get_resume()
@@ -711,7 +711,7 @@ class TestResumeServiceTags:
     """Unit tests for tag normalization in ResumeService."""
 
     def test_tags_normalized_on_create(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         version = service.create_resume(
@@ -720,7 +720,7 @@ class TestResumeServiceTags:
         assert version["tags"] == ["backend", "cloud"]
 
     def test_tags_50_char_limit_on_create(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         long_tag = "x" * 51
@@ -728,7 +728,7 @@ class TestResumeServiceTags:
             service.create_resume("Tagged", tags=[long_tag])
 
     def test_tags_normalized_on_update_metadata(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         version = service.create_resume("V1")
@@ -738,7 +738,7 @@ class TestResumeServiceTags:
         assert updated["tags"] == ["ml", "data"]
 
     def test_list_tags_returns_merged(self, resume_service: object) -> None:
-        from persona.resume_service import ResumeService
+        from pktx.resume_service import ResumeService
 
         service: ResumeService = resume_service  # type: ignore[assignment]
         service.create_resume("A", tags=["backend"])

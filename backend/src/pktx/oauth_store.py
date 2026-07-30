@@ -122,6 +122,8 @@ def _derive_fernet_key(secret: str) -> bytes:
     by one Lambda invocation is readable by the next. Fernet requires a urlsafe
     base64-encoded 32-byte key.
     """
+    # Salt keeps the pre-rename "persona" prefix: changing it would rotate the
+    # Fernet key and invalidate every encrypted value already in oauth_kv.
     digest = hashlib.sha256(f"persona-oauth-kv:{secret}".encode()).digest()
     return base64.urlsafe_b64encode(digest)
 

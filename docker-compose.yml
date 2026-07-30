@@ -2,18 +2,18 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: persona
-      POSTGRES_PASSWORD: persona
-      POSTGRES_DB: persona
+      POSTGRES_USER: pktx
+      POSTGRES_PASSWORD: pktx
+      POSTGRES_DB: pktx
     volumes:
       - pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "persona"]
+      test: ["CMD", "pg_isready", "-U", "pktx"]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  persona:
+  pktx:
     build:
       context: .
       dockerfile: Dockerfile
@@ -25,11 +25,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - PERSONA_PORT=8000
-      - PERSONA_DB_URL=postgresql://persona:persona@postgres:5432/persona
-      - PERSONA_FRONTEND_DIR=/app/frontend-dist
+      - PKTX_PORT=8000
+      - PKTX_DB_URL=postgresql://pktx:pktx@postgres:5432/pktx
+      - PKTX_FRONTEND_DIR=/app/frontend-dist
       - LOG_LEVEL=INFO
-      - PERSONA_PUBLIC_URL=${PERSONA_PUBLIC_URL}
+      - PKTX_PUBLIC_URL=${PKTX_PUBLIC_URL}
       - CLERK_JWKS_URL=${CLERK_JWKS_URL}
       - CLERK_ISSUER=${CLERK_ISSUER}
       - CLERK_OAUTH_CLIENT_ID=${CLERK_OAUTH_CLIENT_ID}

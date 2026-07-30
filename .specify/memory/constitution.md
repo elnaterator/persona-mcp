@@ -98,7 +98,7 @@ MUST NOT be exposed to MCP clients in production.
 - **Type Checking**: `pyright` or `mypy` (MUST pass with no errors
   on CI)
 - **Entry Point**: A `[project.scripts]` entry in `pyproject.toml`
-  that starts the MCP server (e.g., `persona = "persona.server:main"`)
+  that starts the MCP server (e.g., `pktx = "pktx.server:main"`)
 - **Task Runner**: GNU Make via a root-level `Makefile`
 
 ## Development Workflow
@@ -111,7 +111,7 @@ targets are mandatory:
 
 | Target       | Command                        | Purpose                              |
 |--------------|--------------------------------|--------------------------------------|
-| `make run`   | Start the MCP server locally   | Launch via `uv run persona`          |
+| `make run`   | Start the MCP server locally   | Launch via `uv run pktx`          |
 | `make test`  | Run the full test suite        | Execute `uv run pytest`              |
 | `make lint`  | Run linter and formatter check | Execute `uv run ruff check . && uv run ruff format --check .` |
 | `make check` | Run lint then test             | Composite: depends on `lint` + `test` |

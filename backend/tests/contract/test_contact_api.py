@@ -7,7 +7,7 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.auth import current_user_id_var
+from pktx.auth import current_user_id_var
 
 _TEST_USER = "test_contact_user"
 
@@ -23,7 +23,7 @@ def _set_user_context() -> Generator[None, None, None]:
 
 @pytest.fixture
 def contact_service(db_conn: Connection[Any]) -> Any:
-    from persona.contact_service import ContactService
+    from pktx.contact_service import ContactService
 
     db_conn.execute(
         "INSERT INTO users (id, email) VALUES (%s, 'test@test.com') "
@@ -36,9 +36,9 @@ def contact_service(db_conn: Connection[Any]) -> Any:
 def _make_contact_client(db_conn: Connection[Any]) -> TestClient:
     from fastapi import FastAPI
 
-    from persona.api.routes import create_router
-    from persona.contact_service import ContactService
-    from persona.resume_service import ResumeService
+    from pktx.api.routes import create_router
+    from pktx.contact_service import ContactService
+    from pktx.resume_service import ResumeService
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     contact_svc = ContactService(db_conn)  # type: ignore[arg-type]

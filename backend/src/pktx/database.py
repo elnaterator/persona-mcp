@@ -1,4 +1,4 @@
-"""PostgreSQL database operations for persona resume data."""
+"""PostgreSQL database operations for pktx resume data."""
 
 import datetime
 import json
@@ -8,10 +8,10 @@ from typing import Any
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from persona.db import DBConnection
-from persona.migrations import apply_migrations
+from pktx.db import DBConnection
+from pktx.migrations import apply_migrations
 
-logger = logging.getLogger("persona")
+logger = logging.getLogger("pktx")
 
 
 def build_filters(

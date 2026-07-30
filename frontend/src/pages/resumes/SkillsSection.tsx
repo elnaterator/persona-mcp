@@ -1,11 +1,10 @@
-import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
+import { Pencil, X } from 'lucide-react'
 import type { Skill } from '../../types'
-import { EntryForm, type FieldConfig } from '../../components/EntryForm'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
-import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
-import { skillSchema } from '../../schemas/resumeEntry'
+import { addEntry, removeEntry, addVersionEntry, removeVersionEntry } from '../../services/api'
+import { SkillAdder } from './SkillAdder'
 import styles from './SkillsSection.module.css'
 
 interface SkillsSectionProps {
@@ -14,19 +13,20 @@ interface SkillsSectionProps {
   versionId?: number
 }
 
-type Mode = 'view' | 'add' | { type: 'edit'; index: number } | { type: 'delete'; index: number }
-
-const skillFields: FieldConfig[] = [
-  { name: 'name', label: 'Skill Name', type: 'text', required: true, group: 'main' },
-  { name: 'category', label: 'Category', type: 'text', required: false, group: 'main' },
-]
+/** Display label for skills stored with a null category. */
+const UNCATEGORIZED = 'Other'
 
 export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSectionProps) {
-  const [mode, setMode] = useState<Mode>('view')
-  const { success, error } = useToast()
+  /** Category label being edited (chips removable + adder open), or null. */
+  const [editingCategory, setEditingCategory] = useState<string | null>(null)
+  /** Client-only category: exists until its first skill is persisted. */
+  const [draftCategory, setDraftCategory] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const draftAdderRef = useRef<HTMLInputElement>(null)
+  const { success, error, warning } = useToast()
 
   const groupedSkills = skills.reduce((acc, skill, index) => {
-    const category = skill.category || 'Other'
+    const category = skill.category || UNCATEGORIZED
     if (!acc[category]) {
       acc[category] = []
     }
@@ -34,142 +34,256 @@ export default function SkillsSection({ skills, onUpdate, versionId }: SkillsSec
     return acc
   }, {} as Record<string, Array<Skill & { originalIndex: number }>>)
 
-  const categories = Object.keys(groupedSkills).sort()
+  // Alphabetical, with the catch-all "Other" group pinned last
+  const categories = Object.keys(groupedSkills).sort((a, b) => {
+    if (a === UNCATEGORIZED) return 1
+    if (b === UNCATEGORIZED) return -1
+    return a.localeCompare(b)
+  })
 
-  const handleAdd = async (data: Record<string, string | string[]>) => {
-    try {
-      const entryData: Skill = {
-        name: data.name as string,
-        category: (data.category as string) || null,
-      }
-
-      if (versionId !== undefined) {
-        await addVersionEntry(versionId, 'skills', entryData)
-      } else {
-        await addEntry('skills', entryData)
-      }
-      success('Skill added successfully')
-      setMode('view')
-      if (onUpdate) onUpdate()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to add skill'
-      error(msg)
+  // A draft stays mounted — keeping focus in its skill input — until the parent
+  // refetch confirms the category exists, then editing moves to the real group.
+  // Layout effect, not effect: swap before paint so no duplicate group flashes.
+  // categoryKey is joined so the effect keys off content, not array identity;
+  // the NUL separator keeps multi-word category names intact.
+  const categoryKey = categories.join('\u0000')
+  useLayoutEffect(() => {
+    const label = draftCategory?.trim()
+    if (label && categoryKey.split('\u0000').includes(label)) {
+      setDraftCategory(null)
+      setEditingCategory(label)
     }
+  }, [categoryKey, draftCategory])
+
+  const addSkill = (entry: Skill) =>
+    versionId !== undefined
+      ? addVersionEntry(versionId, 'skills', entry)
+      : addEntry('skills', entry)
+
+  /**
+   * Persists one or more skills under `categoryLabel`. Saving the first skill
+   * of a draft category is what makes that category real — it exists nowhere
+   * but this component's state until then.
+   */
+  const commitSkills = async (categoryLabel: string, names: string[]) => {
+    const label = categoryLabel.trim()
+    if (!label) {
+      warning('Name the category first')
+      return
+    }
+
+    const existing = new Set(skills.map((s) => s.name.toLowerCase()))
+    const seen = new Set<string>()
+    const toAdd: string[] = []
+    let duplicates = 0
+
+    // The backend rejects case-insensitive duplicates — filter them up front,
+    // including repeats inside a single pasted list.
+    for (const raw of names) {
+      const name = raw.trim()
+      if (!name) continue
+      const key = name.toLowerCase()
+      if (existing.has(key) || seen.has(key)) {
+        duplicates++
+        continue
+      }
+      seen.add(key)
+      toAdd.push(name)
+    }
+
+    if (toAdd.length === 0) {
+      if (duplicates > 0) {
+        warning(`Skipped ${duplicates} already on this resume`)
+      }
+      return
+    }
+
+    const category = label === UNCATEGORIZED ? null : label
+    const failed: string[] = []
+
+    // Sequential, not parallel: each POST rewrites the whole skills array
+    // server-side, so concurrent writes would drop entries.
+    setSaving(true)
+    for (const name of toAdd) {
+      try {
+        await addSkill({ name, category })
+      } catch {
+        failed.push(name)
+      }
+    }
+    setSaving(false)
+
+    const added = toAdd.length - failed.length
+    if (added > 0) success(`Added ${added} skill${added === 1 ? '' : 's'} to ${label}`)
+    if (duplicates > 0) warning(`Skipped ${duplicates} already on this resume`)
+    if (failed.length > 0) error(`Failed to add: ${failed.join(', ')}`)
+
+    if (onUpdate) onUpdate()
   }
 
-  const handleEdit = async (data: Record<string, string | string[]>) => {
-    if (typeof mode !== 'object' || mode.type !== 'edit') return
-
-    try {
-      const entryData: Partial<Skill> = {
-        name: data.name as string,
-        category: (data.category as string) || null,
-      }
-
-      if (versionId !== undefined) {
-        await updateVersionEntry(versionId, 'skills', mode.index, entryData)
-      } else {
-        await updateEntry('skills', mode.index, entryData)
-      }
-      success('Skill updated successfully')
-      setMode('view')
-      if (onUpdate) onUpdate()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to update skill'
-      error(msg)
+  /**
+   * Enter or Tab in the draft category's name field hands focus straight to its
+   * skill input, so a new category can be filled in without leaving the keyboard.
+   */
+  const handleDraftNameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setDraftCategory(null)
+      return
     }
+    if (e.key !== 'Enter' && !(e.key === 'Tab' && !e.shiftKey)) return
+
+    e.preventDefault()
+    if (!draftCategory?.trim()) {
+      warning('Name the category first')
+      return
+    }
+    draftAdderRef.current?.focus()
   }
 
-  const handleDelete = async () => {
-    if (typeof mode !== 'object' || mode.type !== 'delete') return
-
+  // No confirm dialog for a single skill — delete immediately, offer Undo.
+  // Undo re-adds the skill, which appends it to the end of its category.
+  const handleDelete = async (index: number, skill: Skill) => {
     try {
       if (versionId !== undefined) {
-        await removeVersionEntry(versionId, 'skills', mode.index)
+        await removeVersionEntry(versionId, 'skills', index)
       } else {
-        await removeEntry('skills', mode.index)
+        await removeEntry('skills', index)
       }
-      success('Skill deleted successfully')
-      setMode('view')
-      if (onUpdate) onUpdate()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete skill'
-      error(msg)
-      setMode('view')
+      error(err instanceof Error ? err.message : 'Failed to delete skill')
+      return
     }
+
+    if (onUpdate) onUpdate()
+
+    success(`Deleted ${skill.name}`, {
+      duration: 8000,
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          try {
+            await addSkill({ name: skill.name, category: skill.category ?? null })
+            if (onUpdate) onUpdate()
+          } catch {
+            error(`Failed to restore ${skill.name}`)
+          }
+        },
+      },
+    })
   }
 
   return (
     <section className={styles.container} data-testid="skills-section">
       <h2 className={styles.sectionLabel}>Skills</h2>
 
-      {categories.length > 0 ? (
+      {categories.length > 0 || draftCategory !== null ? (
         <div className={styles.list}>
-          {categories.map((category) => (
-            <div key={category} className={styles.skillGroup}>
-              <span className={styles.categoryLabel}>{category}</span>
-              <div className={styles.skillItems}>
-                {groupedSkills[category].map((skill) => (
-                  typeof mode === 'object' && mode.type === 'edit' && mode.index === skill.originalIndex ? (
-                    <EntryForm
-                      key={skill.originalIndex}
-                      fields={skillFields}
-                      schema={skillSchema}
-                      defaultValues={skill as unknown as Record<string, string | string[]>}
-                      onSubmit={handleEdit}
-                      onCancel={() => setMode('view')}
-                    />
+          {categories.map((category) => {
+            const editing = editingCategory === category
+            return (
+              <div key={category} className={styles.skillGroup}>
+                <div className={styles.groupHeader}>
+                  <span className={styles.categoryLabel}>{category}</span>
+                  {editing ? (
+                    <button
+                      className={styles.doneButton}
+                      onClick={() => setEditingCategory(null)}
+                    >
+                      done
+                    </button>
                   ) : (
+                    <button
+                      className={styles.editCategoryButton}
+                      onClick={() => {
+                        setDraftCategory(null)
+                        setEditingCategory(category)
+                      }}
+                      aria-label={`Edit ${category} skills`}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  )}
+                </div>
+
+                <div className={styles.skillItems}>
+                  {groupedSkills[category].map((skill) => (
                     <div key={skill.originalIndex} className={styles.skillItem}>
                       <span className={styles.skillName}>{skill.name}</span>
-                      <div className={styles.skillActions}>
+                      {editing && (
                         <button
-                          className={styles.editButton}
-                          onClick={() => setMode({ type: 'edit', index: skill.originalIndex })}
-                          aria-label="Edit skill"
+                          className={styles.chipRemove}
+                          onClick={() => handleDelete(skill.originalIndex, skill)}
+                          aria-label={`Remove ${skill.name}`}
                         >
-                          <Pencil size={12} />
+                          <X size={10} />
                         </button>
-                        <button
-                          className={styles.deleteButton}
-                          onClick={() => setMode({ type: 'delete', index: skill.originalIndex })}
-                          aria-label="Delete skill"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  )
-                ))}
+                  ))}
+
+                  {editing && (
+                    <SkillAdder
+                      label={`Add skill to ${category}`}
+                      busy={saving}
+                      onCommit={(names) => void commitSkills(category, names)}
+                      onClose={() => setEditingCategory(null)}
+                    />
+                  )}
+                </div>
               </div>
+            )
+          })}
+
+          {draftCategory !== null && (
+            <div className={styles.skillGroup} data-testid="draft-category">
+              <div className={styles.draftHeader}>
+                <input
+                  className={styles.draftName}
+                  value={draftCategory}
+                  onChange={(e) => setDraftCategory(e.target.value)}
+                  onKeyDown={handleDraftNameKeyDown}
+                  placeholder="Category name"
+                  aria-label="New category name"
+                  autoComplete="off"
+                  autoFocus
+                />
+                <button
+                  className={styles.draftCancel}
+                  onClick={() => setDraftCategory(null)}
+                  aria-label="Discard new category"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div className={styles.skillItems}>
+                <SkillAdder
+                  ref={draftAdderRef}
+                  label="Add skill to new category"
+                  busy={saving}
+                  autoFocus={false}
+                  onCommit={(names) => void commitSkills(draftCategory, names)}
+                  onClose={() => setDraftCategory(null)}
+                />
+              </div>
+              <p className={styles.draftHint}>Unsaved — adding a skill creates this category</p>
             </div>
-          ))}
+          )}
         </div>
       ) : (
-        <p className={styles.placeholder}>Click "Add Skill" to add skills</p>
+        <p className={styles.placeholder}>Click "Add Category" to add skills</p>
       )}
 
-      {mode === 'add' && (
-        <EntryForm
-          fields={skillFields}
-          schema={skillSchema}
-          onSubmit={handleAdd}
-          onCancel={() => setMode('view')}
-        />
-      )}
-
-      {mode === 'view' && (
-        <button className={styles.addButton} onClick={() => setMode('add')}>
-          Add Skill
+      {draftCategory === null && (
+        <button
+          className={styles.addButton}
+          onClick={() => {
+            setEditingCategory(null)
+            setDraftCategory('')
+          }}
+        >
+          + Add Category
         </button>
-      )}
-
-      {typeof mode === 'object' && mode.type === 'delete' && (
-        <ConfirmDialog
-          message="Are you sure you want to delete this skill?"
-          onConfirm={handleDelete}
-          onCancel={() => setMode('view')}
-        />
       )}
     </section>
   )

@@ -21,7 +21,7 @@ def seeded_db(db_conn: Connection[Any]) -> Connection[Any]:
 
 @pytest.fixture
 def link_service(seeded_db: Connection[Any]) -> Any:
-    from persona.link_service import LinkService
+    from pktx.link_service import LinkService
 
     return LinkService(seeded_db)  # type: ignore[arg-type]
 
@@ -59,26 +59,26 @@ def _make_contact(db_conn: Connection[Any], uid: str) -> int:
 
 class TestCanonicalize:
     def test_note_application_stays_canonical(self) -> None:
-        from persona.link_service import canonicalize
+        from pktx.link_service import canonicalize
 
         # 'application' < 'note' lexicographically
         result = canonicalize("note", 1, "application", 2)
         assert result == ("application", 2, "note", 1)
 
     def test_already_canonical_unchanged(self) -> None:
-        from persona.link_service import canonicalize
+        from pktx.link_service import canonicalize
 
         result = canonicalize("application", 1, "note", 2)
         assert result == ("application", 1, "note", 2)
 
     def test_same_type_lower_id_left(self) -> None:
-        from persona.link_service import canonicalize
+        from pktx.link_service import canonicalize
 
         result = canonicalize("note", 5, "note", 3)
         assert result == ("note", 3, "note", 5)
 
     def test_same_type_already_ordered(self) -> None:
-        from persona.link_service import canonicalize
+        from pktx.link_service import canonicalize
 
         result = canonicalize("note", 1, "note", 9)
         assert result == ("note", 1, "note", 9)

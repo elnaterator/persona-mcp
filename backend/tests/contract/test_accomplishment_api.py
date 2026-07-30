@@ -12,7 +12,7 @@ import pytest
 from psycopg import Connection
 from starlette.testclient import TestClient
 
-from persona.auth import current_user_id_var
+from pktx.auth import current_user_id_var
 
 # ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ def _set_user_context() -> Generator[None, None, None]:
 @pytest.fixture
 def acc_service(db_conn: Connection[Any]) -> Any:
     """AccomplishmentService for use in MCP tool tests."""
-    from persona.accomplishment_service import AccomplishmentService
+    from pktx.accomplishment_service import AccomplishmentService
 
     # Seed the test user
     db_conn.execute(
@@ -48,9 +48,9 @@ def _make_acc_client(db_conn: Connection[Any]) -> TestClient:
     """TestClient with accomplishment routes enabled."""
     from fastapi import FastAPI
 
-    from persona.accomplishment_service import AccomplishmentService
-    from persona.api.routes import create_router
-    from persona.resume_service import ResumeService
+    from pktx.accomplishment_service import AccomplishmentService
+    from pktx.api.routes import create_router
+    from pktx.resume_service import ResumeService
 
     svc = ResumeService(db_conn)  # type: ignore[arg-type]
     app_acc_svc = AccomplishmentService(db_conn)  # type: ignore[arg-type]
@@ -68,7 +68,7 @@ class TestMCPCreateGetAccomplishment:
     def test_create_returns_confirmation_string(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -91,7 +91,7 @@ class TestMCPCreateGetAccomplishment:
     def test_create_missing_title_returns_error_string(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -119,7 +119,7 @@ class TestMCPCreateGetAccomplishment:
     def test_get_returns_accomplishment_dict(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -148,7 +148,7 @@ class TestMCPCreateGetAccomplishment:
     def test_get_unknown_id_returns_error_string(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -206,7 +206,7 @@ class TestMCPListAccomplishments:
     def test_list_no_args_returns_summaries(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -230,7 +230,7 @@ class TestMCPListAccomplishments:
     def test_list_with_tag_returns_matching(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -250,7 +250,7 @@ class TestMCPListAccomplishments:
     def test_list_empty_returns_empty_list(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -262,7 +262,7 @@ class TestMCPListAccomplishments:
     def test_list_no_match_returns_empty_not_error(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -399,7 +399,7 @@ class TestMCPUpdateAccomplishment:
     def test_partial_update_returns_confirmation(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -424,7 +424,7 @@ class TestMCPUpdateAccomplishment:
     def test_unknown_id_returns_error_string(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -446,7 +446,7 @@ class TestMCPUpdateAccomplishment:
     def test_blank_title_returns_error_string(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -510,7 +510,7 @@ class TestMCPDeleteAccomplishment:
     def test_delete_returns_confirmation_with_title(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -527,7 +527,7 @@ class TestMCPDeleteAccomplishment:
     def test_delete_unknown_id_returns_error_string(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -579,7 +579,7 @@ class TestMCPCrossToolIntegration:
     def test_create_list_update_delete_sequence(self, acc_service: Any) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
@@ -640,7 +640,7 @@ class TestMCPCrossToolIntegration:
     ) -> None:
         from fastmcp import FastMCP
 
-        from persona.tools.accomplishment_tools import register_accomplishment_tools
+        from pktx.tools.accomplishment_tools import register_accomplishment_tools
 
         mcp = FastMCP("test")
         register_accomplishment_tools(mcp, lambda: acc_service)
