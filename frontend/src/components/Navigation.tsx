@@ -13,13 +13,13 @@ export default function Navigation() {
         <House size={16} />
         Home
       </NavLink>
-      <NavLink to="/resumes" className={navClass} end={false}>
-        <FileText size={16} />
-        Resumes
-      </NavLink>
       <NavLink to="/applications" className={navClass} end={false}>
         <Briefcase size={16} />
         Applications
+      </NavLink>
+      <NavLink to="/resumes" className={navClass} end={false}>
+        <FileText size={16} />
+        Resumes
       </NavLink>
       <NavLink to="/accomplishments" className={navClass} end={false}>
         <Trophy size={16} />
