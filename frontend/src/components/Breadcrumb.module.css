@@ -26,7 +26,7 @@
 }
 
 .link:hover {
-  text-decoration: underline;
+  text-decoration: none;
   color: var(--accent-green-dim);
 }
 
