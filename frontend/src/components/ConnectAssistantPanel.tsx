@@ -27,10 +27,23 @@ const ASSISTANTS: Assistant[] = [
     snippet: MCP_SERVER_URL,
   },
   {
+    id: 'chatgpt',
+    name: 'ChatGPT',
+    filePath:
+      'chatgpt.com → Apps & connectors → Advanced settings → Developer mode → Create connector (desktop app requires this be set up on the web first)',
+    snippet: MCP_SERVER_URL,
+  },
+  {
     id: 'claude-code',
     name: 'Claude Code',
     filePath: null,
     snippet: `claude mcp add --transport http pktx ${MCP_SERVER_URL}`,
+  },
+  {
+    id: 'grok-build',
+    name: 'Grok Build',
+    filePath: null,
+    snippet: `grok mcp add --transport http pktx ${MCP_SERVER_URL}`,
   },
   {
     id: 'cursor',
