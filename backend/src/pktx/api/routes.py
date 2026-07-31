@@ -439,7 +439,7 @@ def create_router(
 
         @api.get("/api/applications")
         def list_applications(
-            status: str | None = None,
+            status: list[str] | None = Query(default=None),
             tag: list[str] | None = Query(default=None),
             q: str | None = None,
             current_user: UserContext | None = Depends(_user_dep),

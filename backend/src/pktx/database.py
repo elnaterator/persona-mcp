@@ -435,12 +435,16 @@ def load_application(
 
 def load_applications(
     conn: DBConnection,
-    status: str | None = None,
+    status: str | list[str] | None = None,
     tags: list[str] | None = None,
     q: str | None = None,
     user_id: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Load applications with optional status/tag filter and search."""
+    """Load applications with optional status/tag filter and search.
+
+    status accepts a single status or a list; a list matches ANY of the
+    given statuses (OR semantics), unlike tags which require ALL (AND).
+    """
     query = (
         "SELECT id, company, position, status, url, "
         "tags, created_at, updated_at "
@@ -448,9 +452,11 @@ def load_applications(
     )
     conditions, params = build_filters(user_id, tags, q, ["company", "position"])
 
-    if status:
-        conditions.append("status = %s")
-        params.append(status)
+    statuses = [status] if isinstance(status, str) else status
+    if statuses:
+        placeholders = ", ".join(["%s"] * len(statuses))
+        conditions.append(f"status IN ({placeholders})")
+        params.extend(statuses)
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)

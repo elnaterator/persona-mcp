@@ -161,8 +161,17 @@ describe('Application API', () => {
 
     it('fetches with status filter', async () => {
       mockFetch([])
-      await api.listApplications('Applied')
+      await api.listApplications(['Applied'])
       expect(global.fetch).toHaveBeenCalledWith('/api/applications?status=Applied', undefined)
+    })
+
+    it('fetches with multiple statuses', async () => {
+      mockFetch([])
+      await api.listApplications(['Applied', 'Interview'])
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/applications?status=Applied&status=Interview',
+        undefined
+      )
     })
 
     it('fetches with search query', async () => {
@@ -173,7 +182,7 @@ describe('Application API', () => {
 
     it('fetches with both status and query', async () => {
       mockFetch([])
-      await api.listApplications('Applied', 'google')
+      await api.listApplications(['Applied'], 'google')
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/applications?status=Applied&q=google',
         undefined
