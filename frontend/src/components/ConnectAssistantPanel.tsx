@@ -22,7 +22,7 @@ interface Assistant {
 const ASSISTANTS: Assistant[] = [
   {
     id: 'claude-desktop',
-    name: 'Claude Desktop (easiest, no file editing)',
+    name: 'Claude Desktop',
     filePath: 'Settings → Connectors → Add custom connector',
     snippet: MCP_SERVER_URL,
   },
