@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useParams, useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,6 +24,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useToast } from '../../components/toast'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { LinksPanel } from '../../components/LinksPanel'
+import DetailLayout from '../../components/DetailLayout'
 import { ApiClientError } from '../../types'
 import styles from './ResumeDetailView.module.css'
 
@@ -141,127 +142,128 @@ export default function ResumeDetailView() {
         ]}
       />
 
-      <div className={styles.topBar}>
-        <Link to="/resumes" className={styles.backButton}>
-          Back to list
-        </Link>
-        {version.is_default && (
-          <span className={styles.defaultBadge}>Default</span>
-        )}
-        <div className={styles.topBarActions}>
-          {!version.is_default && (
-            <button className={styles.setDefaultButton} onClick={handleSetDefault}>
-              Set as Default
-            </button>
+      <DetailLayout
+        sidebar={
+          <LinksPanel
+            resourceType="resume"
+            resourceId={numericId}
+            links={mapGroupedLinks(version.links as Record<string, unknown[]>)}
+            onChange={reloadResume}
+          />
+        }
+      >
+        <div className={styles.topBar}>
+          {version.is_default && (
+            <span className={styles.defaultBadge}>Default</span>
           )}
-          <button
-            className={styles.deleteButton}
-            onClick={() => setConfirmDelete(true)}
-            aria-label="Delete resume version"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.labelRow}>
-        {editingLabel ? (
-          <div className={styles.labelEdit}>
-            <input
-              className={styles.labelInput}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleLabelSave()
-                if (e.key === 'Escape') setEditingLabel(false)
-              }}
-              {...registerLabel('label')}
-            />
-            <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleLabelSave} disabled={labelSubmitting} aria-label="Save label">
-              <Check size={14} />
-            </button>
-            <button className={`${styles.iconBtn} ${styles.cancelIcon}`} onClick={() => setEditingLabel(false)} aria-label="Cancel editing">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <div className={styles.labelDisplay}>
-            <h2 className={styles.label}>{version.label}</h2>
-            <button className={styles.iconBtn} onClick={() => { resetLabel({ label: version.label }); setEditingLabel(true) }} aria-label="Edit label">
-              <Pencil size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className={styles.tagsRow}>
-        {editingTags ? (
-          <div className={styles.tagsEdit}>
-            <TagInput
-              value={tagsForm}
-              onChange={setTagsForm}
-              availableTags={allTags}
-              allowCreate={true}
-              placeholder="Add tag..."
-            />
-            <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleTagsSave} aria-label="Save tags">
-              <Check size={14} />
-            </button>
-            <button className={`${styles.iconBtn} ${styles.cancelIcon}`} onClick={() => setEditingTags(false)} aria-label="Cancel">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <div className={styles.tagsDisplay}>
-            {version.tags && version.tags.length > 0 ? (
-              <div className={styles.tagList}>
-                {version.tags.map((tag) => (
-                  <span key={tag} className={styles.tagBadge}>{tag}</span>
-                ))}
-              </div>
-            ) : (
-              <span className={styles.tagsPlaceholder}>No tags</span>
+          <div className={styles.topBarActions}>
+            {!version.is_default && (
+              <button className={styles.setDefaultButton} onClick={handleSetDefault}>
+                Set as Default
+              </button>
             )}
-            <button className={styles.iconBtn} onClick={handleTagsEdit} aria-label="Edit tags">
-              <Pencil size={14} />
+            <button
+              className={styles.deleteButton}
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete resume version"
+            >
+              <Trash2 size={14} />
             </button>
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className={styles.document}>
-        <ContactSection
-          contact={resume.contact}
-          onUpdate={reloadResume}
-          versionId={numericId}
-        />
-        <SummarySection
-          summary={resume.summary}
-          onUpdate={reloadResume}
-          versionId={numericId}
-        />
-        <ExperienceSection
-          experience={resume.experience}
-          onUpdate={reloadResume}
-          versionId={numericId}
-        />
-        <EducationSection
-          education={resume.education}
-          onUpdate={reloadResume}
-          versionId={numericId}
-        />
-        <SkillsSection
-          skills={resume.skills}
-          onUpdate={reloadResume}
-          versionId={numericId}
-        />
-      </div>
+        <div className={styles.labelRow}>
+          {editingLabel ? (
+            <div className={styles.labelEdit}>
+              <input
+                className={styles.labelInput}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleLabelSave()
+                  if (e.key === 'Escape') setEditingLabel(false)
+                }}
+                {...registerLabel('label')}
+              />
+              <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleLabelSave} disabled={labelSubmitting} aria-label="Save label">
+                <Check size={14} />
+              </button>
+              <button className={`${styles.iconBtn} ${styles.cancelIcon}`} onClick={() => setEditingLabel(false)} aria-label="Cancel editing">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className={styles.labelDisplay}>
+              <h2 className={styles.label}>{version.label}</h2>
+              <button className={styles.iconBtn} onClick={() => { resetLabel({ label: version.label }); setEditingLabel(true) }} aria-label="Edit label">
+                <Pencil size={14} />
+              </button>
+            </div>
+          )}
+        </div>
 
-      <LinksPanel
-        resourceType="resume"
-        resourceId={numericId}
-        links={mapGroupedLinks(version.links as Record<string, unknown[]>)}
-        onChange={reloadResume}
-      />
+        <div className={styles.tagsRow}>
+          {editingTags ? (
+            <div className={styles.tagsEdit}>
+              <TagInput
+                value={tagsForm}
+                onChange={setTagsForm}
+                availableTags={allTags}
+                allowCreate={true}
+                placeholder="Add tag..."
+              />
+              <button className={`${styles.iconBtn} ${styles.saveIcon}`} onClick={handleTagsSave} aria-label="Save tags">
+                <Check size={14} />
+              </button>
+              <button className={`${styles.iconBtn} ${styles.cancelIcon}`} onClick={() => setEditingTags(false)} aria-label="Cancel">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className={styles.tagsDisplay}>
+              {version.tags && version.tags.length > 0 ? (
+                <div className={styles.tagList}>
+                  {version.tags.map((tag) => (
+                    <span key={tag} className={styles.tagBadge}>{tag}</span>
+                  ))}
+                </div>
+              ) : (
+                <span className={styles.tagsPlaceholder}>No tags</span>
+              )}
+              <button className={styles.iconBtn} onClick={handleTagsEdit} aria-label="Edit tags">
+                <Pencil size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.document}>
+          <ContactSection
+            contact={resume.contact}
+            onUpdate={reloadResume}
+            versionId={numericId}
+          />
+          <SummarySection
+            summary={resume.summary}
+            onUpdate={reloadResume}
+            versionId={numericId}
+          />
+          <ExperienceSection
+            experience={resume.experience}
+            onUpdate={reloadResume}
+            versionId={numericId}
+          />
+          <EducationSection
+            education={resume.education}
+            onUpdate={reloadResume}
+            versionId={numericId}
+          />
+          <SkillsSection
+            skills={resume.skills}
+            onUpdate={reloadResume}
+            versionId={numericId}
+          />
+        </div>
+      </DetailLayout>
 
       {confirmDelete && (
         <ConfirmDialog

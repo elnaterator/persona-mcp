@@ -1,6 +1,5 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { FieldError } from '../../components/FieldError'
 import { TagInput } from '../../components/TagInput'
@@ -33,7 +32,6 @@ interface ApplicationPanelProps {
   onCancel?: () => void
   onEdit?: () => void
   onDelete?: () => void
-  backTo?: string
 }
 
 export function ApplicationPanel({
@@ -44,7 +42,6 @@ export function ApplicationPanel({
   onCancel,
   onEdit,
   onDelete,
-  backTo,
 }: ApplicationPanelProps) {
   const isEditable = mode !== 'view'
 
@@ -83,12 +80,6 @@ export function ApplicationPanel({
           <span className={styles.topBarLabel}>Company</span>
           <span className={styles.topBarLabel}>Position</span>
         </div>
-
-        {backTo ? (
-          <Link to={backTo} className={styles.backButton}>Back</Link>
-        ) : (
-          <div className={styles.backPlaceholder} />
-        )}
 
         <div className={styles.topBarMain}>
           {isEditable ? (

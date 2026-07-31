@@ -16,29 +16,6 @@
   margin-left: auto;
 }
 
-.backButton {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-none);
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-  text-decoration: none;
-  display: inline-block;
-}
-
-.backButton:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.backButton:focus {
-  outline: none;
-}
-
 .defaultBadge {
   background-color: var(--accent-green-bg);
   color: var(--accent-green);

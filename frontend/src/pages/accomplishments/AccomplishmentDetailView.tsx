@@ -8,6 +8,7 @@ import {
   useAllTags,
 } from '../../hooks/queries'
 import { LinksPanel } from '../../components/LinksPanel'
+import DetailLayout from '../../components/DetailLayout'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -86,33 +87,35 @@ export default function AccomplishmentDetailView() {
         ]}
       />
 
-      {editing ? (
-        <AccomplishmentPanel
-          key="edit"
-          mode="edit"
-          accomplishment={acc}
-          allTags={allTags}
-          onSave={handleSave}
-          onCancel={() => setEditing(false)}
-          backTo="/accomplishments"
-        />
-      ) : (
-        <AccomplishmentPanel
-          key="view"
-          mode="view"
-          accomplishment={acc}
-          onEdit={() => setEditing(true)}
-          onDelete={() => setConfirmDelete(true)}
-          backTo="/accomplishments"
-        />
-      )}
-
-      <LinksPanel
-        resourceType="accomplishment"
-        resourceId={numericId}
-        links={mapGroupedLinks(acc.links as Record<string, unknown[]>)}
-        onChange={() => detailQuery.refetch()}
-      />
+      <DetailLayout
+        sidebar={
+          <LinksPanel
+            resourceType="accomplishment"
+            resourceId={numericId}
+            links={mapGroupedLinks(acc.links as Record<string, unknown[]>)}
+            onChange={() => detailQuery.refetch()}
+          />
+        }
+      >
+        {editing ? (
+          <AccomplishmentPanel
+            key="edit"
+            mode="edit"
+            accomplishment={acc}
+            allTags={allTags}
+            onSave={handleSave}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <AccomplishmentPanel
+            key="view"
+            mode="view"
+            accomplishment={acc}
+            onEdit={() => setEditing(true)}
+            onDelete={() => setConfirmDelete(true)}
+          />
+        )}
+      </DetailLayout>
 
       {confirmDelete && (
         <ConfirmDialog

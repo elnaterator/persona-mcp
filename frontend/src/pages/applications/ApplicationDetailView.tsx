@@ -8,6 +8,7 @@ import {
   useApplicationMutations,
 } from '../../hooks/queries'
 import { LinksPanel } from '../../components/LinksPanel'
+import DetailLayout from '../../components/DetailLayout'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -115,33 +116,35 @@ export default function ApplicationDetailView() {
         ]}
       />
 
-      {editing ? (
-        <ApplicationPanel
-          key="edit"
-          mode="edit"
-          application={app}
-          allTags={allTags}
-          onSave={handleSave}
-          onCancel={() => setEditing(false)}
-          backTo="/applications"
-        />
-      ) : (
-        <ApplicationPanel
-          key="view"
-          mode="view"
-          application={app}
-          onEdit={() => setEditing(true)}
-          onDelete={() => setShowDeleteConfirm(true)}
-          backTo="/applications"
-        />
-      )}
-
-      <LinksPanel
-        resourceType="application"
-        resourceId={numericId}
-        links={mapGroupedLinks(app.links as Record<string, unknown[]>)}
-        onChange={() => detailQuery.refetch()}
-      />
+      <DetailLayout
+        sidebar={
+          <LinksPanel
+            resourceType="application"
+            resourceId={numericId}
+            links={mapGroupedLinks(app.links as Record<string, unknown[]>)}
+            onChange={() => detailQuery.refetch()}
+          />
+        }
+      >
+        {editing ? (
+          <ApplicationPanel
+            key="edit"
+            mode="edit"
+            application={app}
+            allTags={allTags}
+            onSave={handleSave}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <ApplicationPanel
+            key="view"
+            mode="view"
+            application={app}
+            onEdit={() => setEditing(true)}
+            onDelete={() => setShowDeleteConfirm(true)}
+          />
+        )}
+      </DetailLayout>
 
       {showDeleteConfirm && (
         <ConfirmDialog

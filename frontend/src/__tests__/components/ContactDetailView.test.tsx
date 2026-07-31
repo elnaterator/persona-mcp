@@ -84,16 +84,6 @@ describe('ContactDetailView', () => {
     expect(tagTexts).toContain('ml')
   })
 
-  it('renders a back link to /contacts', async () => {
-    vi.mocked(api.getContact).mockResolvedValue(mockContact)
-    renderView()
-    await waitFor(() => {
-      expect(screen.getAllByText('Jane Doe').length).toBeGreaterThan(0)
-    })
-    const backLink = screen.getByRole('link', { name: /^Back$/i })
-    expect(backLink).toHaveAttribute('href', '/contacts')
-  })
-
   it('edit button switches to edit mode with pre-populated name', async () => {
     const user = userEvent.setup()
     vi.mocked(api.getContact).mockResolvedValue(mockContact)

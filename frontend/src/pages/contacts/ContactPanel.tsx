@@ -1,6 +1,5 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router'
 import { Pencil, Trash2, Check, X, Mail, Phone, Building2, Briefcase, MapPin, Linkedin, Calendar } from 'lucide-react'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
 import { TagInput } from '../../components/TagInput'
@@ -23,8 +22,6 @@ interface ContactPanelProps {
   onCancel?: () => void
   onEdit?: () => void
   onDelete?: () => void
-  backTo?: string
-  backLabel?: string
 }
 
 export function ContactPanel({
@@ -35,8 +32,6 @@ export function ContactPanel({
   onCancel,
   onEdit,
   onDelete,
-  backTo,
-  backLabel = 'Back',
 }: ContactPanelProps) {
   const isEditable = mode !== 'view'
 
@@ -66,7 +61,6 @@ export function ContactPanel({
   return (
     <div className={mode === 'create' ? styles.panelCreate : undefined}>
       <div className={styles.topBar}>
-        {backTo && <Link to={backTo} className={styles.backButton}>{backLabel}</Link>}
         {isEditable ? (
           <input
             className={styles.titleInput}
