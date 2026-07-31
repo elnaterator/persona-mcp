@@ -21,6 +21,12 @@ interface Assistant {
 
 const ASSISTANTS: Assistant[] = [
   {
+    id: 'claude-desktop',
+    name: 'Claude Desktop (easiest, no file editing)',
+    filePath: 'Settings → Connectors → Add custom connector',
+    snippet: MCP_SERVER_URL,
+  },
+  {
     id: 'claude-code',
     name: 'Claude Code',
     filePath: null,
@@ -55,12 +61,6 @@ const ASSISTANTS: Assistant[] = [
       null,
       2,
     ),
-  },
-  {
-    id: 'claude-desktop',
-    name: 'Claude Desktop',
-    filePath: 'Settings → Connectors → Add custom connector',
-    snippet: MCP_SERVER_URL,
   },
   {
     id: 'windsurf',
@@ -160,6 +160,29 @@ export default function ConnectAssistantPanel() {
                   {copiedId === activeAssistant.id ? 'Copied!' : 'Copy'}
                 </button>
               </div>
+            </div>
+
+            <div className={styles.about}>
+              <h4 className={styles.aboutTitle}>What is this?</h4>
+              <p className={styles.aboutText}>
+                This connects your AI assistant directly to your pktx data — your resumes,
+                applications, accomplishments, notes, and contacts — so you can ask it questions
+                and give it tasks instead of copying and pasting information back and forth.
+              </p>
+              <div className={styles.callout}>
+                Your assistant can both <strong>read and write</strong> your data — it can look
+                things up, but it can also log a new application, add an accomplishment, or update
+                a note on its own when you ask it to.
+              </div>
+              <ol className={styles.aboutSteps}>
+                <li>Pick your assistant above and follow its step.</li>
+                <li>When it opens a browser window, sign in — that's the one-time OAuth step.</li>
+                <li>
+                  Test it: ask your assistant something like &ldquo;list my resumes&rdquo; or
+                  &ldquo;what applications do I have open?&rdquo;. If it answers with your real
+                  data, you're connected.
+                </li>
+              </ol>
             </div>
           </div>
         </div>
