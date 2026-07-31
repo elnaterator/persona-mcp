@@ -119,15 +119,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
 }
 
-.app-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
+.app-header h1.logo {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
   color: var(--text-primary);
   margin: 0;
+}
+
+.app-header h1.logo .logo-p {
+  color: var(--accent-green);
 }
 
 main {
@@ -244,8 +249,8 @@ li {
     gap: var(--space-3);
   }
 
-  .app-header h1 {
-    font-size: 1.25rem;
+  .app-header h1.logo {
+    font-size: 1.375rem;
   }
 
   main {

@@ -3,7 +3,6 @@ import { BrowserRouter } from 'react-router'
 import { SignedIn, SignedOut, useAuth } from '@clerk/clerk-react'
 import Navigation from './components/Navigation'
 import UserMenu from './components/UserMenu'
-import BlinkingCursor from './components/BlinkingCursor'
 import { setTokenGetter } from './services/api'
 import LandingPage from './components/LandingPage'
 import AppRoutes from './router'
@@ -23,7 +22,7 @@ function AuthenticatedApp() {
     <div className="app">
       <header className="app-header">
         <div className="app-header-inner">
-          <h1>pktx<BlinkingCursor /></h1>
+          <h1 className="logo"><span className="logo-p">p</span>ktx</h1>
           <Navigation />
           <UserMenu />
         </div>
