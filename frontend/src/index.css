@@ -141,10 +141,14 @@ body {
   color: var(--accent-green);
 }
 
+/* max-width is 1300px (matching .app-header-inner) plus this element's
+   own 2 * var(--space-9) padding, since border-box counts padding
+   toward max-width — this keeps main's actual content column the
+   same width as the header's content row, not 64px narrower. */
 main {
   flex: 1;
   background-color: var(--bg-primary);
-  max-width: 1200px;
+  max-width: 1364px;
   width: 100%;
   margin: 0 auto;
   padding: var(--space-9);
@@ -285,19 +289,11 @@ li {
   }
 }
 
-/* Desktop: 1025px - 1920px */
+/* Desktop: 1025px+ */
 @media (min-width: 1025px) {
   main {
     margin: var(--space-9) auto;
     padding: var(--space-9);
-  }
-}
-
-/* Large desktop: 1921px+ */
-@media (min-width: 1921px) {
-  main {
-    max-width: 1400px;
-    padding: var(--space-10);
   }
 }
 
