@@ -15,6 +15,20 @@ module "observability" {
   }
 }
 
+module "backup" {
+  source = "../modules/backup"
+
+  environment               = var.environment
+  backups_enabled           = var.backups_enabled
+  retention_days            = var.backup_retention_days
+  noncurrent_retention_days = var.backup_noncurrent_retention_days
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
 module "lambda" {
   source = "../modules/lambda"
 
@@ -25,6 +39,12 @@ module "lambda" {
   timeout              = var.timeout
   ssm_parameter_prefix = "/pktx/${var.environment}"
 
+  # Empty bucket ARN or token disables the nightly backup rule.
+  backup_bucket_arn = module.backup.bucket_arn
+  backup_token = var.backups_enabled ? (
+    data.aws_ssm_parameter.backup_token.value
+  ) : ""
+
   environment_variables = {
     PKTX_DB_URL               = data.aws_ssm_parameter.database_url.value
     PKTX_PUBLIC_URL           = data.aws_ssm_parameter.pktx_public_url.value
@@ -34,6 +54,11 @@ module "lambda" {
     CLERK_OAUTH_CLIENT_SECRET = data.aws_ssm_parameter.clerk_oauth_client_secret.value
     CLERK_WEBHOOK_SECRET      = data.aws_ssm_parameter.clerk_webhook_secret.value
     CLERK_SECRET_KEY          = data.aws_ssm_parameter.clerk_secret_key.value
+    PKTX_ENV                  = var.environment
+    PKTX_BACKUP_BUCKET        = module.backup.bucket_name
+    PKTX_BACKUP_TOKEN = var.backups_enabled ? (
+      data.aws_ssm_parameter.backup_token.value
+    ) : ""
   }
 
   tags = {
@@ -181,6 +206,22 @@ resource "aws_ssm_parameter" "clerk_issuer" {
   }
 }
 
+resource "aws_ssm_parameter" "backup_token" {
+  #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
+  name  = "/pktx/${var.environment}/backup_token"
+  type  = "SecureString"
+  value = "TO_BE_SET"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
 resource "aws_ssm_parameter" "clerk_webhook_secret" {
   #checkov:skip=CKV_AWS_337:Default AWS-managed SSM key (alias/aws/ssm) is sufficient; KMS CMK adds recurring cost without meaningful benefit for a personal app
   name  = "/pktx/${var.environment}/clerk_webhook_secret"
@@ -245,4 +286,10 @@ data "aws_ssm_parameter" "clerk_oauth_client_secret" {
   name            = aws_ssm_parameter.clerk_oauth_client_secret.name
   with_decryption = true
   depends_on      = [aws_ssm_parameter.clerk_oauth_client_secret]
+}
+
+data "aws_ssm_parameter" "backup_token" {
+  name            = aws_ssm_parameter.backup_token.name
+  with_decryption = true
+  depends_on      = [aws_ssm_parameter.backup_token]
 }

@@ -244,6 +244,83 @@ resource "aws_lambda_permission" "allow_keep_warm" {
   source_arn    = aws_cloudwatch_event_rule.keep_warm[0].arn
 }
 
+# Nightly backup: EventBridge invokes the Lambda with a synthetic
+# POST /internal/backup event, the same trick as the keep-warm rule above. The
+# app dumps every table to the backup bucket. The route is not user-authenticated
+# — it compares the x-pktx-backup-token header against PKTX_BACKUP_TOKEN with a
+# constant-time comparison, and is not registered at all when that env var is
+# unset.
+locals {
+  backup_enabled = var.backup_bucket_arn != "" && var.backup_token != ""
+}
+
+resource "aws_iam_role_policy" "backup_write" {
+  count = local.backup_enabled ? 1 : 0
+
+  name = "s3-backup-write"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "s3:PutObject"
+        Resource = "${var.backup_bucket_arn}/backups/*"
+      }
+    ]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "backup" {
+  count = local.backup_enabled ? 1 : 0
+
+  name                = "pktx-${var.environment}-backup"
+  description         = "Dump the pktx-${var.environment} database to S3 once a day"
+  schedule_expression = var.backup_schedule_expression
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "backup" {
+  count = local.backup_enabled ? 1 : 0
+
+  rule      = aws_cloudwatch_event_rule.backup[0].name
+  target_id = "pktx-${var.environment}-backup"
+  arn       = aws_lambda_function.app.arn
+
+  input = jsonencode({
+    version        = "2.0"
+    routeKey       = "$default"
+    rawPath        = "/internal/backup"
+    rawQueryString = ""
+    headers = {
+      "x-pktx-backup-token" = var.backup_token
+      "content-length"      = "0"
+    }
+    requestContext = {
+      http = {
+        method    = "POST"
+        path      = "/internal/backup"
+        protocol  = "HTTP/1.1"
+        sourceIp  = "127.0.0.1"
+        userAgent = "pktx-backup"
+      }
+    }
+    isBase64Encoded = false
+  })
+}
+
+resource "aws_lambda_permission" "allow_backup" {
+  count = local.backup_enabled ? 1 : 0
+
+  statement_id  = "AllowEventBridgeBackup"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.app.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.backup[0].arn
+}
+
 # Public HTTPS endpoint for the Lambda function (no auth at URL level;
 # Clerk JWT validation is enforced by the application on every request)
 resource "aws_lambda_function_url" "app" {
