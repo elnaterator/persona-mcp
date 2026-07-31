@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
 import { workExperienceSchema } from '../../schemas/resumeEntry'
+import { sortEntriesByDate } from './sortEntriesByDate'
 import styles from './ExperienceSection.module.css'
 
 interface ExperienceSectionProps {
@@ -104,7 +105,7 @@ export default function ExperienceSection({ experience, onUpdate, versionId }: E
 
       {experience.length > 0 ? (
         <div className={styles.list}>
-          {experience.map((entry, index) => (
+          {sortEntriesByDate(experience).map(({ entry, index }) => (
             typeof mode === 'object' && mode.type === 'edit' && mode.index === index ? (
               <EntryForm
                 key={index}

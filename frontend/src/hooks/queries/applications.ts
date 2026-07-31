@@ -9,7 +9,7 @@ import {
 } from '../../services/api'
 
 export interface ApplicationFilters {
-  status?: string
+  status?: string[]
   q?: string
   tags?: string[]
 }
@@ -28,7 +28,7 @@ export function useApplicationList(filters?: ApplicationFilters) {
     queryKey: applicationKeys.list(filters),
     queryFn: () =>
       listApplications(
-        filters?.status || undefined,
+        filters?.status?.length ? filters.status : undefined,
         filters?.q || undefined,
         filters?.tags?.length ? filters.tags : undefined,
       ),

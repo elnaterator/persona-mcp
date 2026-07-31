@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useToast } from '../../components/toast'
 import { APPLICATION_STATUSES } from '../../schemas/application'
 import { ApplicationPanel } from './ApplicationPanel'
+import { StatusFilter } from './StatusFilter'
 import type { ApplicationPanelInput } from './ApplicationPanel'
 import type { SearchValue } from '../../types'
 import styles from './ApplicationListView.module.css'
@@ -30,13 +31,13 @@ export default function ApplicationListView() {
   const navigate = useNavigate()
   const [search, setSearch] = useState<SearchValue>({ tags: [], text: '' })
   const [debouncedQ, setDebouncedQ] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [showNewForm, setShowNewForm] = useState(false)
   const { success, error } = useToast()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const listQuery = useApplicationList({
-    status: statusFilter || undefined,
+    status: statusFilter.length > 0 ? statusFilter : undefined,
     q: debouncedQ || undefined,
     tags: search.tags,
   })
@@ -107,22 +108,17 @@ export default function ApplicationListView() {
       )}
 
       <div className={styles.filters}>
-        <select
-          className={styles.filterSelect}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          {APPLICATION_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
         <SearchBar
           value={search}
           onChange={handleSearchChange}
           availableTags={allTags}
           placeholder="Search company or position..."
+        />
+        <StatusFilter
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[...APPLICATION_STATUSES]}
+          placeholder="All statuses"
         />
       </div>
 

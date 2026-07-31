@@ -669,6 +669,29 @@ class TestApplicationEndpoints:
         assert len(resp.json()) == 1
         assert resp.json()[0]["company"] == "A"
 
+    def test_list_applications_filter_by_multiple_statuses(
+        self,
+        service: ResumeService,
+        app_service: ApplicationService,
+    ) -> None:
+        client = _make_full_client(service, app_service)
+        client.post(
+            "/api/applications",
+            json={"company": "A", "position": "P1", "status": "Applied"},
+        )
+        client.post(
+            "/api/applications",
+            json={"company": "B", "position": "P2", "status": "Interested"},
+        )
+        client.post(
+            "/api/applications",
+            json={"company": "C", "position": "P3", "status": "Rejected"},
+        )
+        resp = client.get("/api/applications?status=Applied&status=Interested")
+        assert resp.status_code == 200
+        companies = {a["company"] for a in resp.json()}
+        assert companies == {"A", "B"}
+
 
 # --- Application Context Endpoint ---
 

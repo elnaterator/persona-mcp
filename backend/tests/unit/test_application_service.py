@@ -110,6 +110,20 @@ class TestApplicationServiceList:
         assert len(results) == 1
         assert results[0]["company"] == "A"
 
+    def test_filter_by_multiple_statuses(self, app_service: object) -> None:
+        from pktx.application_service import ApplicationService
+
+        svc: ApplicationService = app_service  # type: ignore[assignment]
+        svc.create_application({"company": "A", "position": "P1", "status": "Applied"})
+        svc.create_application(
+            {"company": "B", "position": "P2", "status": "Interested"}
+        )
+        svc.create_application({"company": "C", "position": "P3", "status": "Rejected"})
+        results = svc.list_applications(status=["Applied", "Interested"])
+
+        companies = {r["company"] for r in results}
+        assert companies == {"A", "B"}
+
     def test_search_by_query(self, app_service: object) -> None:
         from pktx.application_service import ApplicationService
 

@@ -31,7 +31,7 @@ function renderView() {
   )
 }
 
-describe('ContactListView — communication search panel', () => {
+describe('ContactListView — unified search', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(api.listContacts).mockResolvedValue([])
@@ -39,31 +39,26 @@ describe('ContactListView — communication search panel', () => {
     vi.mocked(api.searchCommunications).mockResolvedValue([])
   })
 
-  it('shows "Search Communications" toggle', async () => {
+  it('shows a single search bar covering contacts and communications', async () => {
     renderView()
     await waitFor(() => {
-      expect(screen.getByText(/Search Communications/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/Search contacts and communications/i)).toBeInTheDocument()
     })
+    expect(screen.queryByText(/Search Communications/i)).not.toBeInTheDocument()
   })
 
-  it('expands search panel on toggle click', async () => {
-    const user = userEvent.setup()
+  it('does not query communications until there is input', async () => {
     renderView()
-    await waitFor(() => expect(screen.getByText(/Search Communications/i)).toBeInTheDocument())
-
-    await user.click(screen.getByText(/Search Communications/i))
-    expect(screen.getByPlaceholderText(/Search subject/i)).toBeInTheDocument()
+    await waitFor(() => expect(api.listContacts).toHaveBeenCalled())
+    expect(api.searchCommunications).not.toHaveBeenCalled()
   })
 
-  it('calls searchCommunications with debounced query', async () => {
+  it('calls searchCommunications and listContacts with the same debounced query', async () => {
     const user = userEvent.setup()
     vi.mocked(api.searchCommunications).mockResolvedValue([mockResult])
 
     renderView()
-    await waitFor(() => expect(screen.getByText(/Search Communications/i)).toBeInTheDocument())
-    await user.click(screen.getByText(/Search Communications/i))
-
-    const input = screen.getByPlaceholderText(/Search subject/i)
+    const input = await screen.findByPlaceholderText(/Search contacts and communications/i)
     await user.type(input, 'Intro')
 
     await waitFor(
@@ -71,20 +66,18 @@ describe('ContactListView — communication search panel', () => {
         expect(api.searchCommunications).toHaveBeenCalledWith(
           expect.objectContaining({ q: 'Intro' })
         )
+        expect(api.listContacts).toHaveBeenCalledWith(undefined, 'Intro')
       },
       { timeout: 1000 }
     )
   })
 
-  it('renders search results', async () => {
+  it('renders communication search results', async () => {
     const user = userEvent.setup()
     vi.mocked(api.searchCommunications).mockResolvedValue([mockResult])
 
     renderView()
-    await waitFor(() => expect(screen.getByText(/Search Communications/i)).toBeInTheDocument())
-    await user.click(screen.getByText(/Search Communications/i))
-
-    const input = screen.getByPlaceholderText(/Search subject/i)
+    const input = await screen.findByPlaceholderText(/Search contacts and communications/i)
     await user.type(input, 'Intro')
 
     await waitFor(
@@ -95,5 +88,4 @@ describe('ContactListView — communication search panel', () => {
       { timeout: 1000 }
     )
   })
-
 })

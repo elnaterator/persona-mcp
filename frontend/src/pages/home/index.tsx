@@ -271,17 +271,17 @@ export default function HomeView() {
       </div>
 
       <div className={styles.statsGrid}>
-        <Link to="/resumes" className={styles.statCard}>
-          <span className={styles.statLabel}>Resumes</span>
-          <span className={styles.statValue}>{stats === null ? '—' : stats.resumes}</span>
-        </Link>
-
         <Link to="/applications" className={styles.statCard}>
           <span className={styles.statLabel}>Applications</span>
           <span className={styles.statValue}>{stats === null ? '—' : stats.applications}</span>
           {stats !== null && stats.activeApplications > 0 && (
             <span className={styles.statSub}>{stats.activeApplications} active</span>
           )}
+        </Link>
+
+        <Link to="/resumes" className={styles.statCard}>
+          <span className={styles.statLabel}>Resumes</span>
+          <span className={styles.statValue}>{stats === null ? '—' : stats.resumes}</span>
         </Link>
 
         <Link to="/accomplishments" className={styles.statCard}>

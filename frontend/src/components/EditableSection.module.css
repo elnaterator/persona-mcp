@@ -9,9 +9,9 @@
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
-  background-color: var(--bg-surface);
+  background: none;
   border: none;
   border-radius: var(--radius-none);
   padding: var(--space-1) var(--space-2);
@@ -38,20 +38,20 @@
 }
 
 .actionButton {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
-  background-color: var(--bg-surface);
+  background: none;
   border: none;
   border-radius: var(--radius-none);
   padding: var(--space-1) var(--space-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
 .actionButton:hover {
-  background-color: var(--bg-active);
+  color: var(--accent-green);
 }
 
 .saveIcon:hover {

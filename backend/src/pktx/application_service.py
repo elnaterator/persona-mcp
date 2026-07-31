@@ -68,7 +68,7 @@ class ApplicationService:
 
     def list_applications(
         self,
-        status: str | None = None,
+        status: str | list[str] | None = None,
         tags: list[str] | None = None,
         q: str | None = None,
         user_id: str | None = None,

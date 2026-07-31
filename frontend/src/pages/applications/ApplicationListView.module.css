@@ -43,22 +43,6 @@
   margin-bottom: var(--space-6);
 }
 
-.filterSelect {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-none);
-  font-size: 0.9375rem;
-  font-family: var(--font-mono);
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-  min-width: 8rem;
-}
-
-.filterSelect:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
-
 /* List */
 .empty {
   color: var(--text-muted);
@@ -174,9 +158,5 @@
 @media (max-width: 640px) {
   .filters {
     flex-direction: column;
-  }
-
-  .filterSelect {
-    min-width: unset;
   }
 }

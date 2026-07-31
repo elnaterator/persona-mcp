@@ -141,7 +141,7 @@
 
 .saveIconButton,
 .cancelIconButton {
-  background-color: var(--bg-surface);
+  background: none;
   border: none;
   border-radius: var(--radius-none);
   padding: var(--space-1) var(--space-2);
@@ -149,16 +149,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  color: var(--text-muted);
+  transition: color var(--transition-fast);
 }
 
 .saveIconButton:hover {
-  background-color: var(--bg-active);
   color: var(--accent-green);
 }
 
 .cancelIconButton:hover {
-  background-color: var(--bg-active);
   color: var(--status-error);
 }

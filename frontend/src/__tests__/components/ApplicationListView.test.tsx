@@ -160,4 +160,45 @@ describe('ApplicationListView', () => {
       expect(api.listAllTags).toHaveBeenCalled()
     })
   })
+
+  it('selects multiple statuses as chips and filters by all of them', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.listApplications).mockResolvedValue([])
+    renderView()
+
+    const combobox = await screen.findByRole('combobox', { name: /filter by status/i })
+    await user.click(combobox)
+    await user.click(await screen.findByRole('option', { name: 'Applied' }))
+    await user.click(await screen.findByRole('option', { name: 'Interview' }))
+
+    expect(screen.getByRole('button', { name: /remove applied/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /remove interview/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(api.listApplications).toHaveBeenLastCalledWith(
+        ['Applied', 'Interview'],
+        undefined,
+        undefined
+      )
+    })
+  })
+
+  it('removes a status chip via its remove button', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.listApplications).mockResolvedValue([])
+    renderView()
+
+    const combobox = await screen.findByRole('combobox', { name: /filter by status/i })
+    await user.click(combobox)
+    await user.click(await screen.findByRole('option', { name: 'Applied' }))
+    expect(screen.getByRole('button', { name: /remove applied/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /remove applied/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /remove applied/i })).not.toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(api.listApplications).toHaveBeenLastCalledWith(undefined, undefined, undefined)
+    })
+  })
 })

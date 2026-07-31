@@ -165,57 +165,19 @@
   overflow: hidden;
 }
 
-.commSearchToggle {
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: var(--space-4) var(--space-6);
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.commSearchToggle:hover {
-  color: var(--text-primary);
-}
-
 .commSearchBody {
-  padding: 0 var(--space-6) var(--space-6);
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-
-.parentToggle {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.parentBtn {
-  background: none;
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-none);
-  padding: var(--space-1) var(--space-4);
-  font-size: 0.75rem;
+.commSearchHeading {
+  font-size: 0.875rem;
+  font-weight: 500;
   font-family: var(--font-mono);
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.parentBtn:hover {
-  border-color: var(--accent-green);
-  color: var(--accent-green);
-}
-
-.parentBtnActive {
-  background-color: var(--bg-active);
-  border-color: var(--accent-green);
-  color: var(--accent-green);
+  margin: 0;
 }
 
 .commSearchHint {

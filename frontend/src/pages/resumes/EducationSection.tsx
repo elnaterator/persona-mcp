@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useToast } from '../../components/toast'
 import { addEntry, updateEntry, removeEntry, addVersionEntry, updateVersionEntry, removeVersionEntry } from '../../services/api'
 import { educationSchema } from '../../schemas/resumeEntry'
+import { sortEntriesByDate } from './sortEntriesByDate'
 import styles from './EducationSection.module.css'
 
 interface EducationSectionProps {
@@ -106,7 +107,7 @@ export default function EducationSection({ education, onUpdate, versionId }: Edu
 
       {education.length > 0 ? (
         <div className={styles.list}>
-          {education.map((entry, index) => (
+          {sortEntriesByDate(education).map(({ entry, index }) => (
             typeof mode === 'object' && mode.type === 'edit' && mode.index === index ? (
               <EntryForm
                 key={index}

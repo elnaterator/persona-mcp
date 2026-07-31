@@ -91,25 +91,24 @@
 }
 
 .editButton {
-  background-color: var(--bg-surface);
-  color: var(--text-secondary);
+  background: none;
+  color: var(--text-muted);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-none);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
 .editButton:hover {
-  background-color: var(--bg-active);
   color: var(--accent-green);
 }
 
 .deleteButton {
-  background-color: var(--status-error-bg);
-  color: var(--status-error);
+  background: none;
+  color: var(--text-muted);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-none);
   cursor: pointer;
@@ -120,7 +119,7 @@
 }
 
 .deleteButton:hover {
-  background-color: var(--status-error-bg-hover);
+  color: var(--status-error);
 }
 
 .addButton {

@@ -9,12 +9,12 @@ import { API_BASE, fetchWithErrorHandling, handleResponse } from './client'
  * List applications with optional status/tag filter and search query
  */
 export async function listApplications(
-  status?: string,
+  status?: string[],
   q?: string,
   tags?: string[]
 ): Promise<Application[]> {
   const params = new URLSearchParams()
-  if (status) params.set('status', status)
+  if (status && status.length > 0) status.forEach((s) => params.append('status', s))
   if (q) params.set('q', q)
   if (tags && tags.length > 0) tags.forEach((t) => params.append('tag', t))
   const query = params.toString() ? `?${params.toString()}` : ''
