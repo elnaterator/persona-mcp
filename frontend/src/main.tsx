@@ -19,10 +19,10 @@ const clerkAppearance = {
     colorBackground: '#1a1a1a',
     colorForeground: '#e0e0e0',
     colorPrimary: '#52b788',
-    colorNeutral: '#888888',
+    colorNeutral: '#b3b3b3',
     colorDanger: '#ff4444',
     colorText: '#e0e0e0',
-    colorTextSecondary: '#888888',
+    colorTextSecondary: '#b3b3b3',
     colorInputBackground: '#141414',
     colorInputText: '#e0e0e0',
     fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', ui-monospace, monospace",
@@ -50,7 +50,7 @@ const clerkAppearance = {
       borderRight: '1px solid #2a2a2a',
     },
     navbarButton: {
-      color: '#888888',
+      color: '#b3b3b3',
     },
     navbarButton__active: {
       color: '#52b788',
@@ -72,11 +72,11 @@ const clerkAppearance = {
       color: '#e0e0e0',
     },
     headerSubtitle: {
-      color: '#888888',
+      color: '#b3b3b3',
     },
     // Form fields
     formFieldLabel: {
-      color: '#888888',
+      color: '#b3b3b3',
     },
     formFieldInput: {
       backgroundColor: '#141414',
@@ -85,7 +85,7 @@ const clerkAppearance = {
       boxShadow: 'none',
     },
     formFieldInputShowPasswordButton: {
-      color: '#555555',
+      color: '#949494',
     },
     // Buttons
     formButtonPrimary: {
@@ -94,7 +94,7 @@ const clerkAppearance = {
       boxShadow: 'none',
     },
     formButtonReset: {
-      color: '#888888',
+      color: '#b3b3b3',
     },
     // Social sign-in buttons
     socialButtonsBlockButton: {
@@ -111,7 +111,7 @@ const clerkAppearance = {
       backgroundColor: '#2a2a2a',
     },
     dividerText: {
-      color: '#555555',
+      color: '#949494',
     },
     // Identity / avatar
     identityPreviewText: {
@@ -139,7 +139,7 @@ const clerkAppearance = {
     },
     // Alert
     alertText: {
-      color: '#888888',
+      color: '#b3b3b3',
     },
   },
 }

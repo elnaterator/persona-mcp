@@ -4,13 +4,13 @@
   margin-bottom: var(--space-6);
 }
 
-/* Top bar — 2-row grid: labels above, back+values+actions below */
+/* Top bar — 2-row grid: labels above, values+actions below */
 .topBar {
   display: grid;
   grid-template-areas:
-    ". labels ."
-    "back main actions";
-  grid-template-columns: auto 1fr auto;
+    "labels labels"
+    "main actions";
+  grid-template-columns: 1fr auto;
   column-gap: var(--space-4);
   row-gap: var(--space-1);
   margin-bottom: var(--space-6);
@@ -26,40 +26,11 @@
 }
 
 .topBarLabel {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-/* Values row */
-.backButton {
-  grid-area: back;
-  background: none;
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-none);
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-  text-decoration: none;
-  align-self: center;
-}
-
-.backButton:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.backButton:focus {
-  outline: none;
-}
-
-/* Invisible spacer keeps column width consistent when no back button */
-.backPlaceholder {
-  grid-area: back;
 }
 
 .topBarMain {
@@ -204,7 +175,7 @@
 }
 
 .tagBadge {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-none);
@@ -214,7 +185,7 @@
 
 .updatedDate {
   margin-left: auto;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
 }
 
@@ -234,7 +205,7 @@
 }
 
 .metaLabel {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -263,7 +234,7 @@
 }
 
 .detailsLabel {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -271,7 +242,7 @@
 }
 
 .statusBadgeInline {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-none);
@@ -281,7 +252,7 @@
 
 .urlLink {
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-family: var(--font-mono);
   text-decoration: none;
   overflow: hidden;
@@ -372,9 +343,6 @@
 
 @media (max-width: 640px) {
   .topBar {
-    grid-template-areas:
-      "labels labels labels"
-      "back main actions";
     row-gap: var(--space-3);
   }
 

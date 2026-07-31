@@ -56,10 +56,11 @@ describe('HomeView — global search', () => {
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
 
-  it('shows hint text when search is empty', async () => {
+  it('shows the intro copy when search is empty', async () => {
     vi.mocked(api.globalSearch).mockResolvedValue([])
     renderHome()
-    expect(screen.getByText(/type to search/i)).toBeInTheDocument()
+    expect(screen.getByText(/welcome back/i)).toBeInTheDocument()
+    expect(screen.getByText(/your career, organized/i)).toBeInTheDocument()
   })
 
   it('shows grouped results by type', async () => {

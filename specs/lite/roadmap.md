@@ -96,9 +96,6 @@ Cold starts hurt the MCP connect flow (Claude Desktop hits `/mcp` at session sta
 I want to rename this app from persona to pktx which is short for personal context. Look through docs, readme, code, etc.  I also want to clean up docs and readmes, organize the repo, prep for open source. Create contributing.md. Give manual steps needed to rename all places (github, neon, clerk, etc.)
 
 
-## 020 
-
-
 ## 020 Backups, tested restore, and user data export
 Verify automated Postgres backups exist in Terraform and run an actual restore drill (backups enabled is not enough — restore must be proven). Add a user-facing "export my data" feature: full dump of the user's accomplishments, applications, resumes, notes, contacts, and communications as JSON (optionally Markdown). Export doubles as the data-portability trust story. Blocker for first beta invite.
 

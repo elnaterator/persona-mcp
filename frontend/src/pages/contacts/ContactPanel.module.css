@@ -11,29 +11,12 @@
   color: var(--text-primary);
   margin: 0;
   flex: 1;
-  padding: 0 var(--space-6);
+  padding-right: var(--space-6);
 }
 
 .topBarActions {
   display: flex;
   gap: var(--space-3);
-}
-
-.backButton {
-  background: none;
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-none);
-  font-size: 0.875rem;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-  text-decoration: none;
-}
-
-.backButton:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
 }
 
 .editButton {
@@ -87,7 +70,7 @@
 
 .relationshipBadge {
   display: inline-block;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: var(--space-1) var(--space-4);
   border-radius: var(--radius-none);
@@ -135,7 +118,7 @@
 }
 
 .tagBadge {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-none);
@@ -144,7 +127,7 @@
 }
 
 .updatedDate {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
 }
 
@@ -175,7 +158,7 @@
 }
 
 .fieldLabel {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;

@@ -41,9 +41,11 @@
   --bg-spinner-track: rgba(255, 255, 255, 0.08);
 
   /* Colors — Text */
+  /* Contrast against --bg-primary (#1a1a1a): 13.2:1 / 8.4:1 / 5.7:1 —
+     all clear AA for normal text, with a legible three-step hierarchy. */
   --text-primary: #e0e0e0;
-  --text-secondary: #888888;
-  --text-muted: #555555;
+  --text-secondary: #b3b3b3;
+  --text-muted: #949494;
 
   /* Colors — Borders */
   --border-primary: transparent;
@@ -107,6 +109,12 @@ body {
 .app {
   min-height: 100vh;
   display: flex;
+}
+
+.app-shell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
 }
 
@@ -135,10 +143,14 @@ body {
   color: var(--accent-green);
 }
 
+/* max-width is 1300px (matching .app-header-inner) plus this element's
+   own 2 * var(--space-9) padding, since border-box counts padding
+   toward max-width — this keeps main's actual content column the
+   same width as the header's content row, not 64px narrower. */
 main {
   flex: 1;
   background-color: var(--bg-primary);
-  max-width: 1200px;
+  max-width: 1364px;
   width: 100%;
   margin: 0 auto;
   padding: var(--space-9);
@@ -279,19 +291,11 @@ li {
   }
 }
 
-/* Desktop: 1025px - 1920px */
+/* Desktop: 1025px+ */
 @media (min-width: 1025px) {
   main {
     margin: var(--space-9) auto;
     padding: var(--space-9);
-  }
-}
-
-/* Large desktop: 1921px+ */
-@media (min-width: 1921px) {
-  main {
-    max-width: 1400px;
-    padding: var(--space-10);
   }
 }
 

@@ -55,16 +55,6 @@ describe('NoteDetailView', () => {
     expect(tagTexts).toContain('async')
   })
 
-  it('renders a back link to /notes', async () => {
-    vi.mocked(api.getNote).mockResolvedValue(mockNote)
-    renderView()
-    await waitFor(() => {
-      expect(screen.getAllByText('Python async patterns').length).toBeGreaterThan(0)
-    })
-    const backLink = screen.getByRole('link', { name: /^Back$/i })
-    expect(backLink).toHaveAttribute('href', '/notes')
-  })
-
   it('edit button switches to edit mode with pre-populated fields', async () => {
     const user = userEvent.setup()
     vi.mocked(api.getNote).mockResolvedValue(mockNote)

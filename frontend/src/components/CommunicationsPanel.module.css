@@ -23,7 +23,7 @@
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-4);
   border-radius: var(--radius-none);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-family: var(--font-mono);
   cursor: pointer;
   transition: background-color var(--transition-fast);
@@ -109,7 +109,7 @@
 }
 
 .label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -206,13 +206,13 @@
 .commDate {
   font-weight: 600;
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   white-space: nowrap;
 }
 
 .commType {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   background-color: var(--bg-hover);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-none);
@@ -221,7 +221,7 @@
 
 .commDirection {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   background-color: var(--bg-hover);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-none);
@@ -229,7 +229,7 @@
 }
 
 .statusBadge {
-  font-size: 0.7rem;
+  font-size: 0.875rem;
   font-weight: 600;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-none);
@@ -368,7 +368,7 @@
   align-items: center;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-pill);
-  font-size: 0.675rem;
+  font-size: 0.875rem;
   font-family: var(--font-mono);
   background-color: var(--bg-active);
   color: var(--accent-green);

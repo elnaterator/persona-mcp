@@ -4,6 +4,7 @@ import { ApiClientError } from '../../types'
 import { mapGroupedLinks } from '../../services/api'
 import { useAllTags, useContactDetail, useContactMutations } from '../../hooks/queries'
 import { LinksPanel } from '../../components/LinksPanel'
+import DetailLayout from '../../components/DetailLayout'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -97,36 +98,38 @@ export default function ContactDetailView() {
         ]}
       />
 
-      {editing ? (
-        <ContactPanel
-          key="edit"
-          mode="edit"
-          contact={contact}
-          allTags={allTags}
-          onSave={handleSave}
-          onCancel={() => setEditing(false)}
-          backTo="/contacts"
-        />
-      ) : (
-        <>
-          <ContactPanel
-            key="view"
-            mode="view"
-            contact={contact}
-            onEdit={() => setEditing(true)}
-            onDelete={() => setConfirmDelete(true)}
-            backTo="/contacts"
+      <DetailLayout
+        sidebar={
+          <LinksPanel
+            resourceType="contact"
+            resourceId={numericId}
+            links={mapGroupedLinks(contact.links as Record<string, unknown[]>)}
+            onChange={reloadContact}
           />
-          <CommunicationsPanel contactId={contact.id} initialExpandId={expandCommId} />
-        </>
-      )}
-
-      <LinksPanel
-        resourceType="contact"
-        resourceId={numericId}
-        links={mapGroupedLinks(contact.links as Record<string, unknown[]>)}
-        onChange={reloadContact}
-      />
+        }
+      >
+        {editing ? (
+          <ContactPanel
+            key="edit"
+            mode="edit"
+            contact={contact}
+            allTags={allTags}
+            onSave={handleSave}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <>
+            <ContactPanel
+              key="view"
+              mode="view"
+              contact={contact}
+              onEdit={() => setEditing(true)}
+              onDelete={() => setConfirmDelete(true)}
+            />
+            <CommunicationsPanel contactId={contact.id} initialExpandId={expandCommId} />
+          </>
+        )}
+      </DetailLayout>
 
       {confirmDelete && (
         <ConfirmDialog

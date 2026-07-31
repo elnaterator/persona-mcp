@@ -7,7 +7,7 @@
   border-radius: var(--radius-none);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.35;
   outline: none;
 }

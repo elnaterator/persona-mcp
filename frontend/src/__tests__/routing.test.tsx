@@ -47,7 +47,7 @@ describe('Route: /', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText(/hey, test/i)).toBeInTheDocument()
+      expect(screen.getByText(/welcome back, test/i)).toBeInTheDocument()
     })
   })
 
@@ -58,7 +58,7 @@ describe('Route: /', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText(/hey, test/i)).toBeInTheDocument()
+      expect(screen.getByText(/welcome back, test/i)).toBeInTheDocument()
     })
   })
 })

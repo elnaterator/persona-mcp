@@ -83,16 +83,6 @@ describe('AccomplishmentDetailView', () => {
     expect(screen.getByText(/technical/i)).toBeInTheDocument()
   })
 
-  it('renders a back link to /accomplishments', async () => {
-    vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)
-    renderView()
-    await waitFor(() => {
-      expect(screen.getAllByText('Led platform migration').length).toBeGreaterThan(0)
-    })
-    const backLink = screen.getByRole('link', { name: /^Back$/i })
-    expect(backLink).toHaveAttribute('href', '/accomplishments')
-  })
-
   it('edit button switches to edit mode with pre-populated fields', async () => {
     const user = userEvent.setup()
     vi.mocked(api.getAccomplishment).mockResolvedValue(mockAccomplishment)

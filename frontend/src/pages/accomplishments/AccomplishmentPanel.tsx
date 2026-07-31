@@ -1,6 +1,5 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 import { AutoResizeTextarea } from '../../components/AutoResizeTextarea'
 import { TagInput } from '../../components/TagInput'
@@ -25,8 +24,6 @@ interface AccomplishmentPanelProps {
   onCancel?: () => void
   onEdit?: () => void
   onDelete?: () => void
-  backTo?: string
-  backLabel?: string
 }
 
 export function AccomplishmentPanel({
@@ -37,8 +34,6 @@ export function AccomplishmentPanel({
   onCancel,
   onEdit,
   onDelete,
-  backTo,
-  backLabel = 'Back',
 }: AccomplishmentPanelProps) {
   const isEditable = mode !== 'view'
 
@@ -63,7 +58,6 @@ export function AccomplishmentPanel({
   return (
     <div className={mode === 'create' ? styles.panelCreate : undefined}>
       <div className={styles.topBar}>
-        {backTo && <Link to={backTo} className={styles.backButton}>{backLabel}</Link>}
         {isEditable ? (
           <input
             className={styles.titleInput}

@@ -4,6 +4,7 @@ import { ApiClientError } from '../../types'
 import { mapGroupedLinks } from '../../services/api'
 import { useAllTags, useNoteDetail, useNoteMutations } from '../../hooks/queries'
 import { LinksPanel } from '../../components/LinksPanel'
+import DetailLayout from '../../components/DetailLayout'
 import Breadcrumb from '../../components/Breadcrumb'
 import NotFound from '../../components/NotFound'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
@@ -79,33 +80,35 @@ export default function NoteDetailView() {
         ]}
       />
 
-      {editing ? (
-        <NotePanel
-          key="edit"
-          mode="edit"
-          note={note}
-          allTags={allTags}
-          onSave={handleSave}
-          onCancel={() => setEditing(false)}
-          backTo="/notes"
-        />
-      ) : (
-        <NotePanel
-          key="view"
-          mode="view"
-          note={note}
-          onEdit={() => setEditing(true)}
-          onDelete={() => setConfirmDelete(true)}
-          backTo="/notes"
-        />
-      )}
-
-      <LinksPanel
-        resourceType="note"
-        resourceId={numericId}
-        links={mapGroupedLinks(note.links as Record<string, unknown[]>)}
-        onChange={reloadNote}
-      />
+      <DetailLayout
+        sidebar={
+          <LinksPanel
+            resourceType="note"
+            resourceId={numericId}
+            links={mapGroupedLinks(note.links as Record<string, unknown[]>)}
+            onChange={reloadNote}
+          />
+        }
+      >
+        {editing ? (
+          <NotePanel
+            key="edit"
+            mode="edit"
+            note={note}
+            allTags={allTags}
+            onSave={handleSave}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <NotePanel
+            key="view"
+            mode="view"
+            note={note}
+            onEdit={() => setEditing(true)}
+            onDelete={() => setConfirmDelete(true)}
+          />
+        )}
+      </DetailLayout>
 
       {confirmDelete && (
         <ConfirmDialog
