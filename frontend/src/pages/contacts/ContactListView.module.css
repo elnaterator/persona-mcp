@@ -100,7 +100,7 @@
 }
 
 .relationshipBadge {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-none);
@@ -136,7 +136,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-6);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
 }
 
@@ -181,7 +181,7 @@
 }
 
 .commSearchHint {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
   font-style: italic;
   margin: 0;
@@ -217,20 +217,20 @@
 }
 
 .commResultDate {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
 .commResultType,
 .commResultDir {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
   font-family: var(--font-mono);
 }
 
 .parentBadge {
-  font-size: 0.7rem;
+  font-size: 0.875rem;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
@@ -247,13 +247,13 @@
 }
 
 .commResultParent {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
 .commResultSubject {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;

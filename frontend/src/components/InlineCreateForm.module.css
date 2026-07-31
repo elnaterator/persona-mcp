@@ -80,7 +80,7 @@
 }
 
 .error {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--status-error);
   margin: 0;
 }

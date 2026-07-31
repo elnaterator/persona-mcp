@@ -70,7 +70,7 @@
 
 .relationshipBadge {
   display: inline-block;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: var(--space-1) var(--space-4);
   border-radius: var(--radius-none);
@@ -118,7 +118,7 @@
 }
 
 .tagBadge {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-none);
@@ -127,7 +127,7 @@
 }
 
 .updatedDate {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
 }
 
@@ -158,7 +158,7 @@
 }
 
 .fieldLabel {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase;

@@ -71,7 +71,7 @@
 
 .expandLabel {
   writing-mode: vertical-rl;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -92,7 +92,7 @@
   border: none;
   border-bottom: 1px solid var(--bg-hover);
   padding: var(--space-5) var(--space-6);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -124,13 +124,13 @@
 }
 
 .stepHint {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
   margin-bottom: var(--space-3);
 }
 
 .selectLabel {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -140,7 +140,7 @@
   width: 100%;
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   background-color: var(--bg-input);
   border: 1px solid var(--bg-hover);
   color: var(--text-primary);
@@ -161,7 +161,7 @@
 }
 
 .filePath {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
 }
 
@@ -171,7 +171,7 @@
 
 .codeBlock {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.6;
   color: var(--text-primary);
   background-color: var(--bg-input);
@@ -186,7 +186,7 @@
   bottom: var(--space-3);
   right: var(--space-3);
   padding: var(--space-1) var(--space-4);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   background-color: var(--bg-hover);
   color: var(--text-secondary);
   border: none;
@@ -219,7 +219,7 @@
 }
 
 .aboutText {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
@@ -228,7 +228,7 @@
   background-color: var(--accent-blue-bg);
   border: 1px solid var(--accent-blue);
   border-radius: var(--radius-md);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
@@ -241,6 +241,6 @@
   flex-direction: column;
   gap: var(--space-3);
   padding-left: var(--space-7);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
 }
