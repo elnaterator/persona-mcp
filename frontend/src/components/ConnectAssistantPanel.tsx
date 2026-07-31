@@ -85,9 +85,9 @@ export default function ConnectAssistantPanel() {
             aria-expanded={true}
             aria-label="Collapse AI assistant panel"
           >
-            <Bot size={16} />
+            <Bot size={20} />
             <span className={styles.collapseLabel}>Connect your AI assistant</span>
-            <ChevronLeft size={14} />
+            <ChevronLeft size={16} />
           </button>
 
           <div className={styles.body}>
@@ -132,8 +132,9 @@ export default function ConnectAssistantPanel() {
           aria-expanded={false}
           aria-label="Connect your AI assistant"
         >
-          <Bot size={16} />
-          <ChevronRight size={14} />
+          <Bot size={28} />
+          <span className={styles.expandLabel}>Connect</span>
+          <ChevronRight size={18} />
         </button>
       )}
     </aside>
