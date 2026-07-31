@@ -4,12 +4,6 @@
   gap: var(--space-9);
 }
 
-.heading {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 /* Global search */
 .globalSearch {
   display: flex;
@@ -96,6 +90,102 @@
   white-space: nowrap;
 }
 
+/* Intro */
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-9) 0;
+  text-align: center;
+}
+
+.introWelcome {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.introSlogan {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Idea scroller */
+.ideaScroller {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+@keyframes ideaFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ideaCard {
+  width: 100%;
+  max-width: 480px;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-9) var(--space-8);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-top: 2px solid var(--accent-green);
+  text-align: center;
+  animation: ideaFadeIn 700ms ease;
+}
+
+.ideaIcon {
+  color: var(--accent-green);
+}
+
+.ideaTitle {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ideaBody {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 36ch;
+}
+
+.ideaDots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ideaDot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ideaDotActive {
+  background-color: var(--accent-green);
+}
+
 /* Stats */
 .statsGrid {
   display: grid;
@@ -146,8 +236,8 @@
     grid-template-columns: 1fr;
   }
 
-  .heading {
-    font-size: 1.375rem;
+  .introWelcome {
+    font-size: 1.25rem;
   }
 }
 

@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useUser } from '@clerk/clerk-react'
+import { Briefcase, FileText, Trophy, StickyNote, Users, Bot } from 'lucide-react'
 import {
   useAccomplishmentList,
   useApplicationList,
@@ -74,6 +75,78 @@ function SearchResults({ results, loading }: { results: SearchResult[]; loading:
   )
 }
 
+// ─── Ideas ────────────────────────────────────────────────────────────────────
+
+const IDEAS = [
+  {
+    icon: Bot,
+    title: 'Chat with your own career data',
+    body: 'Connect Claude, ChatGPT, or another assistant over MCP and ask it to draft a cover letter from your real accomplishments.',
+  },
+  {
+    icon: Briefcase,
+    title: 'Pull full context for one application',
+    body: 'Get every linked accomplishment, contact, and note for a job in a single call — built for interview prep.',
+  },
+  {
+    icon: FileText,
+    title: 'Link the story behind each resume',
+    body: 'Connect a resume to the applications and accomplishments that justify it, so nothing lives in a silo.',
+  },
+  {
+    icon: Trophy,
+    title: 'Bank wins before you need them',
+    body: 'Log accomplishments as they happen so review season and resume rewrites start with proof, not memory.',
+  },
+  {
+    icon: Users,
+    title: 'Keep every touchpoint on the record',
+    body: 'Attach calls and emails to a contact and see your whole relationship with a recruiter in one timeline.',
+  },
+  {
+    icon: StickyNote,
+    title: 'Tag once, find everywhere',
+    body: 'A shared tag like "python" or "remote" surfaces the resumes, notes, and accomplishments that share it — search across all of it at once.',
+  },
+]
+
+const IDEA_INTERVAL_MS = 7000
+
+function IdeaScroller() {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % IDEAS.length)
+    }, IDEA_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [])
+
+  const { icon: Icon, title, body } = IDEAS[index]
+
+  return (
+    <div className={styles.ideaScroller}>
+      <div className={styles.ideaCard} key={index}>
+        <Icon size={24} className={styles.ideaIcon} />
+        <span className={styles.ideaTitle}>{title}</span>
+        <p className={styles.ideaBody}>{body}</p>
+      </div>
+      <div className={styles.ideaDots}>
+        {IDEAS.map((idea, i) => (
+          <button
+            key={idea.title}
+            type="button"
+            className={`${styles.ideaDot}${i === index ? ` ${styles.ideaDotActive}` : ''}`}
+            aria-label={`Show idea ${i + 1}: ${idea.title}`}
+            aria-current={i === index}
+            onClick={() => setIndex(i)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 const TERMINAL_STATUSES = new Set(['Rejected', 'Withdrawn', 'Accepted'])
@@ -132,28 +205,6 @@ export default function HomeView() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.heading}>
-        {firstName ? `Hey, ${firstName}.` : 'Overview'}
-      </h2>
-
-      <div className={styles.globalSearch}>
-        <SearchBar
-          value={searchValue}
-          onChange={handleSearchChange}
-          availableTags={allTags}
-          placeholder="Search everything..."
-        />
-        {hasSearch && (
-          <SearchResults
-            results={searchQuery.data ?? []}
-            loading={searchQuery.isFetching}
-          />
-        )}
-        {!hasSearch && (
-          <p className={styles.searchHint}>Type to search across all resources.</p>
-        )}
-      </div>
-
       <div className={styles.statsGrid}>
         <Link to="/applications" className={styles.statCard}>
           <span className={styles.statLabel}>Applications</span>
@@ -182,6 +233,31 @@ export default function HomeView() {
           <span className={styles.statLabel}>Contacts</span>
           <span className={styles.statValue}>{stats === null ? '—' : stats.contacts}</span>
         </Link>
+      </div>
+
+      <div className={styles.globalSearch}>
+        <SearchBar
+          value={searchValue}
+          onChange={handleSearchChange}
+          availableTags={allTags}
+          placeholder="Search everything..."
+        />
+        {hasSearch ? (
+          <SearchResults
+            results={searchQuery.data ?? []}
+            loading={searchQuery.isFetching}
+          />
+        ) : (
+          <div className={styles.intro}>
+            <p className={styles.introWelcome}>
+              {firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'}
+            </p>
+            <p className={styles.introSlogan}>
+              Your career, organized — resumes, applications, accomplishments, and contacts, all in one searchable place.
+            </p>
+            <IdeaScroller />
+          </div>
+        )}
       </div>
     </div>
   )
