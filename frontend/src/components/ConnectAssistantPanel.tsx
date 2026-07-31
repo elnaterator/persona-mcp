@@ -56,6 +56,42 @@ const ASSISTANTS: Assistant[] = [
       2,
     ),
   },
+  {
+    id: 'claude-desktop',
+    name: 'Claude Desktop',
+    filePath: 'Settings → Connectors → Add custom connector',
+    snippet: MCP_SERVER_URL,
+  },
+  {
+    id: 'windsurf',
+    name: 'Windsurf',
+    filePath: '~/.codeium/windsurf/mcp_config.json',
+    snippet: JSON.stringify(
+      { mcpServers: { pktx: { serverUrl: MCP_SERVER_URL } } },
+      null,
+      2,
+    ),
+  },
+  {
+    id: 'zed',
+    name: 'Zed',
+    filePath: '~/.config/zed/settings.json',
+    snippet: JSON.stringify(
+      { context_servers: { pktx: { url: MCP_SERVER_URL } } },
+      null,
+      2,
+    ),
+  },
+  {
+    id: 'cline',
+    name: 'Cline',
+    filePath: 'cline_mcp_settings.json (via "Configure MCP Servers")',
+    snippet: JSON.stringify(
+      { mcpServers: { pktx: { type: 'streamableHttp', url: MCP_SERVER_URL } } },
+      null,
+      2,
+    ),
+  },
 ]
 
 export default function ConnectAssistantPanel() {
@@ -95,20 +131,22 @@ export default function ConnectAssistantPanel() {
             <p className={styles.stepHint}>
               Your assistant will open a browser window to sign in (OAuth). No API key to manage.
             </p>
-            <div className={styles.tabList} role="tablist" aria-label="AI coding assistants">
+            <label className={styles.selectLabel} htmlFor="assistant-select">
+              Assistant
+            </label>
+            <select
+              id="assistant-select"
+              className={styles.select}
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+            >
               {ASSISTANTS.map((a) => (
-                <button
-                  key={a.id}
-                  role="tab"
-                  aria-selected={activeTab === a.id}
-                  className={`${styles.tab} ${activeTab === a.id ? styles.tabActive : ''}`}
-                  onClick={() => setActiveTab(a.id)}
-                >
+                <option key={a.id} value={a.id}>
                   {a.name}
-                </button>
+                </option>
               ))}
-            </div>
-            <div className={styles.tabPanel} role="tabpanel">
+            </select>
+            <div className={styles.tabPanel}>
               {activeAssistant.filePath && (
                 <span className={styles.filePath}>{activeAssistant.filePath}</span>
               )}

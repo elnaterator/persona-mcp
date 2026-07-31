@@ -114,30 +114,28 @@
   margin-bottom: var(--space-3);
 }
 
-.tabList {
-  display: flex;
-  gap: var(--space-1);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4);
+.selectLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.tab {
-  padding: var(--space-2) var(--space-4);
+.select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
   font-size: 0.8125rem;
-  background: none;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--bg-hover);
+  color: var(--text-primary);
   cursor: pointer;
   font-family: var(--font-mono);
-  transition: color var(--transition-fast), border-color var(--transition-fast);
+  transition: border-color var(--transition-fast);
 }
 
-.tab:hover {
-  color: var(--text-primary);
-}
-
-.tabActive {
-  color: var(--accent-green);
+.select:hover,
+.select:focus {
   border-color: var(--accent-green-dim);
 }
 
