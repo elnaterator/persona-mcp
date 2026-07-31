@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router'
 import { SignedIn, SignedOut, useAuth } from '@clerk/clerk-react'
 import Navigation from './components/Navigation'
 import UserMenu from './components/UserMenu'
+import ConnectAssistantPanel from './components/ConnectAssistantPanel'
 import { setTokenGetter } from './services/api'
 import LandingPage from './components/LandingPage'
 import AppRoutes from './router'
@@ -20,16 +21,19 @@ function AuthenticatedApp() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <h1 className="logo"><span className="logo-p">p</span>ktx</h1>
-          <Navigation />
-          <UserMenu />
-        </div>
-      </header>
-      <main>
-        <AppRoutes />
-      </main>
+      <ConnectAssistantPanel />
+      <div className="app-shell">
+        <header className="app-header">
+          <div className="app-header-inner">
+            <h1 className="logo"><span className="logo-p">p</span>ktx</h1>
+            <Navigation />
+            <UserMenu />
+          </div>
+        </header>
+        <main>
+          <AppRoutes />
+        </main>
+      </div>
     </div>
   )
 }

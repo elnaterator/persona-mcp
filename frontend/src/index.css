@@ -107,6 +107,12 @@ body {
 .app {
   min-height: 100vh;
   display: flex;
+}
+
+.app-shell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
 }
 
