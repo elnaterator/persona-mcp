@@ -143,21 +143,6 @@ def resolve_db_url() -> str:
     return value.strip()
 
 
-def resolve_environment() -> str:
-    """Resolve PKTX_ENV env var (default "local"). Used in backup object keys."""
-    return os.environ.get("PKTX_ENV", "").strip() or "local"
-
-
-def resolve_backup_bucket() -> str:
-    """Resolve PKTX_BACKUP_BUCKET env var. Empty means backups are disabled."""
-    return os.environ.get("PKTX_BACKUP_BUCKET", "").strip()
-
-
-def resolve_backup_token() -> str:
-    """Resolve PKTX_BACKUP_TOKEN env var. Empty means backups are disabled."""
-    return os.environ.get("PKTX_BACKUP_TOKEN", "").strip()
-
-
 def resolve_pool_min() -> int:
     """Resolve PKTX_DB_POOL_MIN env var (default 1)."""
     return int(os.environ.get("PKTX_DB_POOL_MIN", "1"))

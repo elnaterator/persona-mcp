@@ -1,9 +1,8 @@
 """User-facing data export: everything one user owns, as one JSON document.
 
-Deliberately separate from ``backup_service``. That one is operational —
-all tables, all users, CSV, machine-restorable. This one is the portability
-story: a single user's records, in the same shape the API already returns them,
-readable without any pktx code.
+The portability story — a single user's records, in the same shape the API
+already returns them, readable without any pktx code. Database backups are not
+this app's job: Neon's own point-in-time restore covers that.
 """
 
 from datetime import datetime, timezone

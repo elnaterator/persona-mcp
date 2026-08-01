@@ -78,8 +78,6 @@ backend/                  # Python FastAPI + MCP server
     auth.py               # Clerk JWT (REST) + MCP OAuth proxy (build_mcp_auth)
     oauth_store.py        # PostgreSQL-backed AsyncKeyValue for OAuth-proxy state
     resume_service.py     # Shared business logic (one *_service.py per resource)
-    backup_service.py     # Full-DB dump (per-table CSV in a gzipped tar) → S3
-    restore_service.py    # Inverse of backup_service (see scripts/restore_backup.py)
     export_service.py     # Per-user JSON export behind GET /api/export
     api/                  # REST API routes
       routes.py           # FastAPI route handlers
@@ -167,7 +165,6 @@ secret. Required env in production: `PKTX_PUBLIC_URL`, `CLERK_ISSUER`,
 - Docker + Docker Compose for containerized deployment (multi-stage build)
 - GNU Make for build orchestration (root + per-directory Makefiles)
 - AWS Lambda (container image + Function URL) via Terraform in `infra/`; EventBridge keep-warm rule pings `GET /health` every 5 min (toggle: `keep_warm_enabled` module var)
-- Nightly backup: EventBridge rule invokes `POST /internal/backup` (token-guarded, `x-pktx-backup-token`) and the app dumps every table to `s3://pktx-backups-<env>` (`infra/modules/backup`, toggle: `backups_enabled`). Restore with `backend/scripts/restore_backup.py`; drill procedure in [`docs/runbooks/restore-drill.md`](docs/runbooks/restore-drill.md). Neon PITR is a console setting, not Terraform-managed
 
 ## Recent Changes
 - 017-oauth-dcr-proxy: MCP auth moved to FastMCP `OAuthProxy` (local DCR, loopback-tolerant), proxy state persisted in PostgreSQL (`oauth_kv`, schema v13); new env `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`

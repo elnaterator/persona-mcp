@@ -50,21 +50,3 @@ variable "error_threshold" {
   type        = number
   default     = 1
 }
-
-variable "backups_enabled" {
-  description = "Create the backup bucket and the nightly database backup rule."
-  type        = bool
-  default     = true
-}
-
-variable "backup_retention_days" {
-  description = "Days to keep a backup object before expiring it."
-  type        = number
-  default     = 30
-}
-
-variable "backup_noncurrent_retention_days" {
-  description = "Days to keep a noncurrent (overwritten) backup version."
-  type        = number
-  default     = 7
-}

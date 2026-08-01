@@ -1,34 +1,23 @@
 """FastAPI route handlers for the pktx REST API."""
 
-import hmac
-import logging
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from pktx.accomplishment_service import AccomplishmentService
 from pktx.application_service import ApplicationService
 from pktx.auth import UserContext
-from pktx.backup_service import run_backup
 from pktx.communication_service import ContactCommunicationService
-from pktx.config import (
-    resolve_backup_bucket,
-    resolve_backup_token,
-    resolve_environment,
-)
 from pktx.contact_service import ContactService
-from pktx.db import DBConnection
 from pktx.export_service import ExportService
 from pktx.link_service import RESOURCE_TYPES, LinkService
 from pktx.models import Resume
 from pktx.note_service import NoteService
 from pktx.resume_service import ALL_SECTIONS, SECTION_LIST, ResumeService
 from pktx.search_service import SearchService
-
-logger = logging.getLogger("pktx")
 
 
 def _make_user_dep(get_current_user: Callable | None) -> Callable:
@@ -56,7 +45,6 @@ def create_router(
     comm_service: ContactCommunicationService | None = None,
     link_service: LinkService | None = None,
     get_current_user: Callable | None = None,
-    db_conn: DBConnection | None = None,
 ) -> APIRouter:
     """Create an APIRouter with all endpoints.
 
@@ -66,10 +54,8 @@ def create_router(
         acc_service: Optional accomplishment service.
         get_current_user: Optional FastAPI dependency that validates Bearer JWTs
             and returns a ``UserContext``. When provided, all routes except
-            ``GET /health``, ``POST /api/webhooks/clerk``, and
-            ``POST /internal/backup`` require a valid token.
-        db_conn: Optional raw DB connection. Required for ``POST
-            /internal/backup``; without it the backup route is not registered.
+            ``GET /health`` and ``POST /api/webhooks/clerk`` require a valid
+            token.
     """
     # Top-level router — only truly public endpoints land here.
     router = APIRouter()
@@ -1005,29 +991,6 @@ def create_router(
             content=jsonable_encoder(data),
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
-
-    # ==========================================================
-    # Internal Backup Route (no user auth — shared-secret token)
-    # ==========================================================
-
-    _backup_bucket = resolve_backup_bucket()
-    _backup_token = resolve_backup_token()
-
-    if db_conn is not None and _backup_bucket and _backup_token:
-
-        @router.post("/internal/backup")
-        def run_database_backup(request: Request) -> dict[str, Any]:
-            """Dump the whole database to S3. Invoked by an EventBridge rule."""
-            supplied = request.headers.get("x-pktx-backup-token", "")
-            if not hmac.compare_digest(supplied, _backup_token):
-                raise HTTPException(status_code=401, detail="Invalid backup token")
-            try:
-                return run_backup(db_conn, _backup_bucket, resolve_environment())
-            except Exception as exc:
-                logger.exception("backup failed")
-                raise HTTPException(
-                    status_code=500, detail=f"Backup failed: {exc}"
-                ) from exc
 
     # ==========================================================
     # Webhook Routes (no auth — verified via Svix signature)

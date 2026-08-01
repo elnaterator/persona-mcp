@@ -43,25 +43,6 @@ variable "keep_warm_enabled" {
   default     = true
 }
 
-variable "backup_bucket_arn" {
-  description = "ARN of the backup bucket. Empty disables the nightly backup rule."
-  type        = string
-  default     = ""
-}
-
-variable "backup_token" {
-  description = "Shared secret sent as x-pktx-backup-token by the backup rule. Empty disables the nightly backup rule."
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "backup_schedule_expression" {
-  description = "EventBridge schedule for the nightly database backup."
-  type        = string
-  default     = "cron(0 8 * * ? *)"
-}
-
 variable "tags" {
   description = "AWS resource tags applied to all resources in this module."
   type        = map(string)

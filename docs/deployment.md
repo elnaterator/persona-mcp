@@ -111,19 +111,9 @@ aws ssm put-parameter \
   --value "pk_test_..." \
   --type SecureString \
   --overwrite
-
-# Shared secret the nightly backup rule sends as x-pktx-backup-token.
-# Any high-entropy string; the app compares it in constant time and refuses
-# to register the /internal/backup route when it is unset.
-aws ssm put-parameter \
-  --region us-west-2 \
-  --name /pktx/{env}/backup_token \
-  --value "$(openssl rand -hex 32)" \
-  --type SecureString \
-  --overwrite
 ```
 
-Verify all are set:
+Verify all three are set:
 
 ```bash
 aws ssm get-parameters-by-path \
@@ -300,51 +290,12 @@ Once set, `terraform plan` runs automatically on any PR that touches `infra/**`.
 
 ## Backups
 
-Two independent layers protect the data. They fail differently on purpose.
+Backups are **Neon's**, not this repo's. There is nothing to provision and nothing in Terraform.
 
-| Layer | Covers | Managed by |
-|-------|--------|------------|
-| Neon history retention (PITR) | Bad writes, accidental deletes — restore the branch to a point in time | **Neon console — not Terraform** |
-| Nightly S3 dump | Losing the Neon project or account entirely | Terraform (`infra/modules/backup`) |
+- Neon console → project → **Settings → Storage → History retention** — the point-in-time-restore window (free plan caps it at 24 hours)
+- Restoring is a Neon-console operation: branch → *Restore*, pick a timestamp
 
-### Neon PITR (manual)
-
-Neon is a SaaS dependency configured outside this repo — there is no Terraform resource for it here, so the retention window is a console setting that must be checked by hand.
-
-- Neon console → project → **Settings → Storage → History retention**
-- Free plan caps retention at **24 hours**; paid plans go to 7 days or more
-- Record the current window here when it changes: **24 hours** (free plan, as of 2026-07-31)
-
-Restoring via PITR is a Neon-console operation (branch → *Restore*), independent of anything in this repo.
-
-### Nightly S3 dump (Terraform)
-
-An EventBridge rule invokes the app Lambda daily at 08:00 UTC with a synthetic `POST /internal/backup` event. The app dumps every table with `COPY ... TO STDOUT` into a gzipped tar (per-table CSV plus a `manifest.json` carrying the schema version and row counts) and writes it to `s3://pktx-backups-{env}/backups/YYYY/MM/`.
-
-- Bucket: versioned, SSE-S3, public access blocked, TLS-only, objects expire after 30 days (noncurrent versions after 7)
-- Route auth: `x-pktx-backup-token` header compared in constant time against `PKTX_BACKUP_TOKEN` (SSM `/pktx/{env}/backup_token`). Unset ⇒ the route is not registered at all
-- The token is a SecureString in SSM but is also injected into the Lambda environment and embedded in the EventBridge target input, so anyone with `events:DescribeRule`, `lambda:GetFunction`, or read access to Terraform state can read it. It only authorizes "dump to our own bucket", and those principals can already read the database URL beside it. Rotate by overwriting the SSM parameter and re-applying
-- Toggle: `backups_enabled = false` in `infra/{env}` removes the bucket, the rule, and the IAM grant
-
-Trigger one by hand:
-
-```bash
-aws events put-events --region us-west-2 --entries '[{"Source":"manual","DetailType":"manual-backup","Detail":"{}"}]' >/dev/null
-# or invoke the rule's target directly:
-aws lambda invoke --region us-west-2 \
-  --function-name pktx-{env} \
-  --payload "$(aws events list-targets-by-rule --rule pktx-{env}-backup \
-    --query 'Targets[0].Input' --output text | base64)" \
-  /dev/stdout
-```
-
-List what exists:
-
-```bash
-aws s3 ls s3://pktx-backups-{env}/backups/ --recursive | tail -5
-```
-
-**Restoring is a drill, not a guess** — see [`runbooks/restore-drill.md`](runbooks/restore-drill.md).
+Users can take their own data out at any time via **Export my data** in the account menu (`GET /api/export`), which returns their full dataset as JSON.
 
 ---
 

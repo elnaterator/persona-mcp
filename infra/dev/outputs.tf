@@ -22,8 +22,3 @@ output "log_group_name" {
   description = "CloudWatch Log Group name for viewing Lambda logs."
   value       = module.observability.log_group_name
 }
-
-output "backup_bucket_name" {
-  description = "S3 bucket holding nightly database backups (empty when disabled)."
-  value       = module.backup.bucket_name
-}

@@ -298,7 +298,6 @@ def create_app(
             comm_service=_comm_service,
             link_service=_link_service,
             get_current_user=get_user,
-            db_conn=conn,
         )
     )
 
