@@ -16,6 +16,7 @@ from psycopg_pool import ConnectionPool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
+from starlette.routing import Route as StarletteRoute
 
 from pktx.accomplishment_service import AccomplishmentService
 from pktx.api.routes import create_router
@@ -193,6 +194,34 @@ class UserContextMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+_PRM_PATH = "/.well-known/oauth-protected-resource"
+
+
+def _add_root_resource_metadata_alias(app: FastAPI, mcp_app: Any) -> None:
+    """Serve protected-resource metadata at the root well-known path too.
+
+    FastMCP registers RFC 9728 metadata only at the path-suffixed location
+    (``/.well-known/oauth-protected-resource/mcp``). MCP clients probe that first
+    and fall back to the root path, so a client that skips the WWW-Authenticate
+    header and probes only the root would otherwise get the SPA's 404 page. Both
+    paths serve the same document, produced by the same handler.
+    """
+    suffixed = f"{_PRM_PATH}/mcp"
+    source = next(
+        (r for r in mcp_app.routes if getattr(r, "path", None) == suffixed), None
+    )
+    if source is None:
+        return
+    app.router.routes.append(
+        StarletteRoute(
+            _PRM_PATH,
+            endpoint=source.endpoint,
+            methods=["GET", "HEAD", "OPTIONS"],
+            name="oauth_protected_resource_root",
+        )
+    )
+
+
 # --- FastAPI application factory ---
 
 
@@ -305,6 +334,8 @@ def create_app(
     # the /mcp route is matched before the StaticFiles catch-all.
     for route in mcp_app.routes:
         app.router.routes.append(route)
+
+    _add_root_resource_metadata_alias(app, mcp_app)
 
     # Mount static files for frontend (if directory exists)
     # This must come AFTER API routes and MCP mount so they take priority

@@ -633,3 +633,241 @@ class TestMCPWellKnownRouteOrdering:
         wk_idx = next(i for i, p in enumerate(paths) if "/.well-known" in p)
         mcp_idx = next(i for i, p in enumerate(paths) if p == "/mcp")
         assert wk_idx < mcp_idx
+
+
+# ---------------------------------------------------------------------------
+# Plan 025 — MCP 2025-11-25 authorization spec gaps (CIMD, audience, root PRM)
+# ---------------------------------------------------------------------------
+
+
+def _build_mcp_proxy_and_app(
+    private_key: Any, extra_redirect_uris: list[str] | None = None
+) -> tuple[Any, Any]:
+    """Build the OAuth proxy plus its ASGI app, mirroring build_mcp_auth wiring."""
+    from fastmcp import FastMCP
+    from fastmcp.server.auth.oauth_proxy import OAuthProxy
+    from fastmcp.server.auth.providers.jwt import JWTVerifier
+    from fastmcp.server.auth.redirect_validation import DEFAULT_LOCALHOST_PATTERNS
+    from key_value.aio.stores.memory import MemoryStore
+
+    pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
+    proxy = OAuthProxy(
+        upstream_authorization_endpoint=f"{_TEST_ISSUER}/oauth/authorize",
+        upstream_token_endpoint=f"{_TEST_ISSUER}/oauth/token",
+        upstream_client_id="test_client_id",
+        upstream_client_secret="test_client_secret_at_least_12_chars",
+        token_verifier=JWTVerifier(
+            public_key=pem,
+            issuer=_TEST_ISSUER,
+            audience=None,
+            base_url=_TEST_PUBLIC_URL,
+        ),
+        base_url=_TEST_PUBLIC_URL,
+        redirect_path="/auth/callback",
+        allowed_client_redirect_uris=[
+            *DEFAULT_LOCALHOST_PATTERNS,
+            *(extra_redirect_uris or []),
+        ],
+        client_storage=MemoryStore(),
+        enable_cimd=True,
+    )
+    m = FastMCP("pktx", auth=proxy)
+
+    @m.tool()
+    def ping() -> str:
+        return "pong"
+
+    return proxy, m.http_app(path="/mcp", stateless_http=True)
+
+
+class TestMCPProxyCIMD:
+    """MCP 2025-11-25: authorization servers SHOULD support CIMD client ids."""
+
+    def test_as_metadata_advertises_cimd_support(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        _, app = _build_mcp_proxy_and_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        body = client.get("/.well-known/oauth-authorization-server").json()
+        assert body.get("client_id_metadata_document_supported") is True
+
+    def test_as_metadata_offers_secretless_client_auth(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        """CIMD clients hold no shared secret: auth is none or private_key_jwt."""
+        private_key, _ = mcp_oauth_key_pair
+        _, app = _build_mcp_proxy_and_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        body = client.get("/.well-known/oauth-authorization-server").json()
+        methods = body["token_endpoint_auth_methods_supported"]
+        assert "none" in methods
+        assert "private_key_jwt" in methods
+
+    def test_dcr_registration_endpoint_still_advertised(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        """DCR stays available: the spec keeps it for clients that predate CIMD."""
+        private_key, _ = mcp_oauth_key_pair
+        _, app = _build_mcp_proxy_and_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        body = client.get("/.well-known/oauth-authorization-server").json()
+        assert body["registration_endpoint"].startswith(_TEST_PUBLIC_URL)
+
+    def test_https_url_client_id_is_treated_as_cimd(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        proxy, _app = _build_mcp_proxy_and_app(private_key)
+        manager = proxy._cimd_manager
+        assert manager is not None
+        assert manager.is_cimd_client_id("https://app.example.com/client.json")
+
+    def test_opaque_client_id_is_not_treated_as_cimd(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        """DCR-issued ids stay on the registered-client path, not the fetch path."""
+        private_key, _ = mcp_oauth_key_pair
+        proxy, _app = _build_mcp_proxy_and_app(private_key)
+        manager = proxy._cimd_manager
+        assert manager is not None
+        assert not manager.is_cimd_client_id("dcr_generated_client_id")
+
+
+class TestMCPProxyTokenAudience:
+    """MCP 2025-11-25: a resource server MUST only accept tokens minted for it."""
+
+    def test_issued_tokens_are_bound_to_the_mcp_resource_url(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        proxy, _app = _build_mcp_proxy_and_app(private_key)
+        assert proxy.jwt_issuer.audience.rstrip("/") == _TEST_RESOURCE
+
+    def test_token_for_another_audience_is_rejected(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        """Same signing key, foreign aud — must not validate (no token passthrough)."""
+        from fastmcp.server.auth.jwt_issuer import JWTIssuer
+        from joserfc.errors import JoseError
+
+        private_key, _ = mcp_oauth_key_pair
+        proxy, _app = _build_mcp_proxy_and_app(private_key)
+        foreign = JWTIssuer(
+            issuer=proxy.jwt_issuer.issuer,
+            audience="https://other.example.com/mcp",
+            signing_key=proxy._jwt_signing_key,
+        )
+        token = foreign.issue_access_token(
+            client_id="c1", scopes=[], jti="jti-foreign", expires_in=3600
+        )
+        with pytest.raises(JoseError):
+            proxy.jwt_issuer.verify_token(token)
+
+    def test_token_for_this_resource_validates(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        proxy, _app = _build_mcp_proxy_and_app(private_key)
+        token = proxy.jwt_issuer.issue_access_token(
+            client_id="c1", scopes=[], jti="jti-ours", expires_in=3600
+        )
+        claims = proxy.jwt_issuer.verify_token(token)
+        assert claims["aud"].rstrip("/") == _TEST_RESOURCE
+
+
+class TestRootProtectedResourceMetadataAlias:
+    """RFC 9728 root fallback: clients probe the suffixed path, then the root."""
+
+    def _app_with_alias(self, private_key: Any) -> FastAPI:
+        from pktx.server import _add_root_resource_metadata_alias
+
+        _, mcp_app = _build_mcp_proxy_and_app(private_key)
+        app = FastAPI()
+        for route in mcp_app.routes:
+            app.router.routes.append(route)
+        _add_root_resource_metadata_alias(app, mcp_app)
+        return app
+
+    def test_root_path_returns_200(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        client = TestClient(self._app_with_alias(private_key))
+        assert client.get("/.well-known/oauth-protected-resource").status_code == 200
+
+    def test_root_and_suffixed_documents_match(self, mcp_oauth_key_pair: tuple) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        client = TestClient(self._app_with_alias(private_key))
+        root = client.get("/.well-known/oauth-protected-resource").json()
+        suffixed = client.get("/.well-known/oauth-protected-resource/mcp").json()
+        assert root == suffixed
+        assert root["resource"].rstrip("/") == _TEST_RESOURCE
+
+
+class TestHostedClientRedirectAllowlist:
+    """Hosted (non-loopback) CIMD clients need their HTTPS callback allowlisted."""
+
+    def _register(self, app: Any, redirect_uri: str) -> Any:
+        client = TestClient(app, raise_server_exceptions=False)
+        return client.post(
+            "/register",
+            json={
+                "redirect_uris": [redirect_uri],
+                "token_endpoint_auth_method": "none",
+                "grant_types": ["authorization_code", "refresh_token"],
+                "response_types": ["code"],
+            },
+        )
+
+    def test_hosted_redirect_rejected_by_default(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        _, app = _build_mcp_proxy_and_app(private_key)
+        client = TestClient(app, raise_server_exceptions=False)
+        client_id = self._register(app, "http://127.0.0.1:33418/callback").json()[
+            "client_id"
+        ]
+        resp = client.get(
+            "/authorize",
+            params={
+                "response_type": "code",
+                "client_id": client_id,
+                "redirect_uri": "https://client.example.com/callback",
+                "code_challenge": _pkce_challenge(),
+                "code_challenge_method": "S256",
+                "state": "xyz",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 400, resp.text
+
+    def test_hosted_redirect_allowed_when_configured(
+        self, mcp_oauth_key_pair: tuple
+    ) -> None:
+        private_key, _ = mcp_oauth_key_pair
+        _, app = _build_mcp_proxy_and_app(
+            private_key, extra_redirect_uris=["https://client.example.com/callback"]
+        )
+        client = TestClient(app, raise_server_exceptions=False)
+        client_id = self._register(app, "https://client.example.com/callback").json()[
+            "client_id"
+        ]
+        resp = client.get(
+            "/authorize",
+            params={
+                "response_type": "code",
+                "client_id": client_id,
+                "redirect_uri": "https://client.example.com/callback",
+                "code_challenge": _pkce_challenge(),
+                "code_challenge_method": "S256",
+                "state": "xyz",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code != 400, resp.text
+        assert resp.status_code in (302, 303, 307)

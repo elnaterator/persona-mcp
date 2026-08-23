@@ -114,3 +114,7 @@ Add privacy policy and terms of service pages. Implement full account deletion (
 
 ## 024 Donations via simple payment link
 Add a GitHub Sponsors or Buy Me a Coffee link in the app footer. Explicitly no billing system, subscriptions, or tiers — a payment link only. Revisit with real billing (Stripe) only if donations become meaningful revenue.
+
+
+## 025 Close MCP 2025-11-25 authorization spec gaps - SHIPPED
+The Nov 2025 MCP authorization spec makes Client ID Metadata Documents (CIMD) the preferred client-identification mechanism (`client_id` is an HTTPS URL serving the client's own metadata) and demotes Dynamic Client Registration to backwards compatibility. Our proxy on FastMCP 2.14.5 had no CIMD support, advertised no `client_id_metadata_document_supported`, never validated token audience (spec MUST), and 404'd the root `/.well-known/oauth-protected-resource` fallback. Upgrade to FastMCP 3.4.7 (CIMD + audience-bound proxy tokens built in), add the root protected-resource alias, and add `PKTX_EXTRA_CLIENT_REDIRECT_URIS` so hosted CIMD clients can be allowlisted without loosening loopback handling. Scopes deliberately out of scope: the server has no scope model, and empty `scopes_supported` correctly means "no scopes required". Refs: https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization

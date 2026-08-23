@@ -1,5 +1,6 @@
 """Contract tests for note REST API and MCP tools."""
 
+import asyncio
 from collections.abc import Generator
 from typing import Any
 
@@ -404,8 +405,9 @@ class TestMCPNoteTools:
 
 def _get_tool_fn(mcp: Any, name: str) -> Any:
     """Extract a registered MCP tool function by name for direct testing."""
-    for tool in mcp._tool_manager._tools.values():
+    tools = asyncio.run(mcp.list_tools())
+    for tool in tools:
         if tool.name == name:
             return tool.fn
-    registered = list(mcp._tool_manager._tools.keys())
+    registered = [t.name for t in tools]
     raise KeyError(f"MCP tool '{name}' not found. Registered: {registered}")

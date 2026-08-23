@@ -1,5 +1,6 @@
 """Integration tests: contact comm MCP tools roundtrip + cross-parent search."""
 
+import asyncio
 from typing import Any, cast
 
 import pytest
@@ -22,10 +23,11 @@ def seeded_db(db_conn: Connection[Any]) -> Connection[Any]:
 
 
 def _get_tool_fn(mcp: Any, name: str) -> Any:
-    for tool in mcp._tool_manager._tools.values():
+    tools = asyncio.run(mcp.list_tools())
+    for tool in tools:
         if tool.name == name:
             return tool.fn
-    registered = list(mcp._tool_manager._tools.keys())
+    registered = [t.name for t in tools]
     raise KeyError(f"MCP tool '{name}' not found. Registered: {registered}")
 
 

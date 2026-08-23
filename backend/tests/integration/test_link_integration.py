@@ -1,5 +1,6 @@
 """Integration tests for resource linking — MCP tools + service + cascade delete."""
 
+import asyncio
 from typing import Any, cast
 
 import pytest
@@ -17,10 +18,11 @@ def _ref_id(ref: Any) -> int:
 
 
 def _get_tool_fn(mcp: Any, name: str) -> Any:
-    for tool in mcp._tool_manager._tools.values():
+    tools = asyncio.run(mcp.list_tools())
+    for tool in tools:
         if tool.name == name:
             return tool.fn
-    registered = list(mcp._tool_manager._tools.keys())
+    registered = [t.name for t in tools]
     raise KeyError(f"MCP tool '{name}' not found. Registered: {registered}")
 
 

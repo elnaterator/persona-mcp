@@ -4,6 +4,7 @@ Verifies that all MCP tool handlers call require_user_id() and pass the
 resulting user_id to service methods, ensuring data isolation between users.
 """
 
+import asyncio
 from typing import Any, cast
 
 import pytest
@@ -64,10 +65,11 @@ def _as_user(user_id: str):
 
 def _get_tool_fn(mcp: Any, name: str) -> Any:
     """Extract a registered MCP tool function by name for direct testing."""
-    for tool in mcp._tool_manager._tools.values():
+    tools = asyncio.run(mcp.list_tools())
+    for tool in tools:
         if tool.name == name:
             return tool.fn
-    registered = list(mcp._tool_manager._tools.keys())
+    registered = [t.name for t in tools]
     raise KeyError(f"MCP tool '{name}' not found. Registered: {registered}")
 
 
