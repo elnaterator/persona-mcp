@@ -51,19 +51,26 @@ Once running:
 | `CLERK_OAUTH_CLIENT_ID` | Client id of the static Clerk OAuth application the MCP proxy uses upstream |
 | `CLERK_OAUTH_CLIENT_SECRET` | Client secret of that Clerk OAuth application (also derives the at-rest encryption key for proxy state) |
 | `CLERK_WEBHOOK_SECRET` | Webhook signing secret from Clerk dashboard |
+| `PKTX_EXTRA_CLIENT_REDIRECT_URIS` | Optional. Comma-separated redirect-URI patterns for hosted MCP clients (loopback is always allowed) |
 
 ### Keyless OAuth connect flow
 
-MCP clients (Claude Code, Cursor, etc.) connect via standard OAuth2. The server runs a
-**DCR proxy** (FastMCP `OAuthProxy`): clients register and authorize against *us*, and we
+MCP clients (Claude Code, Cursor, etc.) connect via standard OAuth2. The server runs an
+**OAuth proxy** (FastMCP `OAuthProxy`): clients identify themselves to *us*, and we
 proxy the flow upstream to Clerk through one fixed OAuth application. This removes the
 loopback-redirect friction where a native client registers `http://localhost:PORT` but
 sends `http://127.0.0.1:PORT` — both loopback hosts are accepted.
 
-1. Client sends unauthenticated request to `/mcp` → server returns `401` with `WWW-Authenticate` pointing to `/.well-known/oauth-protected-resource/mcp`.
+Both client-identification mechanisms of the MCP 2025-11-25 authorization spec are
+supported: **Client ID Metadata Documents** (the spec's preferred option — the client's
+`client_id` is an HTTPS URL serving its metadata, advertised by us as
+`client_id_metadata_document_supported`) and **Dynamic Client Registration** at
+`/register` for clients that predate CIMD.
+
+1. Client sends unauthenticated request to `/mcp` → server returns `401` with `WWW-Authenticate` pointing to `/.well-known/oauth-protected-resource/mcp` (also served at the root `/.well-known/oauth-protected-resource`).
 2. Client fetches the metadata → discovers **this server** as the authorization server.
-3. Client registers dynamically (RFC 7591) with a loopback redirect, then does a PKCE browser sign-in; the consent screen redirects to Clerk to authenticate.
-4. The proxy exchanges the Clerk code server-side, stores the Clerk token encrypted **in PostgreSQL** (shared across instances — see the `oauth_kv` table), and issues the client a reference JWT. Each `/mcp` call re-validates the stored Clerk token, so revocation at Clerk takes effect.
+3. Client identifies itself with a CIMD URL or registers dynamically (RFC 7591), then does a PKCE browser sign-in; the consent screen redirects to Clerk to authenticate.
+4. The proxy exchanges the Clerk code server-side, stores the Clerk token encrypted **in PostgreSQL** (shared across instances — see the `oauth_kv` table), and issues the client a reference JWT bound to `aud=<PKTX_PUBLIC_URL>/mcp`. Each `/mcp` call checks that audience and re-validates the stored Clerk token, so a token minted for another resource is rejected and revocation at Clerk takes effect.
 
 No API key to generate or paste. Add the bare URL in your assistant's MCP config:
 

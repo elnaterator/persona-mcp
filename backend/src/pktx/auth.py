@@ -267,13 +267,23 @@ def build_mcp_auth(pool: "ConnectionPool[Any]") -> OAuthProxy:
     authorize state) is stored in PostgreSQL via ``pool`` so it is shared across
     serverless instances rather than a per-instance local DiskStore.
 
-    Token audience is NOT validated: signature (JWKS) and issuer stay strict.
+    Client identification supports both MCP 2025-11-25 mechanisms: Client ID
+    Metadata Documents (``enable_cimd``, the spec's preferred approach — the client
+    hosts a JSON document at an HTTPS URL and that URL is its ``client_id``) and
+    Dynamic Client Registration at ``/register`` (kept for older clients).
+
+    Audience: the proxy issues its own JWTs to clients bound to ``aud=<public>/mcp``
+    and rejects any token whose audience differs, satisfying the spec requirement
+    that a resource server only accept tokens minted for it. The *upstream* Clerk
+    token — where we are the OAuth client, not the resource — is verified for
+    signature (JWKS) and issuer only; its audience is Clerk's own client id.
     """
     from pktx.config import (
         resolve_clerk_issuer,
         resolve_clerk_jwks_url,
         resolve_clerk_oauth_client_id,
         resolve_clerk_oauth_client_secret,
+        resolve_extra_client_redirect_uris,
         resolve_public_url,
     )
     from pktx.oauth_store import build_oauth_client_storage
@@ -306,9 +316,18 @@ def build_mcp_auth(pool: "ConnectionPool[Any]") -> OAuthProxy:
         # authorize with http://localhost:PORT (or vice versa) — distinct strings
         # per OAuth. These patterns accept either host on any port so the mismatch
         # no longer 400s, while still rejecting non-loopback redirects a client
-        # never registered. Extend this list if a hosted (non-loopback) client is
-        # ever added.
-        allowed_client_redirect_uris=list(DEFAULT_LOCALHOST_PATTERNS),
+        # never registered. Hosted clients (CIMD documents pointing at an HTTPS
+        # callback) are opted in per deployment via PKTX_EXTRA_CLIENT_REDIRECT_URIS;
+        # the same allowlist gates DCR and CIMD clients alike.
+        allowed_client_redirect_uris=[
+            *DEFAULT_LOCALHOST_PATTERNS,
+            *resolve_extra_client_redirect_uris(),
+        ],
+        # MCP 2025-11-25: authorization servers SHOULD support Client ID Metadata
+        # Documents. On by default in FastMCP; set explicitly so a library default
+        # flip cannot silently drop the capability (and its advertisement via
+        # client_id_metadata_document_supported in the AS metadata).
+        enable_cimd=True,
         # Shared, encrypted proxy state in PostgreSQL (not a local DiskStore) so
         # the OAuth flow survives across serverless instances and cold starts. The
         # Fernet key is derived from the Clerk OAuth client secret, stable per env.

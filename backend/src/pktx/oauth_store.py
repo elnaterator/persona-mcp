@@ -23,9 +23,9 @@ from datetime import datetime
 from typing import Any
 
 from cryptography.fernet import Fernet
+from key_value.aio._utils.managed_entry import ManagedEntry
 from key_value.aio.stores.base import BaseStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
-from key_value.shared.utils.managed_entry import ManagedEntry
 from psycopg_pool import ConnectionPool
 
 

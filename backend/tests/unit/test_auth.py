@@ -256,3 +256,58 @@ class TestVerifyClerkJwt:
                 )
 
         assert exc_info.value.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Plan 025: build_mcp_auth wiring (CIMD + redirect allowlist)
+# ---------------------------------------------------------------------------
+
+
+_MCP_AUTH_ENV = {
+    "PKTX_PUBLIC_URL": "https://pktx.test",
+    "CLERK_ISSUER": "https://clerk.test",
+    "CLERK_JWKS_URL": "https://clerk.test/.well-known/jwks.json",
+    "CLERK_OAUTH_CLIENT_ID": "test_client_id",
+    "CLERK_OAUTH_CLIENT_SECRET": "test_client_secret_at_least_12_chars",
+}
+
+
+def _build_auth(extra_redirects: str | None = None) -> Any:
+    """Build the production MCP auth provider against a stand-in pool."""
+    from unittest.mock import MagicMock
+
+    from pktx.auth import build_mcp_auth
+
+    env = dict(_MCP_AUTH_ENV)
+    if extra_redirects is not None:
+        env["PKTX_EXTRA_CLIENT_REDIRECT_URIS"] = extra_redirects
+    with patch.dict("os.environ", env, clear=False):
+        return build_mcp_auth(MagicMock())
+
+
+class TestBuildMcpAuthWiring:
+    """The proxy we ship must support CIMD and gate redirects to loopback."""
+
+    def test_cimd_is_enabled(self) -> None:
+        proxy = _build_auth()
+        assert proxy._cimd_manager is not None
+
+    def test_loopback_patterns_are_allowed(self) -> None:
+        proxy = _build_auth()
+        assert "http://localhost:*" in proxy._allowed_client_redirect_uris
+        assert "http://127.0.0.1:*" in proxy._allowed_client_redirect_uris
+
+    def test_extra_redirect_uris_are_appended(self) -> None:
+        proxy = _build_auth("https://client.example.com/callback")
+        allowed = proxy._allowed_client_redirect_uris
+        assert "https://client.example.com/callback" in allowed
+        assert "http://localhost:*" in allowed
+
+    def test_cimd_manager_shares_the_redirect_allowlist(self) -> None:
+        """A CIMD document cannot smuggle in a redirect the allowlist rejects."""
+        proxy = _build_auth("https://client.example.com/callback")
+        assert proxy._cimd_manager is not None
+        assert (
+            "https://client.example.com/callback"
+            in proxy._cimd_manager.allowed_redirect_uri_patterns
+        )

@@ -101,15 +101,24 @@ specs/                    # Feature specifications
 
 <!-- MANUAL ADDITIONS START -->
 
-## MCP Authentication (OAuth DCR proxy)
+## MCP Authentication (OAuth proxy: CIMD + DCR)
 
 `/mcp` is an OAuth2-protected endpoint fronted by FastMCP's `OAuthProxy` (built in
-`auth.build_mcp_auth`). The server handles Dynamic Client Registration locally and
-proxies authorize/token upstream to one static Clerk OAuth app, so native clients
-(Claude Desktop, Cursor, VS Code) register with us — not Clerk — which fixes the
-`localhost` vs `127.0.0.1` loopback redirect mismatch. Clients receive proxy-issued
-reference JWTs; each `/mcp` call swaps the JWT for the stored Clerk token and
-re-validates it (revocation-aware). REST `/api/*` auth is unchanged (Clerk JWT via
+`auth.build_mcp_auth`). Clients identify themselves to us, not to Clerk, and we proxy
+authorize/token upstream to one static Clerk OAuth app — which fixes the `localhost`
+vs `127.0.0.1` loopback redirect mismatch for native clients (Claude Desktop, Cursor,
+VS Code). Both MCP 2025-11-25 mechanisms work: Client ID Metadata Documents
+(`enable_cimd=True`, advertised as `client_id_metadata_document_supported`) and
+Dynamic Client Registration at `/register`.
+
+Clients receive proxy-issued reference JWTs bound to `aud=<PKTX_PUBLIC_URL>/mcp`;
+each `/mcp` call validates that audience, then swaps the JWT for the stored Clerk
+token and re-validates it (revocation-aware). The upstream Clerk token's own audience
+is Clerk's client id and is not checked — there we are the OAuth client, not the
+resource. RFC 9728 metadata is served at `/.well-known/oauth-protected-resource/mcp`
+and aliased at the root path (`server._add_root_resource_metadata_alias`). Redirect
+URIs are restricted to loopback plus whatever `PKTX_EXTRA_CLIENT_REDIRECT_URIS` adds
+(for hosted clients). REST `/api/*` auth is unchanged (Clerk JWT via
 `build_get_current_user`). stdio mode uses `PKTX_USER_ID`, no token.
 
 Proxy state (DCR registrations, encrypted upstream tokens, JTI mappings, transient
@@ -117,7 +126,8 @@ authorize state) is stored in PostgreSQL via `oauth_store.PostgresKVStore` (tabl
 `oauth_kv`) — **not** a local DiskStore — so it is shared across serverless
 instances. Values are Fernet-encrypted at rest, keyed off the Clerk OAuth client
 secret. Required env in production: `PKTX_PUBLIC_URL`, `CLERK_ISSUER`,
-`CLERK_JWKS_URL`, `CLERK_OAUTH_CLIENT_ID`, `CLERK_OAUTH_CLIENT_SECRET`.
+`CLERK_JWKS_URL`, `CLERK_OAUTH_CLIENT_ID`, `CLERK_OAUTH_CLIENT_SECRET`. Optional:
+`PKTX_EXTRA_CLIENT_REDIRECT_URIS`.
 
 <!-- MANUAL ADDITIONS END -->
 
@@ -140,10 +150,12 @@ secret. Required env in production: `PKTX_PUBLIC_URL`, `CLERK_ISSUER`,
 - PostgreSQL 16+ — no schema changes (feat-015-tags-handling)
 - Python 3.11+ (backend) + FastMCP ≥2.14.5 `OAuthProxy` (existing dep), `py-key-value-aio` + `cryptography` (transitive via FastMCP) — no new direct deps (017-oauth-dcr-proxy)
 - PostgreSQL 16+, schema v12 → v13 (`oauth_kv` table for OAuth-proxy state) (017-oauth-dcr-proxy)
+- Python 3.11+ (backend) + FastMCP ≥3.4.7 (major upgrade from 2.x; brings CIMD + audience-bound proxy tokens) — no new direct deps (025-mcp-auth-spec-gaps)
+- PostgreSQL 16+ — no schema changes (025-mcp-auth-spec-gaps)
 
 ### Backend
 - Python 3.11+ with type hints + Pydantic validation
-- FastMCP >=2.3.0 for MCP server (streamable-http + stdio)
+- FastMCP >=3.4.7 for MCP server (streamable-http + stdio)
 - FastAPI >=0.100.0 for REST API + static file serving
 - uvicorn >=0.20.0 for ASGI HTTP server
 - PostgreSQL 16+ via `psycopg` + `psycopg-pool`, `DBConnection` protocol, migrations in `migrations.py` (schema v13)
@@ -167,6 +179,7 @@ secret. Required env in production: `PKTX_PUBLIC_URL`, `CLERK_ISSUER`,
 - AWS Lambda (container image + Function URL) via Terraform in `infra/`; EventBridge keep-warm rule pings `GET /health` every 5 min (toggle: `keep_warm_enabled` module var)
 
 ## Recent Changes
+- 025-mcp-auth-spec-gaps: FastMCP 2.14.5 → 3.4.7; MCP 2025-11-25 gaps closed — CIMD client ids (`enable_cimd`), proxy tokens audience-bound to `<public>/mcp`, root `/.well-known/oauth-protected-resource` alias; new optional env `PKTX_EXTRA_CLIENT_REDIRECT_URIS`
 - 017-oauth-dcr-proxy: MCP auth moved to FastMCP `OAuthProxy` (local DCR, loopback-tolerant), proxy state persisted in PostgreSQL (`oauth_kv`, schema v13); new env `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`
 - feat-015-tags-handling: Added Python 3.11+ (backend); TypeScript 5.x / React 18 (frontend) + FastAPI ≥0.100.0, FastMCP ≥2.3.0, React 18, Vite 6, Vitest 2 — all existing, no new deps
 - feature/002-ci-pipeline: Added Python 3.11 (minimum supported per pyproject.toml) + GitHub Actions, `astral-sh/setup-uv` action

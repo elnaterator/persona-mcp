@@ -74,6 +74,21 @@ def resolve_public_url() -> str:
     return value.strip().rstrip("/")
 
 
+def resolve_extra_client_redirect_uris() -> list[str]:
+    """Resolve extra client redirect-URI patterns from PKTX_EXTRA_CLIENT_REDIRECT_URIS.
+
+    Comma-separated list of patterns (wildcards allowed, e.g.
+    ``https://claude.ai/api/mcp/auth_callback``). Loopback patterns are always
+    allowed on top of these; this env var exists for hosted MCP clients, which
+    identify themselves with a Client ID Metadata Document and redirect to their
+    own HTTPS callback instead of a local port. Empty/unset = loopback only.
+    """
+    raw = os.environ.get("PKTX_EXTRA_CLIENT_REDIRECT_URIS", "")
+    if not raw.strip():
+        return []
+    return [pattern.strip() for pattern in raw.split(",") if pattern.strip()]
+
+
 def resolve_clerk_jwks_url() -> str:
     """Resolve CLERK_JWKS_URL env var. Raises on missing."""
     value = os.environ.get("CLERK_JWKS_URL", "")
