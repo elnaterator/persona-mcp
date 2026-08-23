@@ -311,3 +311,38 @@ class TestBuildMcpAuthWiring:
             "https://client.example.com/callback"
             in proxy._cimd_manager.allowed_redirect_uri_patterns
         )
+
+
+class TestChatGptConnectorRedirects:
+    """ChatGPT derives a per-connector callback, so it needs a wildcard entry.
+
+    Observed shape: https://chatgpt.com/connector/oauth/<connector-id>. Without
+    an allowlist entry the proxy answers the authorize call with
+    "Redirect URI ... does not match allowed patterns".
+    """
+
+    _PATTERNS = (
+        "https://chatgpt.com/connector/oauth/*,"
+        "https://chatgpt.com/connector_platform_oauth_redirect"
+    )
+
+    def _validate(self, redirect_uri: str) -> bool:
+        from fastmcp.server.auth.redirect_validation import validate_redirect_uri
+
+        proxy = _build_auth(self._PATTERNS)
+        return validate_redirect_uri(redirect_uri, proxy._allowed_client_redirect_uris)
+
+    def test_per_connector_callback_is_allowed(self) -> None:
+        assert self._validate("https://chatgpt.com/connector/oauth/u9m_SO-e_jDr")
+
+    def test_platform_callback_is_allowed(self) -> None:
+        assert self._validate("https://chatgpt.com/connector_platform_oauth_redirect")
+
+    def test_lookalike_host_is_rejected(self) -> None:
+        assert not self._validate("https://chatgpt.com.evil.test/connector/oauth/x")
+
+    def test_other_path_on_same_host_is_rejected(self) -> None:
+        assert not self._validate("https://chatgpt.com/somewhere/else")
+
+    def test_loopback_still_allowed_alongside(self) -> None:
+        assert self._validate("http://127.0.0.1:33418/callback")

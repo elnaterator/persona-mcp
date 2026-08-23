@@ -50,3 +50,14 @@ variable "error_threshold" {
   type        = number
   default     = 1
 }
+
+variable "extra_client_redirect_uris" {
+  description = <<-EOT
+    Redirect URI patterns allowed for hosted (non-loopback) MCP clients, in
+    addition to the loopback patterns the app always allows. Wildcards are
+    supported. ChatGPT derives a per-connector callback under
+    https://chatgpt.com/connector/oauth/, so it needs a wildcard entry.
+  EOT
+  type        = list(string)
+  default     = []
+}
