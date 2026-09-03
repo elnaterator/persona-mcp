@@ -34,6 +34,11 @@ module "lambda" {
     CLERK_OAUTH_CLIENT_SECRET = data.aws_ssm_parameter.clerk_oauth_client_secret.value
     CLERK_WEBHOOK_SECRET      = data.aws_ssm_parameter.clerk_webhook_secret.value
     CLERK_SECRET_KEY          = data.aws_ssm_parameter.clerk_secret_key.value
+
+    # Redirect URIs allowed for hosted MCP clients, on top of the loopback
+    # patterns the app always allows. Not a secret, so it lives in tfvars
+    # rather than SSM.
+    PKTX_EXTRA_CLIENT_REDIRECT_URIS = join(",", var.extra_client_redirect_uris)
   }
 
   tags = {

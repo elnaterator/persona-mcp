@@ -82,6 +82,26 @@ claude mcp add --transport http pktx https://your-pktx-server.com/mcp
 { "mcpServers": { "pktx": { "url": "https://your-pktx-server.com/mcp" } } }
 ```
 
+#### ChatGPT
+
+ChatGPT connects from its own servers rather than a loopback port, so its callback
+must be allowlisted — otherwise `/authorize` answers *"Redirect URI ... does not match
+allowed patterns"*. Terraform sets this via `extra_client_redirect_uris` in
+`infra/<env>/terraform.tfvars`; outside AWS, set the env var directly:
+
+```bash
+PKTX_EXTRA_CLIENT_REDIRECT_URIS=https://chatgpt.com/connector/oauth/*,https://chatgpt.com/connector_platform_oauth_redirect
+```
+
+Then, on the web (Plus, Pro, Business, Enterprise, or Education plan; Business and
+Enterprise workspaces need an admin to allow custom MCP connectors first):
+
+1. **Settings → Apps → Advanced settings** → turn on **Developer mode**.
+2. **Plugins → Create** (older builds call this section Connectors).
+3. Paste `https://your-pktx-server.com/mcp`, give it a name and description — the
+   model reads the description when deciding whether to use pktx — and pick **OAuth**.
+4. Complete the browser sign-in when prompted, then enable the tools you want.
+
 ### Clerk manual setup (required before MCP auth works end-to-end)
 
 1. Create an OAuth application in Clerk Dashboard with redirect URI `<PKTX_PUBLIC_URL>/auth/callback`; set its client id/secret as `CLERK_OAUTH_CLIENT_ID` / `CLERK_OAUTH_CLIENT_SECRET`.

@@ -17,6 +17,8 @@ interface Assistant {
   name: string
   filePath: string | null
   snippet: string
+  /** Extra setup detail, shown under the snippet. Only for assistants that need it. */
+  notes?: string[]
 }
 
 const ASSISTANTS: Assistant[] = [
@@ -30,8 +32,13 @@ const ASSISTANTS: Assistant[] = [
     id: 'chatgpt',
     name: 'ChatGPT',
     filePath:
-      'chatgpt.com → Apps & connectors → Advanced settings → Developer mode → Create connector (desktop app requires this be set up on the web first)',
+      'chatgpt.com → Settings → Apps → Advanced settings → turn on Developer mode, then Plugins → Create → paste the URL below and pick OAuth (set this up on the web; the desktop app picks it up afterwards)',
     snippet: MCP_SERVER_URL,
+    notes: [
+      'Developer mode is web-only and needs a Plus, Pro, Business, Enterprise, or Education plan. On Business/Enterprise an admin enables it first under Workspace Settings → Permissions & Roles.',
+      'Give it a name and a description — ChatGPT reads the description when deciding whether to use pktx.',
+      'Older builds label the section Connectors instead of Plugins; the steps are the same.',
+    ],
   },
   {
     id: 'claude-code',
@@ -173,6 +180,13 @@ export default function ConnectAssistantPanel() {
                   {copiedId === activeAssistant.id ? 'Copied!' : 'Copy'}
                 </button>
               </div>
+              {activeAssistant.notes && (
+                <ul className={styles.notes}>
+                  {activeAssistant.notes.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className={styles.about}>
